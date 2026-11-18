@@ -1,15 +1,27 @@
-import type { Cabinet } from '../domain/cabinet';
+import type { Cabinet, Compartment } from '../domain/cabinet';
 import { evaluate, EVALUATOR_REVISION } from '../geometry/evaluate';
-export const AUTOSAVE_KEY = 'cabinet-studio.autosave.v1';
+export const AUTOSAVE_KEY = 'cabinet-studio.autosave.v2';
+export const LEGACY_AUTOSAVE_KEY = 'cabinet-studio.autosave.v1';
 export function serialize(cabinet: Cabinet): string {
   evaluate(cabinet);
-  return JSON.stringify({ format: 'cabinet-studio', schemaVersion: 1, evaluatorRevision: EVALUATOR_REVISION, cabinet }, null, 2);
+  return JSON.stringify({ format: 'cabinet-studio', schemaVersion: 2, evaluatorRevision: EVALUATOR_REVISION, cabinet }, null, 2);
 }
 function object(value: unknown): value is Record<string, any> { return !!value && typeof value === 'object' && !Array.isArray(value); }
 function exact(value: unknown, keys: string[]) { return object(value) && Object.keys(value).length === keys.length && keys.every(k => k in value); }
-export function deserialize(text: string): Cabinet {
-  const doc = JSON.parse(text);
-  if (!object(doc) || doc.format !== 'cabinet-studio' || doc.schemaVersion !== 1 || doc.evaluatorRevision !== EVALUATOR_REVISION)
+function validTree(value: any, reserved: Set<string>, legacy: boolean, depth = 0, count = { nodes: 0 }): value is Compartment {
+  if (!object(value) || depth > 32 || ++count.nodes > 127 || typeof value.id !== 'string' || !value.id.trim() || value.id.length > 128 || reserved.has(value.id)) return false;
+  reserved.add(value.id);
+  if (value.kind === 'opening') return exact(value, ['id', 'kind', 'children']) && Array.isArray(value.children) && value.children.length === 0;
+  if (legacy || value.kind !== 'split' || !exact(value, ['id', 'kind', 'featureId', 'axis', 'position', 'policyRevision', 'children']) ||
+    typeof value.featureId !== 'string' || !value.featureId.trim() || value.featureId.length > 128 || reserved.has(value.featureId) ||
+    !['horizontal', 'vertical'].includes(value.axis) || value.policyRevision !== 'fixed-1' || typeof value.position !== 'number' || !Number.isFinite(value.position) ||
+    !Array.isArray(value.children) || value.children.length !== 2) return false;
+  reserved.add(value.featureId);
+  return value.children.every((child: unknown) => validTree(child, reserved, legacy, depth + 1, count));
+}
+export function deserializeWithInfo(text: string): { cabinet: Cabinet; migrated: boolean } {
+  const doc = JSON.parse(text), legacy = doc?.schemaVersion === 1 && doc?.evaluatorRevision === 'carcass-1';
+  if (!object(doc) || doc.format !== 'cabinet-studio' || !(legacy || (doc.schemaVersion === 2 && doc.evaluatorRevision === EVALUATOR_REVISION)))
     throw new Error('Unsupported cabinet format or revision. Your current cabinet and original file are unchanged.');
   const c = doc.cabinet;
   const pin = (p: unknown) => exact(p, ['id', 'revision']) && typeof (p as any).id === 'string' && typeof (p as any).revision === 'string';
@@ -18,8 +30,7 @@ export function deserialize(text: string): Cabinet {
     !exact(c.envelope, ['width', 'height', 'depth', 'origin']) ||
     !Array.isArray(c.envelope.origin) || c.envelope.origin.length !== 3 || !c.envelope.origin.every((n: unknown) => typeof n === 'number' && Number.isFinite(n)) ||
     !exact(c.carcass, ['construction', 'policyRevision']) || c.carcass.construction !== 'butt-full-top-inset-back' || c.carcass.policyRevision !== 'concept-1' ||
-    !exact(c.compartments, ['id', 'kind', 'children']) || typeof c.compartments.id !== 'string' || !c.compartments.id.trim() || c.compartments.kind !== 'opening' ||
-    !Array.isArray(c.compartments.children) || c.compartments.children.length ||
+    !validTree(c.compartments, new Set([c.id, ...['left', 'right', 'top', 'bottom', 'back'].map(role => `${c.id}/panel/${role}`)]), legacy) ||
     !Array.isArray(c.contents) || c.contents.length || !Array.isArray(c.fronts) || c.fronts.length ||
     !exact(c.installation, ['type']) || c.installation.type !== 'unassigned' ||
     !exact(c.materials, ['carcass', 'back']) || !pin(c.materials.carcass) || !pin(c.materials.back) ||
@@ -27,8 +38,9 @@ export function deserialize(text: string): Cabinet {
     !Array.isArray(c.hardware) || c.hardware.length)
     throw new Error('This cabinet contains invalid or unsupported data. Your current cabinet is unchanged.');
   evaluate(c);
-  return structuredClone(c) as Cabinet;
+  return { cabinet: structuredClone(c) as Cabinet, migrated: legacy };
 }
+export function deserialize(text: string): Cabinet { return deserializeWithInfo(text).cabinet; }
 export function downloadCabinet(cabinet: Cabinet) {
   const url = URL.createObjectURL(new Blob([serialize(cabinet)], { type: 'application/json' }));
   const link = document.createElement('a'); link.href = url;

@@ -1,5 +1,9 @@
 export type Axis = 'width' | 'height' | 'depth';
-export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back';
+export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back' | 'shelf' | 'divider';
+export type DivisionAxis = 'horizontal' | 'vertical';
+export interface OpeningNode { id: string; kind: 'opening'; children: [] }
+export interface SplitNode { id: string; kind: 'split'; featureId: string; axis: DivisionAxis; position: number; policyRevision: 'fixed-1'; children: [Compartment, Compartment] }
+export type Compartment = OpeningNode | SplitNode;
 export type Vec3 = [number, number, number];
 export interface ProductPin { id: string; revision: string }
 export interface Cabinet {
@@ -7,7 +11,7 @@ export interface Cabinet {
   name: string;
   envelope: { width: number; height: number; depth: number; origin: Vec3 };
   carcass: { construction: 'butt-full-top-inset-back'; policyRevision: 'concept-1' };
-  compartments: { id: string; kind: 'opening'; children: never[] };
+  compartments: Compartment;
   contents: never[];
   fronts: never[];
   installation: { type: 'unassigned' };

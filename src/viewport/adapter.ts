@@ -7,7 +7,7 @@ export type ViewName = 'isometric' | 'front' | 'side' | 'top';
 export interface DimensionAnchor { axis: Axis; x: number; y: number; handleX: number; handleY: number }
 interface Callbacks {
   select(id: string): void; dragStart(): void; preview(axis: Axis, value: number): void; commit(): void; cancel(): void;
-  anchors(anchors: DimensionAnchor[]): void;
+  anchors(anchors: DimensionAnchor[]): void; divisionAnchor(point: { x: number; y: number } | null): void; previewDivision(id: string, value: number): void;
 }
 export class CabinetViewport {
   readonly renderer: THREE.WebGLRenderer;
@@ -21,10 +21,11 @@ export class CabinetViewport {
   private raycaster = new THREE.Raycaster();
   private resizeObserver: ResizeObserver;
   private cabinet!: Cabinet;
+  private geometry!: EvaluatedCabinet;
   private selected = '';
   private theme!: ViewportTheme;
   private down: { x: number; y: number } | null = null;
-  private drag: { axis: Axis; x: number; y: number; initial: number; px: number; py: number } | null = null;
+  private drag: { axis: Axis; x: number; y: number; initial: number; px: number; py: number; featureId?: string; centre?: number } | null = null;
   private disposed = false;
   constructor(private host: HTMLElement, private callbacks: Callbacks) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -65,7 +66,7 @@ export class CabinetViewport {
     }
   }
   update(cabinet: Cabinet, geometry: EvaluatedCabinet, selected: string, theme: ViewportTheme, preview: boolean, cutaway: boolean) {
-    const first = !this.cabinet; this.cabinet = cabinet; this.theme = theme; this.selected = selected;
+    const first = !this.cabinet; this.cabinet = cabinet; this.geometry = geometry; this.theme = theme; this.selected = selected;
     this.scene.background = new THREE.Color(theme.background);
     (this.grid.material as THREE.LineBasicMaterial).color.set(theme.grid);
     (this.grid.material as THREE.Material).transparent = true; (this.grid.material as THREE.Material).opacity = 0.07;
@@ -82,8 +83,21 @@ export class CabinetViewport {
     }
     const { width: w, height: h, depth: d, origin: [ox, oy, oz] } = cabinet.envelope;
     this.grid.position.set(ox + w / 2, oy - 1, oz + d / 2);
-    const opening = new THREE.Mesh(new THREE.PlaneGeometry(...geometry.opening.size.slice(0, 2) as [number, number]), new THREE.MeshBasicMaterial({ visible: selected === cabinet.compartments.id, side: THREE.DoubleSide, color: theme.selected, transparent: true, opacity: 0.08, depthWrite: false }));
-    opening.position.set(ox + w / 2, oy + h / 2, oz + d - 1); opening.userData.id = cabinet.compartments.id; this.model.add(opening);
+    for (const space of geometry.openings) {
+      const opening = new THREE.Mesh(new THREE.PlaneGeometry(space.size[0], space.size[1]), new THREE.MeshBasicMaterial({ visible: selected === space.id, side: THREE.DoubleSide, color: theme.selected, transparent: true, opacity: 0.1, depthWrite: false }));
+      opening.position.set(space.origin[0] + space.size[0] / 2, space.origin[1] + space.size[1] / 2, space.origin[2] + space.size[2] - 1);
+      opening.userData.id = space.id; this.model.add(opening);
+    }
+    const activeDivision = geometry.divisions.find(d => d.id === selected);
+    if (activeDivision) {
+      const axis = activeDivision.axis === 'horizontal' ? 1 : 0, cross = 1 - axis;
+      for (const position of [activeDivision.min, (activeDivision.min + activeDivision.max) / 2, activeDivision.max]) {
+        const start = new THREE.Vector3(...activeDivision.origin), end = start.clone();
+        start.setComponent(axis, activeDivision.origin[axis] + activeDivision.size[axis] / 2 + position - activeDivision.position);
+        start.z += activeDivision.size[2] + 2; end.copy(start); end.setComponent(cross, start.getComponent(cross) + activeDivision.size[cross]);
+        this.dimensions.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([start, end]), new THREE.LineDashedMaterial({ color: theme.ghost, transparent: true, opacity: 0.5, dashSize: 8, gapSize: 6 })).computeLineDistances());
+      }
+    }
     const specs: [Axis, Vec3, Vec3, Vec3][] = [
       ['width', [0, -80, d + 45], [w, -80, d + 45], [w, h / 2, d + 12]],
       ['height', [-85, 0, d + 45], [-85, h, d + 45], [w / 2, h, d + 12]],
@@ -107,6 +121,8 @@ export class CabinetViewport {
     if (!this.cabinet) return;
     const { width: w, height: h, depth: d, origin: [x, y, z] } = this.cabinet.envelope;
     const positions: [Axis, Vec3][] = [['width', [w / 2, -80, d + 45]], ['height', [-85, h / 2, d + 45]], ['depth', [w + 85, -40, d / 2]]];
+    const division = this.geometry.divisions.find(d => d.id === this.selected);
+    this.callbacks.divisionAnchor(division ? this.project(new THREE.Vector3(division.origin[0] + division.size[0] / 2, division.origin[1] + division.size[1] / 2, division.origin[2] + division.size[2] + 12)) : null);
     this.callbacks.anchors(positions.map(([axis, p]) => {
       const handle = this.handles.children.find(h => h.userData.axis === axis)!;
       const at = this.project(handle.position);
@@ -126,21 +142,31 @@ export class CabinetViewport {
       event.stopImmediatePropagation(); this.startDrag(hit.object.userData.axis, event);
     }
   };
-  startDrag(axis: Axis, event: PointerEvent) {
+  startDrag(axis: Axis, event: PointerEvent, point?: THREE.Vector3) {
     if (event.button !== 0) return;
     this.controls.enabled = false; this.renderer.domElement.setPointerCapture(event.pointerId);
-    const start = this.handles.children.find(h => h.userData.axis === axis)!.position.clone();
+    const start = point ?? this.handles.children.find(h => h.userData.axis === axis)!.position.clone();
     const direction = axis === 'width' ? new THREE.Vector3(1, 0, 0) : axis === 'height' ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1);
     const a = this.project(start), b = this.project(start.clone().add(direction.multiplyScalar(100)));
     this.drag = { axis, x: event.clientX, y: event.clientY, initial: this.cabinet.envelope[axis], px: (b.x - a.x) / 100, py: (b.y - a.y) / 100 };
     this.callbacks.dragStart(); this.renderer.domElement.focus({ preventScroll: true });
   }
+  startDivisionDrag(event: PointerEvent) {
+    if (event.button !== 0) return;
+    const division = this.geometry.divisions.find(d => d.id === this.selected); if (!division) return;
+    const axis = division.axis === 'horizontal' ? 'height' : 'width';
+    this.startDrag(axis, event, new THREE.Vector3(division.origin[0] + division.size[0] / 2, division.origin[1] + division.size[1] / 2, division.origin[2] + division.size[2] + 12));
+    this.drag!.initial = division.position; this.drag!.featureId = division.id; this.drag!.centre = (division.min + division.max) / 2;
+  }
   private pointerMove = (event: PointerEvent) => {
     if (this.drag) {
-      const { axis, x, y, initial, px, py } = this.drag, denominator = px * px + py * py;
+      const { axis, x, y, initial, px, py, featureId, centre } = this.drag, denominator = px * px + py * py;
       if (denominator < 0.002) return;
       const delta = ((event.clientX - x) * px + (event.clientY - y) * py) / denominator;
-      this.callbacks.preview(axis, Math.round(initial + delta));
+      if (featureId) {
+        const value = Math.abs(initial + delta - centre!) < 5 ? centre! : Math.round((initial + delta) / 5) * 5;
+        this.callbacks.previewDivision(featureId, Math.round(value * 10) / 10);
+      } else this.callbacks.preview(axis, Math.round(initial + delta));
     } else this.renderer.domElement.style.cursor = this.hits(event, this.handles.children).length ? 'ew-resize' : 'grab';
   };
   private pointerUp = (event: PointerEvent) => {

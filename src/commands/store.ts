@@ -1,13 +1,13 @@
 import type { Cabinet } from '../domain/cabinet';
 import { evaluate } from '../geometry/evaluate';
 import { validate } from '../rules/validate';
-export interface Snapshot { committed: Cabinet; preview: Cabinet | null; error: string | null; canUndo: boolean; canRedo: boolean; revision: number }
+export interface Snapshot { committed: Cabinet; preview: Cabinet | null; error: string | null; issueFeatureId: string | null; canUndo: boolean; canRedo: boolean; revision: number }
 export class CabinetStore {
   private past: Cabinet[] = [];
   private future: Cabinet[] = [];
   private listeners = new Set<() => void>();
   private state: Snapshot;
-  constructor(cabinet: Cabinet) { evaluate(cabinet); this.state = { committed: structuredClone(cabinet), preview: null, error: null, canUndo: false, canRedo: false, revision: 0 }; }
+  constructor(cabinet: Cabinet) { evaluate(cabinet); this.state = { committed: structuredClone(cabinet), preview: null, error: null, issueFeatureId: null, canUndo: false, canRedo: false, revision: 0 }; }
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private emit(patch: Partial<Snapshot>) {
@@ -16,8 +16,8 @@ export class CabinetStore {
   }
   preview = (candidate: Cabinet) => {
     const errors = validate(candidate).filter(i => i.severity === 'error');
-    if (errors.length) { this.emit({ preview: null, error: errors.map(i => i.message).join(' ') }); return false; }
-    evaluate(candidate); this.emit({ preview: structuredClone(candidate), error: null }); return true;
+    if (errors.length) { this.emit({ preview: null, error: errors.map(i => i.message).join(' '), issueFeatureId: errors[0].featureId }); return false; }
+    evaluate(candidate); this.emit({ preview: structuredClone(candidate), error: null, issueFeatureId: null }); return true;
   };
   commit = (candidate = this.state.preview) => {
     if (!candidate || !this.preview(candidate)) return false;
@@ -25,7 +25,7 @@ export class CabinetStore {
     this.past.push(this.state.committed); if (this.past.length > 100) this.past.shift();
     this.future = []; this.emit({ committed: structuredClone(candidate), preview: null, error: null }); return true;
   };
-  cancel = () => this.emit({ preview: null, error: null });
-  undo = () => { const previous = this.past.pop(); if (previous) { this.future.push(this.state.committed); this.emit({ committed: previous, preview: null, error: null }); } };
-  redo = () => { const next = this.future.pop(); if (next) { this.past.push(this.state.committed); this.emit({ committed: next, preview: null, error: null }); } };
+  cancel = () => this.emit({ preview: null, error: null, issueFeatureId: null });
+  undo = () => { const previous = this.past.pop(); if (previous) { this.future.push(this.state.committed); this.emit({ committed: previous, preview: null, error: null, issueFeatureId: null }); } };
+  redo = () => { const next = this.future.pop(); if (next) { this.past.push(this.state.committed); this.emit({ committed: next, preview: null, error: null, issueFeatureId: null }); } };
 }

@@ -1,5 +1,6 @@
 import type { Axis, Cabinet } from '../domain/cabinet';
 import { material } from '../catalogue/materials';
+import { resolveInteriors } from './interiors';
 export interface Issue { code: string; featureId: string; message: string; severity: 'error' | 'notice' }
 // Application modelling limits, not manufacturer or load limits.
 export const dimensionLimits: Record<Axis, { min: number; max: number }> = {
@@ -15,5 +16,6 @@ export function validate(c: Cabinet): Issue[] {
   try { material(c.materials.carcass); material(c.materials.back); }
   catch (error) { issues.push({ code: 'material-revision', featureId: c.id, severity: 'error', message: (error as Error).message }); }
   if (c.hardware.length) issues.push({ code: 'hardware-unavailable', featureId: c.id, severity: 'error', message: 'This version has no enabled hardware assemblies. The original file is unchanged.' });
+  if (!issues.some(i => i.severity === 'error')) issues.push(...resolveInteriors(c, material(c.materials.carcass).thickness, material(c.materials.back).thickness).issues);
   return issues;
 }
