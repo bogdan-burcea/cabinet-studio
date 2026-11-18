@@ -1,0 +1,189 @@
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import type { Axis, Cabinet, Vec3 } from '../domain/cabinet';
+import type { EvaluatedCabinet } from '../geometry/evaluate';
+import type { ViewportTheme } from '../design-system/themes';
+export type ViewName = 'isometric' | 'front' | 'side' | 'top';
+export interface DimensionAnchor { axis: Axis; x: number; y: number; handleX: number; handleY: number }
+interface Callbacks {
+  select(id: string): void; dragStart(): void; preview(axis: Axis, value: number): void; commit(): void; cancel(): void;
+  anchors(anchors: DimensionAnchor[]): void;
+}
+export class CabinetViewport {
+  readonly renderer: THREE.WebGLRenderer;
+  private scene = new THREE.Scene();
+  private camera = new THREE.PerspectiveCamera(36, 1, 1, 50000);
+  private controls: OrbitControls;
+  private model = new THREE.Group();
+  private handles = new THREE.Group();
+  private dimensions = new THREE.Group();
+  private grid = new THREE.GridHelper(5000, 50, '#ffffff', '#ffffff');
+  private raycaster = new THREE.Raycaster();
+  private resizeObserver: ResizeObserver;
+  private cabinet!: Cabinet;
+  private selected = '';
+  private theme!: ViewportTheme;
+  private down: { x: number; y: number } | null = null;
+  private drag: { axis: Axis; x: number; y: number; initial: number; px: number; py: number } | null = null;
+  private disposed = false;
+  constructor(private host: HTMLElement, private callbacks: Callbacks) {
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.1;
+    this.renderer.domElement.tabIndex = 0;
+    this.renderer.domElement.setAttribute('aria-label', '3D cabinet. Arrow keys orbit, plus and minus zoom, F fits. Use dimension fields to resize.');
+    this.renderer.domElement.setAttribute('role', 'img');
+    host.prepend(this.renderer.domElement);
+    this.scene.add(this.model, this.handles, this.dimensions, this.grid);
+    this.scene.add(new THREE.HemisphereLight('#fff9ee', '#687b83', 2.7));
+    const key = new THREE.DirectionalLight('#ffffff', 3.2); key.position.set(1500, 2500, 2200); this.scene.add(key);
+    const fill = new THREE.DirectionalLight('#dce5eb', 1.4); fill.position.set(-1200, 700, -800); this.scene.add(fill);
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.enableDamping = true; this.controls.dampingFactor = 0.12;
+    this.controls.minDistance = 250; this.controls.maxDistance = 12000;
+    this.controls.maxPolarAngle = Math.PI * 0.98;
+    const canvas = this.renderer.domElement;
+    canvas.addEventListener('pointerdown', this.pointerDown, true);
+    canvas.addEventListener('pointermove', this.pointerMove);
+    canvas.addEventListener('pointerup', this.pointerUp);
+    canvas.addEventListener('pointercancel', this.pointerCancel);
+    canvas.addEventListener('keydown', this.keyDown);
+    this.resizeObserver = new ResizeObserver(() => this.resize()); this.resizeObserver.observe(host);
+    this.resize();
+    this.renderer.setAnimationLoop(() => { if (this.disposed) return; this.controls.update(); this.renderer.render(this.scene, this.camera); this.updateAnchors(); });
+  }
+  private resize() {
+    const { width, height } = this.host.getBoundingClientRect();
+    this.renderer.setSize(width, height); this.camera.aspect = width / Math.max(1, height); this.camera.updateProjectionMatrix();
+  }
+  private clear(group: THREE.Group) {
+    for (const child of [...group.children]) {
+      child.traverse(obj => { const mesh = obj as THREE.Mesh; mesh.geometry?.dispose(); if (mesh.material) (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).forEach(m => m.dispose()); });
+      group.remove(child);
+    }
+  }
+  update(cabinet: Cabinet, geometry: EvaluatedCabinet, selected: string, theme: ViewportTheme, preview: boolean, cutaway: boolean) {
+    const first = !this.cabinet; this.cabinet = cabinet; this.theme = theme; this.selected = selected;
+    this.scene.background = new THREE.Color(theme.background);
+    (this.grid.material as THREE.LineBasicMaterial).color.set(theme.grid);
+    (this.grid.material as THREE.Material).transparent = true; (this.grid.material as THREE.Material).opacity = 0.07;
+    (this.grid.material as THREE.Material).depthWrite = false;
+    this.clear(this.model); this.clear(this.handles); this.clear(this.dimensions);
+    for (const panel of geometry.panels) {
+      const isSelected = selected === panel.id;
+      const material = new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : isSelected ? theme.selected : theme.panel,
+        roughness: 0.82, metalness: 0, transparent: (cutaway && panel.role === 'back') || preview, opacity: cutaway && panel.role === 'back' ? 0.12 : preview ? 0.68 : 1 });
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(...panel.size), material);
+      mesh.position.set(...panel.center); mesh.userData.id = panel.id;
+      const edge = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color: isSelected ? theme.selected : theme.edge, transparent: true, opacity: 0.65 }));
+      mesh.add(edge); this.model.add(mesh);
+    }
+    const { width: w, height: h, depth: d, origin: [ox, oy, oz] } = cabinet.envelope;
+    this.grid.position.set(ox + w / 2, oy - 1, oz + d / 2);
+    const opening = new THREE.Mesh(new THREE.PlaneGeometry(...geometry.opening.size.slice(0, 2) as [number, number]), new THREE.MeshBasicMaterial({ visible: selected === cabinet.compartments.id, side: THREE.DoubleSide, color: theme.selected, transparent: true, opacity: 0.08, depthWrite: false }));
+    opening.position.set(ox + w / 2, oy + h / 2, oz + d - 1); opening.userData.id = cabinet.compartments.id; this.model.add(opening);
+    const specs: [Axis, Vec3, Vec3, Vec3][] = [
+      ['width', [0, -80, d + 45], [w, -80, d + 45], [w, h / 2, d + 12]],
+      ['height', [-85, 0, d + 45], [-85, h, d + 45], [w / 2, h, d + 12]],
+      ['depth', [w + 85, -40, 0], [w + 85, -40, d], [w + 12, h / 2, d / 2]]
+    ];
+    for (const [axis, from, to, handle] of specs) {
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([from, to].map(v => new THREE.Vector3(v[0] + ox, v[1] + oy, v[2] + oz))), new THREE.LineBasicMaterial({ color: theme.handle, transparent: true, opacity: 0.65 })); this.dimensions.add(line);
+      for (const point of [from, to]) {
+        const delta: Vec3 = axis === 'height' ? [12, 0, 0] : [0, 12, 0];
+        const tick = new THREE.Line(new THREE.BufferGeometry().setFromPoints([-1, 1].map(sign => new THREE.Vector3(point[0] + ox + sign * delta[0], point[1] + oy + sign * delta[1], point[2] + oz))), new THREE.LineBasicMaterial({ color: theme.handle })); this.dimensions.add(tick);
+      }
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(11, 16, 12), new THREE.MeshBasicMaterial({ color: theme.handle, depthTest: false }));
+      ball.renderOrder = 10; ball.position.set(handle[0] + ox, handle[1] + oy, handle[2] + oz); ball.userData.axis = axis; this.handles.add(ball);
+    }
+    if (first) this.view('isometric');
+  }
+  private project(point: THREE.Vector3) {
+    const v = point.clone().project(this.camera); return { x: (v.x + 1) * this.host.clientWidth / 2, y: (1 - v.y) * this.host.clientHeight / 2 };
+  }
+  private updateAnchors() {
+    if (!this.cabinet) return;
+    const { width: w, height: h, depth: d, origin: [x, y, z] } = this.cabinet.envelope;
+    const positions: [Axis, Vec3][] = [['width', [w / 2, -80, d + 45]], ['height', [-85, h / 2, d + 45]], ['depth', [w + 85, -40, d / 2]]];
+    this.callbacks.anchors(positions.map(([axis, p]) => {
+      const handle = this.handles.children.find(h => h.userData.axis === axis)!;
+      const at = this.project(handle.position);
+      return { axis, ...this.project(new THREE.Vector3(p[0] + x, p[1] + y, p[2] + z)), handleX: at.x, handleY: at.y };
+    }));
+  }
+  private hits(event: PointerEvent, objects: THREE.Object3D[]) {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.raycaster.setFromCamera(new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1), this.camera);
+    return this.raycaster.intersectObjects(objects, false);
+  }
+  private pointerDown = (event: PointerEvent) => {
+    if (event.button !== 0) return;
+    this.down = { x: event.clientX, y: event.clientY };
+    const hit = this.hits(event, this.handles.children)[0];
+    if (hit) {
+      event.stopImmediatePropagation(); this.startDrag(hit.object.userData.axis, event);
+    }
+  };
+  startDrag(axis: Axis, event: PointerEvent) {
+    if (event.button !== 0) return;
+    this.controls.enabled = false; this.renderer.domElement.setPointerCapture(event.pointerId);
+    const start = this.handles.children.find(h => h.userData.axis === axis)!.position.clone();
+    const direction = axis === 'width' ? new THREE.Vector3(1, 0, 0) : axis === 'height' ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1);
+    const a = this.project(start), b = this.project(start.clone().add(direction.multiplyScalar(100)));
+    this.drag = { axis, x: event.clientX, y: event.clientY, initial: this.cabinet.envelope[axis], px: (b.x - a.x) / 100, py: (b.y - a.y) / 100 };
+    this.callbacks.dragStart(); this.renderer.domElement.focus({ preventScroll: true });
+  }
+  private pointerMove = (event: PointerEvent) => {
+    if (this.drag) {
+      const { axis, x, y, initial, px, py } = this.drag, denominator = px * px + py * py;
+      if (denominator < 0.002) return;
+      const delta = ((event.clientX - x) * px + (event.clientY - y) * py) / denominator;
+      this.callbacks.preview(axis, Math.round(initial + delta));
+    } else this.renderer.domElement.style.cursor = this.hits(event, this.handles.children).length ? 'ew-resize' : 'grab';
+  };
+  private pointerUp = (event: PointerEvent) => {
+    if (this.drag) { this.drag = null; this.controls.enabled = true; this.callbacks.commit(); }
+    else if (this.down && Math.hypot(event.clientX - this.down.x, event.clientY - this.down.y) < 5) {
+      const hits = this.hits(event, this.model.children);
+      this.callbacks.select(hits[0]?.object.userData.id || this.cabinet.id);
+    }
+    this.down = null;
+    if (this.renderer.domElement.hasPointerCapture(event.pointerId)) this.renderer.domElement.releasePointerCapture(event.pointerId);
+  };
+  private pointerCancel = () => { this.drag = null; this.down = null; this.controls.enabled = true; this.callbacks.cancel(); };
+  private keyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') { event.preventDefault(); this.pointerCancel(); return; }
+    const actions: Record<string, () => void> = { ArrowLeft: () => this.orbit(-0.15, 0), ArrowRight: () => this.orbit(0.15, 0), ArrowUp: () => this.orbit(0, -0.15), ArrowDown: () => this.orbit(0, 0.15), '+': () => this.zoom(0.85), '=': () => this.zoom(0.85), '-': () => this.zoom(1.15), f: () => this.fit() };
+    if (actions[event.key]) { event.preventDefault(); actions[event.key](); }
+  };
+  private center() { const { width, height, depth, origin } = this.cabinet.envelope; return new THREE.Vector3(origin[0] + width / 2, origin[1] + height / 2, origin[2] + depth / 2); }
+  view(name: ViewName) {
+    if (!this.cabinet) return;
+    const directions: Record<ViewName, Vec3> = { isometric: [1.25, 0.8, 1.8], front: [0, 0, 1], side: [1, 0, 0], top: [0, 1, 0.001] };
+    this.controls.target.copy(this.center()); this.camera.position.copy(this.center()).add(new THREE.Vector3(...directions[name]).normalize().multiplyScalar(this.distance())); this.controls.update();
+  }
+  private distance() {
+    const { width, height, depth } = this.cabinet.envelope;
+    const radius = Math.sqrt((width + 260) ** 2 + (height + 220) ** 2 + (depth + 180) ** 2) / 2;
+    const angle = Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * Math.min(1, this.camera.aspect));
+    return radius / Math.sin(angle) * 1.08;
+  }
+  fit() {
+    const direction = this.camera.position.clone().sub(this.controls.target).normalize();
+    this.controls.target.copy(this.center()); this.camera.position.copy(this.center()).add(direction.multiplyScalar(this.distance())); this.controls.update();
+  }
+  orbit(theta: number, phi: number) {
+    const offset = this.camera.position.clone().sub(this.controls.target), spherical = new THREE.Spherical().setFromVector3(offset);
+    spherical.theta += theta; spherical.phi = Math.max(0.02, Math.min(Math.PI - 0.02, spherical.phi + phi));
+    this.camera.position.copy(this.controls.target).add(new THREE.Vector3().setFromSpherical(spherical)); this.controls.update();
+  }
+  zoom(factor: number) { const offset = this.camera.position.clone().sub(this.controls.target).multiplyScalar(factor); offset.clampLength(250, 12000); this.camera.position.copy(this.controls.target).add(offset); this.controls.update(); }
+  dispose() {
+    this.disposed = true; this.renderer.setAnimationLoop(null); this.resizeObserver.disconnect(); this.controls.dispose();
+    const canvas = this.renderer.domElement;
+    canvas.removeEventListener('pointerdown', this.pointerDown, true); canvas.removeEventListener('pointermove', this.pointerMove); canvas.removeEventListener('pointerup', this.pointerUp); canvas.removeEventListener('pointercancel', this.pointerCancel); canvas.removeEventListener('keydown', this.keyDown);
+    this.clear(this.model); this.clear(this.handles); this.clear(this.dimensions); this.grid.geometry.dispose(); (this.grid.material as THREE.Material).dispose(); this.renderer.dispose(); canvas.remove();
+  }
+}
