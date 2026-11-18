@@ -29,11 +29,14 @@ export function duplicateDivision(c: Cabinet, featureId: string) {
   const leaves = (node: Compartment): string[] => node.kind === 'opening' ? [node.id] : node.children.flatMap(leaves);
   const ids = new Set(leaves(division)), axis = division.axis === 'horizontal' ? 1 : 0;
   const target = evaluate(c).openings.filter(o => ids.has(o.id)).sort((a, b) => b.size[axis] - a.size[axis])[0];
-  return addDivision(c, target.id, division.axis, Math.round(target.size[axis] * 5) / 10);
+  const next = addDivision(c, target.id, division.axis, Math.round(target.size[axis] * 5) / 10);
+  if (c.banding[featureId]) next.cabinet = { ...next.cabinet, banding: { ...c.banding, [next.featureId]: structuredClone(c.banding[featureId]) } };
+  return next;
 }
 export function removeDivision(c: Cabinet, featureId: string): Cabinet {
   const division = findDivision(c.compartments, featureId);
   if (!division) throw new Error('This division no longer exists.');
   if (division.children.some(child => child.kind !== 'opening')) throw new Error('Remove the divisions inside the child openings first. This preserves your nested interior.');
-  return { ...c, compartments: transform(c.compartments, node => node.id === division.id, node => ({ id: node.id, kind: 'opening', children: [] })) };
+  const banding = { ...c.banding }; delete banding[featureId];
+  return { ...c, banding, compartments: transform(c.compartments, node => node.id === division.id, node => ({ id: node.id, kind: 'opening', children: [] })) };
 }

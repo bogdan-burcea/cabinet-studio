@@ -6,6 +6,6 @@ The existing cabinet-workshop repository is read-only reference material. Do not
 
 Keep cabinet rules and canonical geometry independent of UI, Three.js and themes. All edits use the command transaction path. Preserve stable identities and product/policy/evaluator revisions. Theme and display finish changes never change material identity.
 
-Current scope is the first Stage 2 increment: fixed shelves and dividers. Other Stage 2 construction options remain future work. Hardware candidates remain disabled until official assembly rules and fixtures are verified. No wooden drawer boxes, manufacturing outputs, costs or room/project UI.
+Current Stage 2 scope includes fixed interiors, full top/top rails, full back/rear rails, material role bindings and per-panel edge banding. Preserve these features and their stable intent. Feet/plinth, mounting and adjustable shelf fittings remain future work. Hardware candidates remain disabled until official assembly rules and fixtures are verified. No wooden drawer boxes, manufacturing outputs, costs or room/project UI.
 
 Run `npm test` and `npm run build` after functional changes. Review relevant behavior in local preview. Keep `docs/backlog.md` and verification notes honest about remaining limits.

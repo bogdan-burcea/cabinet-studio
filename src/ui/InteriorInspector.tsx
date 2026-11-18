@@ -25,7 +25,7 @@ export function InteriorInspector(p: Props) {
       try { const next = duplicateDivision(p.committed, division!.id); if (p.onCommit(next.cabinet)) p.onSelect(next.featureId); }
       catch (error) { p.onNotice((error as Error).message); }
     }
-    return <Section title={horizontal ? 'Fixed shelf position' : 'Divider position'} aside={<span className="unit-badge">18 mm</span>}>
+    return <Section title={horizontal ? 'Fixed shelf position' : 'Divider position'} aside={<span className="unit-badge">{division.size[horizontal ? 1 : 0]} mm</span>}>
       <DimensionField key={division.id} label={horizontal ? 'Centre from bottom' : 'Centre from left'} value={division.position} cancelValue={base.position} limits={{ min: division.min, max: division.max }} register={p.positionRef}
         onPreview={value => p.onPreview(move(value))} onCommit={value => p.onCommit(move(value))} onCancel={p.onCancel}/>
       <p className="field-note">Measured inside the parent opening. Range {division.min.toFixed(1)}–{division.max.toFixed(1)} mm.</p>

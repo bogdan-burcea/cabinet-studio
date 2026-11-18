@@ -15,6 +15,12 @@ export interface SplitNode { id: string; kind: 'split'; featureId: string; axis:
 export type Compartment = OpeningNode | SplitNode;
 export type Vec3 = [number, number, number];
 export interface ProductPin { id: string; revision: string }
+export type MaterialRole = 'carcass' | 'back' | 'interior';
+export type EdgeKey = 'u-min' | 'u-max' | 'v-min' | 'v-max';
+export interface MaterialBinding { stock: ProductPin; finish: ProductPin; grain: 'none' | 'u' | 'v' }
+export type MaterialBindings = { carcass: MaterialBinding; back: MaterialBinding; interior: MaterialBinding | null };
+export type EdgeBanding = Record<string, Partial<Record<EdgeKey, ProductPin>>>;
+export function defaultBinding(stock: ProductPin): MaterialBinding { return { stock, finish: { id: 'unspecified', revision: '1' }, grain: 'none' }; }
 export interface Cabinet {
   id: string;
   name: string;
@@ -24,7 +30,8 @@ export interface Cabinet {
   contents: never[];
   fronts: never[];
   installation: { type: 'unassigned' };
-  materials: { carcass: ProductPin; back: ProductPin };
+  materials: MaterialBindings;
+  banding: EdgeBanding;
   hardware: ProductPin[];
 }
 export function createCabinet(): Cabinet {
@@ -34,8 +41,8 @@ export function createCabinet(): Cabinet {
     carcass: defaultCarcass(),
     compartments: { id: `${id}/opening`, kind: 'opening', children: [] }, contents: [], fronts: [],
     installation: { type: 'unassigned' }, materials: {
-      carcass: { id: 'generic-panel-18', revision: '1' }, back: { id: 'generic-back-6', revision: '1' }
-    }, hardware: []
+      carcass: defaultBinding({ id: 'generic-panel-18', revision: '1' }), back: defaultBinding({ id: 'generic-back-6', revision: '1' }), interior: null
+    }, banding: {}, hardware: []
   };
 }
 export function resize(cabinet: Cabinet, axis: Axis, value: number): Cabinet {

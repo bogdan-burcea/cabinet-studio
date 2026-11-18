@@ -83,8 +83,8 @@ test('unsupported versions, product revisions, layouts and malformed data fail w
   const variants = [
     (d: any) => d.schemaVersion = 99,
     (d: any) => d.evaluatorRevision = 'carcass-99',
-    (d: any) => d.cabinet.materials.carcass.revision = 'future',
-    (d: any) => d.cabinet.materials.carcass.id = 'generic-back-6',
+    (d: any) => d.cabinet.materials.carcass.stock.revision = 'future',
+    (d: any) => d.cabinet.materials.carcass.stock.id = 'generic-back-6',
     (d: any) => d.cabinet.hardware.push({ id: 'unknown', revision: '1' }),
     (d: any) => d.cabinet.fronts.push({ id: 'door' }),
     (d: any) => d.cabinet.envelope.width = '600',

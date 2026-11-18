@@ -1,11 +1,12 @@
-import type { Cabinet, PanelRole, Vec3 } from '../domain/cabinet';
-import { material } from '../catalogue/materials';
+import type { Cabinet, PanelRole, MaterialRole, Vec3 } from '../domain/cabinet';
+import { stock } from '../catalogue/materials';
 import { validate, type Issue } from '../rules/validate';
+import { panelMaterials } from './banding';
 import { resolveConstruction } from '../rules/construction';
 import { resolveInteriors, type Division, type Opening } from '../rules/interiors';
-export const EVALUATOR_REVISION = 'construction-3';
-export interface Panel {
-  id: string; role: PanelRole; label: string; size: Vec3; center: Vec3; materialId: string;
+export const EVALUATOR_REVISION = 'materials-4';
+export interface Panel extends ReturnType<typeof panelMaterials> {
+  id: string; role: PanelRole; label: string; size: Vec3; center: Vec3; materialRole: MaterialRole;
   provenance: string; orientation: 'yz' | 'xz' | 'xy'; constructionPart?: 'top' | 'back';
 }
 export interface EvaluatedCabinet {
@@ -17,19 +18,20 @@ export interface EvaluatedCabinet {
 export function evaluate(c: Cabinet): EvaluatedCabinet {
   const issues = validate(c);
   if (issues.some(i => i.severity === 'error')) throw new Error(issues.map(i => i.message).join(' '));
-  const t = material(c.materials.carcass).thickness, b = material(c.materials.back).thickness;
-  const construction = resolveConstruction(c, t, b), interiors = resolveInteriors(c, t, b);
-  const panels: Panel[] = construction.panels.map(panel => ({
+  const t = stock(c, 'carcass').thickness, b = stock(c, 'back').thickness;
+  const construction = resolveConstruction(c, t, b), interiors = resolveInteriors(c, t, b, stock(c, 'interior').thickness);
+  const basePanels: Omit<Panel, keyof ReturnType<typeof panelMaterials>>[] = construction.panels.map(panel => ({
     id: `${c.id}/panel/${panel.role}`, role: panel.role, label: panel.label, size: panel.size,
     center: panel.origin.map((n, i) => n + panel.size[i] / 2) as Vec3,
-    materialId: c.materials[panel.materialRole].id, provenance: `${c.id}/carcass/${c.carcass.policyRevision}`,
+    materialRole: panel.materialRole, provenance: `${c.id}/carcass/${c.carcass.policyRevision}`,
     orientation: panel.orientation, ...(panel.constructionPart ? { constructionPart: panel.constructionPart } : {})
   }));
-  panels.push(...interiors.divisions.map((division): Panel => ({
-    id: division.id, role: division.axis === 'horizontal' ? 'shelf' : 'divider', label: division.label,
+  basePanels.push(...interiors.divisions.map(division => ({
+    id: division.id, role: (division.axis === 'horizontal' ? 'shelf' : 'divider') as PanelRole, label: division.label,
     size: division.size, center: division.origin.map((n, i) => n + division.size[i] / 2) as Vec3,
-    materialId: c.materials.carcass.id, provenance: `${division.nodeId}/fixed-1`, orientation: division.axis === 'horizontal' ? 'xz' : 'yz'
+    materialRole: 'interior' as const, provenance: `${division.nodeId}/fixed-1`, orientation: (division.axis === 'horizontal' ? 'xz' : 'yz') as 'xz' | 'yz'
   })));
+  const panels: Panel[] = basePanels.map(panel => ({ ...panel, ...panelMaterials(c, panel) }));
   return { revision: EVALUATOR_REVISION, cabinetId: c.id, issues, panels, opening: interiors.root, openings: interiors.openings, divisions: interiors.divisions,
     construction: { rearSetback: construction.rearSetback, topGap: construction.topGap, backGap: construction.backGap } };
 }

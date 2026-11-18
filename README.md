@@ -1,6 +1,6 @@
 # Cabinet Studio
 
-A new, local cabinet builder. Stage 0/1 foundation plus the first Stage 2 increment: fixed shelves and dividers, following `docs/specification-v0.2.md`. The original specification is requirements material; it does not grant permission to publish. Nothing in this project deploys automatically.
+A new, local cabinet builder. Stage 0/1 foundation plus Stage 2 construction, fixed interiors, material bindings and edge banding, following `docs/specification-v0.2.md`. The original specification is requirements material; it does not grant permission to publish. Nothing in this project deploys automatically.
 
 ## Development
 
@@ -30,20 +30,25 @@ npm run build
 - Switch Graphite/Linen with the theme button. The shell, controls, dimension overlays and 3D presentation change together.
 - Save cabinet creates native cabinet JSON. Open validates the schema and revisions and can be undone. Files from Cabinet Workshop are unsupported.
 - Select a leaf opening to add a fixed shelf or divider at its centre. Repeat in the child openings for nested interiors. Select a division to reposition, centre, duplicate or remove it. Duplicate uses the largest child opening. Remove child divisions before their parent; nested contents are never silently deleted. Invalid dependent edits preserve the entire previous cabinet.
+- Choose full top or independently sized front/rear top rails; full inset back or upper/lower rear rails. Review the ghost model, usable depth and preserved interior count, then Apply construction or Cancel preview. Rails use carcass stock. Rear rails reserve their thickness behind all interior panels; top-zone height remains reserved for either top option.
+- Materials & edge banding selects the carcass, full-back or interior role. Interiors inherit the carcass stock/finish/grain unless explicitly overridden. Pick generic stock thickness, expand Finish & grain intent if needed, and apply the reviewed change. Invalid dependencies preserve the entire prior cabinet.
+- Select a panel for its four named edge controls. Choose unbanded or a pinned 0.8/1/2 mm generic band. Finished dimensions remain fixed; core and band geometry are derived inside that envelope. Edge choices for inactive top/back variants are retained when switching construction.
 - Browser autosave is specific to this origin, browser and profile. Use JSON backups before clearing browser data or changing the local address. Unreadable autosaves are preserved until backed up through the editing guide.
 
 ## Current limits
 
-This is a conceptual five-panel carcass with optional fixed interior divisions, not verified construction. Sides run full height/depth; top and bottom fit between them. A 6 mm back fits inside the four panels at the rear. No joinery, drilling, supports, fitting load checks, grain or edge treatment is inferred. Generic material records are pinned at 18/6 mm. Body depth excludes fronts and handles; installation height is unassigned. The editable ranges are application policies, not structural ratings.
+This remains conceptual construction. Sides span the body; bottom/full top fit between them. Top rails occupy that same reserved top zone. A full back fits between the four carcass panels; rear rails are vertical panels of carcass stock. Rail pairs require at least a 20 mm gap, an application policy. No joinery, preparation, structural/racking capacity or wall support is inferred.
 
-Fixed shelves and dividers use the same 18 mm generic carcass material. Their centres are stored relative to the parent opening; moving a parent resizes its descendants. Each split reserves the actual panel thickness. The 60 mm minimum clear opening is an application modelling policy. Interior drag handles snap to a 5 mm application grid and the centre, with 0.1 mm numeric precision. No shelf-support hole pattern is implied.
+Generic carcass/interior stock is available at 16/18/19/22 mm, and back stock at 6/9/12 mm. These are versioned declared records, not verified purchased materials. Unspecified, white-concept and oak-concept finishes carry pinned identities; colour rendering stays in the design system. Grain is stored relative to each panel's two broad-face axes. Band products are generic concepts matching the panel finish. Band corner treatment is schematic; board-core dimensions are not manufacturing cut sizes and include no preparation allowances.
 
-The hardware shortlist is explicit but **disabled pending assembly verification**. No fitting is substituted or implied. Stage 0's complete verified starter fitting set remains open; see `docs/hardware-shortlist.md`. Adjustable shelves, other Stage 2 construction options and Stage 3–5 tools remain deferred, without placeholder menus.
+Fixed shelf/divider positions remain absolute inside their parent opening. Material changes reserve actual selected thickness and update descendants; positions and identities are never silently rewritten. Invalid changes are rejected. The 60 mm minimum opening and 5 mm drag grid are application policies, not support-hole or load requirements. Body depth excludes fronts/handles; installation height is unassigned.
 
-Camera state and theme are presentation state; they are not cabinet intent or saved in the cabinet file. Ordinary edits preserve the camera; Fit is explicit. Native files pin the schema, evaluator, material and construction policy revisions. Native schema 2 pins evaluator `interiors-2` and interior policy `fixed-1`. Stage 1 schema 1 files are upgraded as copies with an explicit notice and unchanged carcass geometry. Browser autosave uses a new v2 key and preserves the original v1 data; unreadable data is not overwritten. Future formats or unknown revisions are rejected.
+The hardware shortlist is explicit but **disabled pending assembly verification**. No fitting is substituted or implied. Stage 0's complete verified starter fitting set remains open; see `docs/hardware-shortlist.md`. Adjustable shelves, feet/plinth, mounting and Stage 3–5 tools remain deferred, without placeholder menus.
+
+Camera state and theme are presentation state; they are not cabinet intent or saved in the cabinet file. Ordinary edits preserve the camera; Fit is explicit. Native files pin the schema, evaluator, material and construction policy revisions. Native schema 4 pins evaluator `materials-4`, construction policy `construction-1`, interior policy `fixed-1`, and all stock/finish/band revisions. Schemas 1–3 upgrade as disclosed copies with unchanged finished geometry and retained construction/interior intent. Autosave writes to a v4 key and preserves previous v1/v2/v3 records. Unknown formats fail clearly and preserve the original data. Save downloads committed intent; apply a preview before backing up its changes.
 
 ## Repository
 
-This is a separate Git repository. Stage 0/1 is on `main`; the current Stage 2 increment is on local feature branch `feat/stage-2-interiors` for review. The agreed private source repository is **https://github.com/bogdan-burcea/cabinet-studio** (`origin`). Source synchronization does not deploy the app. No files in `/Users/Bogdan/Projects/cabinet-workshop` are edited or copied into the new controller.
+This is a separate Git repository. Stage 0/1 is on `main`; the current Stage 2 increment is on local feature branch `feat/stage-2-materials` for review (including the construction checkpoint). The agreed private source repository is **https://github.com/bogdan-burcea/cabinet-studio** (`origin`). Source synchronization does not deploy the app. No files in `/Users/Bogdan/Projects/cabinet-workshop` are edited or copied into the new controller.
 
 See `docs/architecture.md`, `docs/backlog.md` and `docs/reference-review.md` for boundaries and staged follow-up work.

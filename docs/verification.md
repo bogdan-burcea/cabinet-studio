@@ -54,3 +54,26 @@ An example native file and screenshots are supplied alongside the repository: `s
 ## Boundaries
 
 This completes the first Stage 2 increment, not the entire stage. Fixed shelves/dividers remain conceptual construction with unassigned joinery. The 60 mm clear-space rule and 5 mm drag grid are application policies. Adjustable supports, verified hole grids, fittings/load claims, other construction variants, materials/edge treatment and installation remain future increments. Original Stage 1 autosave data remains at the v1 key. No changes were made to the reference repository.
+
+# Stage 2 — construction and material/edge increments (v0.4.0)
+
+18 November 2026. Local branches: construction checkpoint `feat/stage-2-construction`; current combined work `feat/stage-2-materials`. No source push, hosting registration or publication for these increments.
+
+## Automated checks
+
+44 tests pass. Added construction coverage across all four top/back choices and 72 furnished dimension configurations, independent rail sizes, gap boundaries, invalid dependent edits, cancellation/history and copied migration. Added material/edge coverage for role inheritance/override, actual thickness dependencies, finish/grain identity, band/core composition without overlap, dormant variant settings, duplication/removal/Undo, strict files and pins, and 192 mixed stock/construction configurations. All existing basic-cabinet/interior regression tests remain passing.
+
+TypeScript and Vite build pass. The existing Three.js-containing chunk size advisory remains; no delivery optimization, structural verification or 30 fps benchmark is claimed.
+
+## Local browser review
+
+- Previewed independent 100/60 mm front/rear top rails and rear rails on the existing four-division/five-opening cabinet. Usable depth changed from 554 to 542 mm without rewriting positions or deleting contents.
+- A 550 mm front rail combined with a 60 mm rear rail was rejected: the committed full-panel cabinet stayed visible and Apply was disabled until corrected. Applying the corrected construction retained all interiors.
+- The preview server stopped during development. Restarted loopback Vite, verified HTTP 200, and opened a fresh visible preview tab. No deployment was used to resolve it.
+- Previewed 19 mm carcass stock: openings and rear-rail gap updated. Cancel restored 18 mm without history; applying then Undo restored the previous binding.
+- Turned off interior inheritance, selected 16 mm stock with pinned oak-concept finish and U grain, then assigned a 2 mm front band to the first shelf. One apply/Undo/Redo transaction restored stock, finish/grain and banding together.
+- Finished shelf dimensions remained 564 × 16 × 542 mm; canonical core was 564 × 16 × 540 mm. Changing the band to 0.8 mm derived 541.2 mm core depth while preserving finished dimensions.
+- Switched the top from full panel to rails after material/edge changes. The 16 mm interior override, 2 mm front band, local shelf position 400 mm, construction dimensions and all five openings remained.
+- Saved native schema 4; changed the band to 0.8 mm, then reopened the saved file and recovered the 2 mm band and associated material settings. Original older files and autosave keys remain preserved.
+
+Examples/screenshots are supplied alongside the repository. Material/finish/band catalogue records are generic concepts. Band corners are schematic, grain is stored intent, and core dimensions are not manufacturing cut sizes. Hardware, adjustable supports, feet/plinth and mounting remain unverified/deferred.

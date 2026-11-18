@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { Axis, Cabinet, Vec3 } from '../domain/cabinet';
 import type { EvaluatedCabinet } from '../geometry/evaluate';
-import type { ViewportTheme } from '../design-system/themes';
+import { finishColor, type ViewportTheme } from '../design-system/themes';
 export type ViewName = 'isometric' | 'front' | 'side' | 'top';
 export interface DimensionAnchor { axis: Axis; x: number; y: number; handleX: number; handleY: number }
 interface Callbacks {
@@ -74,12 +74,19 @@ export class CabinetViewport {
     this.clear(this.model); this.clear(this.handles); this.clear(this.dimensions);
     for (const panel of geometry.panels) {
       const isSelected = selected === panel.id;
-      const material = new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : isSelected ? theme.selected : theme.panel,
+      const material = new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : isSelected ? theme.selected : finishColor(panel.finish.id, theme),
         roughness: 0.82, metalness: 0, transparent: (cutaway && panel.constructionPart === 'back') || preview, opacity: cutaway && panel.constructionPart === 'back' ? 0.12 : preview ? 0.68 : 1 });
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(...panel.size), material);
-      mesh.position.set(...panel.center); mesh.userData.id = panel.id;
-      const edge = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color: isSelected ? theme.selected : theme.edge, transparent: true, opacity: 0.65 }));
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(...panel.coreSize), material);
+      mesh.position.set(...panel.coreCenter); mesh.userData.id = panel.id;
+      const outline = new THREE.BoxGeometry(...panel.size);
+      const edge = new THREE.LineSegments(new THREE.EdgesGeometry(outline), new THREE.LineBasicMaterial({ color: isSelected ? theme.selected : theme.edge, transparent: true, opacity: 0.65 })); outline.dispose();
+      edge.position.set(...panel.center.map((v, i) => v - panel.coreCenter[i]) as Vec3);
       mesh.add(edge); this.model.add(mesh);
+      for (const band of panel.edges.filter(edge => edge.product)) {
+        const strip = new THREE.Mesh(new THREE.BoxGeometry(...band.size), material.clone()); strip.position.set(...band.center); strip.userData.id = panel.id;
+        if (isSelected) strip.add(new THREE.LineSegments(new THREE.EdgesGeometry(strip.geometry), new THREE.LineBasicMaterial({ color: theme.handle, transparent: true, opacity: 0.9 })));
+        this.model.add(strip);
+      }
     }
     const { width: w, height: h, depth: d, origin: [ox, oy, oz] } = cabinet.envelope;
     this.grid.position.set(ox + w / 2, oy - 1, oz + d / 2);

@@ -46,3 +46,19 @@ Physical fitting verification and non-professional usability trials remain requi
 - [ ] Remaining Stage 2 work in later increments: top/rails, back/rear rails, material bindings/edge treatment, feet/plinth and verified mounting.
 
 Stage 2 remains in progress. Work is local on `feat/stage-2-interiors`; this increment does not authorize publication.
+
+## Stage 2 — increments 2 and 3: construction, material bindings and banding
+
+- [x] Full top or independent front/rear top rails; full inset back or independent upper/lower rear rails.
+- [x] Canonical construction bounds and conservative rear clearance; existing compartment IDs/positions preserved.
+- [x] Review ghost geometry/usable depth before applying; reject invalid rail combinations; Undo/Redo.
+- [x] Versioned material roles: carcass/construction rails, full back and inherited or overridden interiors.
+- [x] Actual declared stock thickness, finish identity and grain intent, with presentation colours kept in the design system.
+- [x] Per-panel, per-edge generic band pins; canonical core/strip geometry inside the finished envelope.
+- [x] Retain edge intent for inactive construction variants; duplicate/remove/Undo preserve feature identity and edge data together.
+- [x] Native schema 4 and copied migrations from schemas 1–3; preserve original autosave keys and files.
+- [x] Regression tests and browser review for combinations, dependencies, transactions and persistence.
+- [ ] User review of construction and materials/banding interactions.
+- [ ] Remaining Stage 2: exact adjustable shelf supports, feet/plinth and verified wall mounting. No unverified fittings are enabled.
+
+Current work is local on `feat/stage-2-materials`, including the `feat/stage-2-construction` checkpoint. The older increment notes above are historical; the current schema/evaluator are 4 / `materials-4`. Nothing is published.

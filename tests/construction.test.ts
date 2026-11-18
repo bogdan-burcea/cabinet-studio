@@ -71,7 +71,7 @@ test('rear rails use carcass stock and resize every existing interior depth whil
     assert.equal(d.origin[2], original.origin[2] + 12); assert.equal(d.size[2], original.size[2] - 12);
     assert.deepEqual(d.origin.slice(0, 2), original.origin.slice(0, 2)); assert.equal(d.position, original.position);
   }
-  for (const rail of e.panels.filter(p => p.constructionPart === 'back')) assert.equal(rail.materialId, c.materials.carcass.id);
+  for (const rail of e.panels.filter(p => p.constructionPart === 'back')) assert.equal(rail.materialId, c.materials.carcass.stock.id);
   assert.deepEqual(next.compartments, c.compartments); noOverlapsAndEnclosed(next, e);
 });
 
@@ -121,12 +121,12 @@ test('returning to full panels retains dormant rail settings and restores interi
   assert.deepEqual(evaluate(restored).panels, initial.panels); assert.deepEqual(evaluate(restored).openings, initial.openings);
 });
 
-test('native schema 3 round trips every construction choice including dormant dimensions and interior identities', () => {
+test('native schema 4 round trips every construction choice including dormant dimensions and interior identities', () => {
   const c = furnished();
   for (const top of ['full', 'rails'] as const) for (const back of ['full', 'rails'] as const) {
     const config = modes(c, top, back); config.top.frontDepth = 90; config.back.lowerHeight = 95;
     const next = changeConstruction(c, config), json = serialize(next), doc = JSON.parse(json);
-    assert.equal(doc.schemaVersion, 3); assert.equal(doc.evaluatorRevision, 'construction-3');
+    assert.equal(doc.schemaVersion, 4); assert.equal(doc.evaluatorRevision, 'materials-4');
     assert.deepEqual(deserialize(json), next); assert.deepEqual(evaluate(deserialize(json)), evaluate(next));
   }
 });
@@ -134,7 +134,8 @@ test('native schema 3 round trips every construction choice including dormant di
 test('Stage 1 and Stage 2 migrations add full-panel defaults as copies without changing existing geometry or tree intent', () => {
   for (const version of [1, 2]) {
     const expected = version === 1 ? createCabinet() : furnished();
-    const old = { ...expected, carcass: { construction: 'butt-full-top-inset-back', policyRevision: 'concept-1' } };
+    const { banding, ...withoutBanding } = expected;
+    const old = { ...withoutBanding, materials: { carcass: expected.materials.carcass.stock, back: expected.materials.back.stock }, carcass: { construction: 'butt-full-top-inset-back', policyRevision: 'concept-1' } };
     const encoded = JSON.stringify({ format: 'cabinet-studio', schemaVersion: version, evaluatorRevision: version === 1 ? 'carcass-1' : 'interiors-2', cabinet: old });
     const result = deserializeWithInfo(encoded);
     assert.equal(result.migrated, true); assert.deepEqual(result.cabinet, expected);
@@ -157,7 +158,7 @@ test('unknown construction modes, policy revisions, malformed parameters and rai
     (d: any) => delete d.cabinet.carcass.back,
     (d: any) => d.cabinet.compartments.featureId = `${c.id}/panel/top-rear-rail`,
     (d: any) => d.evaluatorRevision = 'construction-99',
-    (d: any) => d.schemaVersion = 4
+    (d: any) => d.schemaVersion = 5
   ];
   for (const mutate of mutations) {
     const doc = JSON.parse(serialize(c)); mutate(doc);
