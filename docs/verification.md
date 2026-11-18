@@ -109,3 +109,9 @@ Local preview returned HTTP 200. On the existing furnished cabinet (600 × 720 �
 - Reviewed the supplied fitting-reference section: six correct supplier links/article records, explicitly not applied. No browser error logs were captured. Existing concept geometry remained unchanged.
 
 Screenshots and a native example are alongside the repository. These are software-model checks. Exact GTV, Häfele and Blum assemblies are not activated; official regional drawing/companion verification and physical trials remain open. No structural capacity/performance/usability acceptance is claimed. No Stage 3 work, reference edits, source push or publication.
+
+## Interior-selection correction — 18 November 2026
+
+Reproduced an invisible opening proxy intercepting a visible shelf-surface click and selecting Opening 5. The viewport picker now treats opening planes as interaction proxies, prioritizes visible shelf/divider/support/band geometry, and retains empty-opening selection against carcass background surfaces. Opaque foreground geometry still occludes hidden shelves; transparent back construction and its band strips pass through for picking. Canonical cabinet geometry, intent, saved revisions and history are unchanged.
+
+89 tests pass (six added real Three.js raycasting regressions) and TypeScript/Vite build passes. Browser direct clicks selected Fixed shelf 1, Adjustable shelf 1, Opening 1 and Divider 1 correctly in the narrow preview. Structure selection also selected Fixed shelf 2 and restored the matching inspector/move handle. No browser error logs were captured. Local screenshot: `preview-shelf-selection-fixed.jpg` alongside the repository. No publication or source push.
