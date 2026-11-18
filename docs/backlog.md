@@ -76,3 +76,17 @@ Current work is local on `feat/stage-2-materials`, including the `feat/stage-2-c
 - [ ] Adjustable shelf fittings, verified wall mounting and user review remain open.
 
 This section supersedes earlier deferred feet/plinth and schema notes. Current branch is `feat/stage-2-installation`; schema/evaluator 5 / `installation-5`. No source push, hosting registration or publication.
+
+## Stage 2 — increment 5: concept wall layouts (v0.6.0)
+
+- [x] Independent disabled/wall-restraint/suspended layouts with pinned provisional geometry and policies.
+- [x] Wall gap, mounting centre/top/side offsets, suspended body clearance and floor-relative readouts.
+- [x] Canonical rail/bracket envelopes, stable selection identities and Rear inspection view.
+- [x] Preserve construction, interiors, material/edge intent; restraint retains active feet/plinth. Suspension stores feet/plinth settings inactive and Undo restores the complete support transaction.
+- [x] Reject unsupported support combinations and envelope conflicts; preview, Apply/Cancel, Undo/Redo.
+- [x] Native schema 6/autosave v6 with copied migrations from schemas 1–5 and original keys/files preserved.
+- [x] 67 tests, TypeScript/Vite build, local browser review of both layouts, files, themes and compact view.
+- [ ] Matched real hanger/rail, regional articles/companions, official preparation drawings and fixtures, wall substrate/anchors and physical/structural verification. No installable suspension pack is enabled.
+- [ ] Verified feet/clips, adjustable shelf support fittings and user acceptance remain open.
+
+This section supersedes earlier deferred mounting and current-version notes. Stage 2 remains in progress. Current local branch `feat/stage-2-wall-mounting`; schema/evaluator 6 / `mounting-6`. No source push, hosting registration or publication.

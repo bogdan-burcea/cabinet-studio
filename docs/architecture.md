@@ -12,7 +12,7 @@ Intent + pinned stock/finish/band records + construction policies → validation
 - `viewport/`: replaceable Three.js adapter, picking, projected constrained handles and camera. Renders canonical cores/strips, finished outlines, ghost previews and legal position guides. Ordinary edits preserve camera. All direct operations have numeric, keyboard or button alternatives.
 - `ui/`: separate construction/material/interior inspectors and element list. One preview owner at a time; starting another feature's edit cancels the previous unapplied draft. Roles and inheritance are explicit. The UI consumes evaluated dimensions, not independent construction calculations.
 - `design-system/`: semantic tokens, shared control styling, icon adapter, Graphite/Linen themes and finish presentation palette. Finish IDs are cabinet data; their rendered colours are presentation. Theme changes cannot change product identities or dimensions.
-- `persistence/`: strict native schema 5 / evaluator `installation-5`, tree complexity/identity validation, revision checks and copied migrations from schemas 1–4. Browser autosave v5 preserves older keys. A corrupt newest record never silently falls back to an older one.
+- `persistence/`: strict native schema 6 / evaluator `mounting-6`, tree complexity/identity validation, revision checks and copied migrations from schemas 1–5. Browser autosave v6 preserves older keys. A corrupt newest record never silently falls back to an older one.
 
 Evaluation remains small and synchronous. Future asynchronous work must carry revision IDs and reject stale results. Native-file reading already checks the command revision before installing its result.
 
@@ -42,7 +42,7 @@ Removing a leaf division explicitly removes its own edge intent; Undo restores t
 
 Schema 1 (`carcass-1`) and schema 2 (`interiors-2`) gain full-top/full-back defaults as copies. Schema 3 (`construction-3`) retains exact top/back settings. All gain unspecified finishes, no specified grain, inherited interiors and no bands, preserving existing stock pins and finished geometry. Original files and browser keys remain untouched; migration is disclosed. Unknown future schemas/revisions never substitute products or reset to defaults.
 
-No nesting, CAM/export, production documents, labels, costs, project/room layout, legacy Cabinet Workshop importer or placeholder services. No hosting manifest, site registration or automatic deployment. Development remains local, on `feat/stage-2-installation`; publication requires explicit user instruction.
+No nesting, CAM/export, production documents, labels, costs, project/room layout, legacy Cabinet Workshop importer or placeholder services. No hosting manifest, site registration or automatic deployment. Development remains local, on `feat/stage-2-wall-mounting`; publication requires explicit user instruction.
 
 ## Installation policy `support-1`
 
@@ -51,3 +51,11 @@ No nesting, CAM/export, production documents, labels, costs, project/room layout
 The body origin and every existing body/interior panel remain fixed. Feet extend below the body; floor Y is body-origin Y minus foot height. Four semantic foot IDs each own plate/post/base primitives. Front/rear rows and left/right columns must have disjoint 60 mm envelopes. Front/side plinth covers retain at least 5 mm from foot envelopes. Front cover spans the width; returns stop at its inner face. Foot height is 70–200 mm; gaps 0–20 mm; cover height is derived. These are concept policies, not verified hardware assembly or structural rules. No clips or drilling are invented.
 
 Plinth material inherits carcass stock/finish/grain unless overridden. Its panels pass through the existing band/core evaluator, preserving dormant edge intent. Unassigned/direct-floor modes retain settings but produce no feet or covers. Schema 5 copy migrations add default unassigned installation to schemas 1–4, preserving all prior materials, banding, tree and construction settings; previous files/keys remain untouched.
+
+## Mounting policy `mounting-1`
+
+`domain/Installation.mounting` retains independent none/restraint/suspended intent, exact concept geometry pin, wall gap, centre from top, shared side setbacks and floor clearance. `catalogue/mounting.ts` declares application geometry without purchased articles. `rules/mounting.ts` produces one wall rail and two bracket envelopes, semantic IDs, wall Z, mounting height and fit errors. It does not alter construction bounds, reserve interior space, cut a back or claim a cabinet attachment. All geometry is behind the body rear; the bracket/rail volumes meet at a face without overlap. UI and renderer consume this result; colours remain design-system tokens. A Rear perspective is presentation state.
+
+`commands/mounting.ts` releases floor support to unassigned when suspension is reviewed/applied, retaining feet/plinth and all material/band settings. Wall restraint requires active floor/feet; suspension rejects active floor/feet. Support mode edits also use this shared validation. Suspended floor Y is body-origin Y minus body clearance, while body geometry stays fixed. Installed height means body top above that floor, not the body alone. Ordinary edits preserve camera; explicit Fit includes the floor clearance and wall gap.
+
+Mounting is a provisional spatial concept with no verified hanger/rail pair, cabinet preparation, wall anchors, fasteners, structural capacity or physical trial. It is not an enabled fitting pack; `hardware` remains empty. No real-product deductions are invented. Schema 6 copies schema 5 installation unchanged and adds disabled mounting. Schemas 1–4 retain their previous migration behavior plus disabled mounting. Original files and browser keys remain untouched.

@@ -2,16 +2,18 @@ import type { Cabinet, PanelRole, MaterialRole, Vec3 } from '../domain/cabinet';
 import { stock } from '../catalogue/materials';
 import { validate, type Issue } from '../rules/validate';
 import { panelMaterials } from './banding';
+import { resolveMounting } from '../rules/mounting';
 import { resolveInstallation } from '../rules/installation';
 import { resolveConstruction } from '../rules/construction';
 import { resolveInteriors, type Division, type Opening } from '../rules/interiors';
-export const EVALUATOR_REVISION = 'installation-5';
+export const EVALUATOR_REVISION = 'mounting-6';
 export interface Panel extends ReturnType<typeof panelMaterials> {
   id: string; role: PanelRole; label: string; size: Vec3; center: Vec3; materialRole: MaterialRole;
   provenance: string; orientation: 'yz' | 'xz' | 'xy'; constructionPart?: 'top' | 'back'; installationPart?: 'plinth';
 }
 export interface EvaluatedCabinet {
   revision: typeof EVALUATOR_REVISION; cabinetId: string; panels: Panel[]; opening: Opening; openings: Opening[]; divisions: Division[];
+  mounting: ReturnType<typeof resolveMounting>;
   installation: ReturnType<typeof resolveInstallation>;
   construction: { rearSetback: number; topGap: number; backGap: number }; issues: Issue[];
 }
@@ -36,6 +38,6 @@ export function evaluate(c: Cabinet): EvaluatedCabinet {
   const installation = resolveInstallation(c);
   basePanels.push(...installation.panels.map(panel => ({ ...panel, materialRole: 'plinth' as const, installationPart: 'plinth' as const, provenance: `${c.id}/installation/support-1` })));
   const panels: Panel[] = basePanels.map(panel => ({ ...panel, ...panelMaterials(c, panel) }));
-  return { revision: EVALUATOR_REVISION, cabinetId: c.id, issues, installation, panels, opening: interiors.root, openings: interiors.openings, divisions: interiors.divisions,
+  return { revision: EVALUATOR_REVISION, cabinetId: c.id, issues, installation, mounting: resolveMounting(c), panels, opening: interiors.root, openings: interiors.openings, divisions: interiors.divisions,
     construction: { rearSetback: construction.rearSetback, topGap: construction.topGap, backGap: construction.backGap } };
 }

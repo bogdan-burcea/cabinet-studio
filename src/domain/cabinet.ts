@@ -21,13 +21,21 @@ export interface MaterialBinding { stock: ProductPin; finish: ProductPin; grain:
 export type MaterialBindings = { carcass: MaterialBinding; back: MaterialBinding; interior: MaterialBinding | null };
 export type EdgeBanding = Record<string, Partial<Record<EdgeKey, ProductPin>>>;
 export function defaultBinding(stock: ProductPin): MaterialBinding { return { stock, finish: { id: 'unspecified', revision: '1' }, grain: 'none' }; }
+export interface Mounting {
+  mode: 'none' | 'restraint-concept' | 'suspended-concept'; policyRevision: 'mounting-1'; geometry: ProductPin;
+  wallGap: number; topOffset: number; sideInset: number; floorClearance: number;
+}
+export function defaultMounting(): Mounting {
+  return { mode: 'none', policyRevision: 'mounting-1', geometry: { id: 'concept-wall-layout', revision: '1' }, wallGap: 30, topOffset: 60, sideInset: 60, floorClearance: 300 };
+}
 export interface Installation {
   type: 'unassigned' | 'floor' | 'feet-concept'; policyRevision: 'support-1';
+  mounting: Mounting;
   feet: { geometry: ProductPin; height: number; sideInset: number; frontInset: number; rearInset: number };
   plinth: { enabled: boolean; leftReturn: boolean; rightReturn: boolean; frontSetback: number; topGap: number; bottomGap: number; material: MaterialBinding | null };
 }
 export function defaultInstallation(): Installation {
-  return { type: 'unassigned', policyRevision: 'support-1', feet: { geometry: { id: 'concept-foot-60', revision: '1' }, height: 100, sideInset: 60, frontInset: 120, rearInset: 60 },
+  return { type: 'unassigned', policyRevision: 'support-1', mounting: defaultMounting(), feet: { geometry: { id: 'concept-foot-60', revision: '1' }, height: 100, sideInset: 60, frontInset: 120, rearInset: 60 },
     plinth: { enabled: false, leftReturn: false, rightReturn: false, frontSetback: 60, topGap: 5, bottomGap: 0, material: null } };
 }
 export interface Cabinet {

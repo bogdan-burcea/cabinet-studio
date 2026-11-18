@@ -1,6 +1,7 @@
 import type { Axis, Cabinet } from '../domain/cabinet';
 import { stock, binding, finish, edgeProduct } from '../catalogue/materials';
 import { resolveInteriors } from './interiors';
+import { resolveMounting } from './mounting';
 import { resolveInstallation } from './installation';
 import { resolveConstruction } from './construction';
 export interface Issue { code: string; featureId: string; message: string; severity: 'error' | 'notice' }
@@ -39,6 +40,8 @@ export function validate(c: Cabinet): Issue[] {
     if (!issues.length) issues.push(...resolveInteriors(c, t, b, stock(c, 'interior').thickness).issues);
   }
   if (!issues.some(issue => issue.severity === 'error')) issues.push(...resolveInstallation(c).issues);
+  if (!issues.some(issue => issue.severity === 'error')) issues.push(...resolveMounting(c).issues);
+  if (c.installation.mounting.mode !== 'none' && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-mounting', featureId: `${c.id}/installation/mounting`, severity: 'notice', message: 'Concept wall layout only: no verified hanger/rail assembly, preparation, anchors or cabinet/wall load capacity.' });
   if (c.installation.type === 'feet-concept' && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-support', featureId: `${c.id}/installation/feet`, severity: 'notice', message: 'Concept feet only: no verified foot/clip assembly, drilling or load capacity.' });
   return issues;
 }

@@ -21,8 +21,9 @@ export function resolveInstallation(c: Cabinet) {
   for (const key of ['sideInset', 'frontInset', 'rearInset'] as const) if (!validNumber(intent.feet[key], supportLimits.inset.min, supportLimits.inset.max)) fail('feet', 'Foot centre setbacks must be 30–600 mm, in 0.1 mm steps.');
   if (!validNumber(intent.plinth.frontSetback, 0, 150)) fail('plinth', 'Plinth front setback must be 0–150 mm, in 0.1 mm steps.');
   for (const key of ['topGap', 'bottomGap'] as const) if (!validNumber(intent.plinth[key], 0, 20)) fail('plinth', 'Plinth top/floor gaps must be 0–20 mm, in 0.1 mm steps.');
-  const supportHeight = intent.type === 'feet-concept' ? intent.feet.height : 0;
-  const floorY = oy - supportHeight, installedHeight = intent.type === 'unassigned' ? null : h + supportHeight;
+  const suspended = intent.mounting.mode === 'suspended-concept';
+  const supportHeight = suspended ? intent.mounting.floorClearance : intent.type === 'feet-concept' ? intent.feet.height : 0;
+  const floorY = oy - supportHeight, installedHeight = intent.type === 'unassigned' && !suspended ? null : h + supportHeight;
   const plinthHeight = supportHeight - intent.plinth.topGap - intent.plinth.bottomGap;
   const thickness = stock(c, 'plinth').thickness;
   if (intent.type === 'feet-concept' && profile && !issues.length) {

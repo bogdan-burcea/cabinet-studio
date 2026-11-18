@@ -136,10 +136,10 @@ test('switching support modes or disabling returns retains dormant plinth materi
   assert.deepEqual(evaluate(restored), evaluate(next));
 });
 
-test('schema 5 round trip pins support geometry, plinth binding and every existing cabinet feature', () => {
+test('schema 6 round trip pins support geometry, plinth binding and every existing cabinet feature', () => {
   const c = furnished(); let next = changeInstallation(c, feet(c, true));
   next = setBanding(next, `${c.id}/panel/plinth-front`, 'u-max', pin('generic-edge-0.8'));
-  const json = serialize(next); assert.equal(JSON.parse(json).schemaVersion, 5); assert.equal(JSON.parse(json).evaluatorRevision, 'installation-5');
+  const json = serialize(next); assert.equal(JSON.parse(json).schemaVersion, 6); assert.equal(JSON.parse(json).evaluatorRevision, 'mounting-6');
   assert.deepEqual(deserialize(json), next); assert.deepEqual(evaluate(deserialize(json)), evaluate(next));
 });
 
@@ -164,7 +164,7 @@ test('unknown installation revisions, actual hardware packs, invalid bindings an
     (d: any) => d.cabinet.compartments.featureId = `${c.id}/installation/foot/front-left`,
     (d: any) => d.cabinet.installation.plinth.leftReturn = 'true',
     (d: any) => d.cabinet.hardware.push(pin('unverified-foot')),
-    (d: any) => d.schemaVersion = 6
+    (d: any) => d.schemaVersion = 7
   ];
   for (const mutate of mutations) { const doc = JSON.parse(serialize(c)); mutate(doc); assert.throws(() => store.commit(deserialize(JSON.stringify(doc)))); assert.deepEqual(store.getSnapshot().committed, c); }
 });

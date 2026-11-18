@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { Axis, Cabinet, Vec3 } from '../domain/cabinet';
 import type { EvaluatedCabinet } from '../geometry/evaluate';
 import { finishColor, type ViewportTheme } from '../design-system/themes';
-export type ViewName = 'isometric' | 'front' | 'side' | 'top';
+export type ViewName = 'isometric' | 'front' | 'side' | 'top' | 'rear';
 export interface DimensionAnchor { axis: Axis; x: number; y: number; handleX: number; handleY: number }
 interface Callbacks {
   select(id: string): void; dragStart(): void; preview(axis: Axis, value: number): void; commit(): void; cancel(): void;
@@ -93,6 +93,12 @@ export class CabinetViewport {
       const shape = part.kind === 'plate' ? new THREE.BoxGeometry(...part.size) : new THREE.CylinderGeometry(part.size[0] / 2, part.size[0] / 2, part.size[1], 24);
       const mesh = new THREE.Mesh(shape, new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : selected === foot.id ? theme.selected : theme.support, roughness: 0.65, metalness: 0.1, transparent: preview, opacity: preview ? 0.65 : 1 }));
       mesh.position.set(...part.center); mesh.userData.id = foot.id; this.model.add(mesh);
+    }
+    for (const part of geometry.mounting.parts) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(...part.size), new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : selected === part.id ? theme.selected : theme.mounting, roughness: 0.6, metalness: 0.2, transparent: preview, opacity: preview ? 0.65 : 1 }));
+      mesh.position.set(...part.center); mesh.userData.id = part.id;
+      mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color: theme.edge })));
+      this.model.add(mesh);
     }
     const { width: w, height: h, depth: d, origin: [ox, oy, oz] } = cabinet.envelope;
     this.grid.position.set(ox + w / 2, geometry.installation.floorY - 1, oz + d / 2);
@@ -200,12 +206,12 @@ export class CabinetViewport {
   private center() { const { width, height, depth, origin } = this.cabinet.envelope; return new THREE.Vector3(origin[0] + width / 2, origin[1] + (height - this.geometry.installation.supportHeight) / 2, origin[2] + depth / 2); }
   view(name: ViewName) {
     if (!this.cabinet) return;
-    const directions: Record<ViewName, Vec3> = { isometric: [1.25, 0.8, 1.8], front: [0, 0, 1], side: [1, 0, 0], top: [0, 1, 0.001] };
+    const directions: Record<ViewName, Vec3> = { isometric: [1.25, 0.8, 1.8], front: [0, 0, 1], side: [1, 0, 0], rear: [-1.25, 0.6, -1.8], top: [0, 1, 0.001] };
     this.controls.target.copy(this.center()); this.camera.position.copy(this.center()).add(new THREE.Vector3(...directions[name]).normalize().multiplyScalar(this.distance())); this.controls.update();
   }
   private distance() {
     const { width, height, depth } = this.cabinet.envelope;
-    const radius = Math.sqrt((width + 260) ** 2 + (height + this.geometry.installation.supportHeight + 220) ** 2 + (depth + 180) ** 2) / 2;
+    const radius = Math.sqrt((width + 260) ** 2 + (height + this.geometry.installation.supportHeight + 220) ** 2 + (depth + (this.geometry.mounting.wallZ === null ? 0 : this.cabinet.installation.mounting.wallGap) + 180) ** 2) / 2;
     const angle = Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * Math.min(1, this.camera.aspect));
     return radius / Math.sin(angle) * 1.08;
   }
