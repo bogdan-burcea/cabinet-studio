@@ -94,6 +94,10 @@ export class CabinetViewport {
       const mesh = new THREE.Mesh(shape, new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : selected === foot.id ? theme.selected : theme.support, roughness: 0.65, metalness: 0.1, transparent: preview, opacity: preview ? 0.65 : 1 }));
       mesh.position.set(...part.center); mesh.userData.id = foot.id; this.model.add(mesh);
     }
+    for (const pad of geometry.adjustable.supports) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(...pad.size), new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : selected === pad.ownerId ? theme.selected : theme.support, roughness: 0.6, transparent: preview, opacity: preview ? 0.65 : 1 }));
+      mesh.position.set(...pad.center); mesh.userData.id = pad.ownerId; this.model.add(mesh);
+    }
     for (const part of geometry.mounting.parts) {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(...part.size), new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : selected === part.id ? theme.selected : theme.mounting, roughness: 0.6, metalness: 0.2, transparent: preview, opacity: preview ? 0.65 : 1 }));
       mesh.position.set(...part.center); mesh.userData.id = part.id;
@@ -107,10 +111,10 @@ export class CabinetViewport {
       opening.position.set(space.origin[0] + space.size[0] / 2, space.origin[1] + space.size[1] / 2, space.origin[2] + space.size[2] - 1);
       opening.userData.id = space.id; this.model.add(opening);
     }
-    const activeDivision = geometry.divisions.find(d => d.id === selected);
+    const activeDivision = [...geometry.divisions, ...geometry.adjustable.shelves].find(d => d.id === selected);
     if (activeDivision) {
       const axis = activeDivision.axis === 'horizontal' ? 1 : 0, cross = 1 - axis;
-      for (const position of [activeDivision.min, (activeDivision.min + activeDivision.max) / 2, activeDivision.max]) {
+      for (const position of ('legalPositions' in activeDivision ? activeDivision.legalPositions as number[] : [activeDivision.min, (activeDivision.min + activeDivision.max) / 2, activeDivision.max])) {
         const start = new THREE.Vector3(...activeDivision.origin), end = start.clone();
         start.setComponent(axis, activeDivision.origin[axis] + activeDivision.size[axis] / 2 + position - activeDivision.position);
         start.z += activeDivision.size[2] + 2; end.copy(start); end.setComponent(cross, start.getComponent(cross) + activeDivision.size[cross]);
@@ -140,7 +144,7 @@ export class CabinetViewport {
     if (!this.cabinet) return;
     const { width: w, height: h, depth: d, origin: [x, y, z] } = this.cabinet.envelope;
     const positions: [Axis, Vec3][] = [['width', [w / 2, -80, d + 45]], ['height', [-85, h / 2, d + 45]], ['depth', [w + 85, -40, d / 2]]];
-    const division = this.geometry.divisions.find(d => d.id === this.selected);
+    const division = [...this.geometry.divisions, ...this.geometry.adjustable.shelves].find(d => d.id === this.selected);
     this.callbacks.divisionAnchor(division ? this.project(new THREE.Vector3(division.origin[0] + division.size[0] / 2, division.origin[1] + division.size[1] / 2, division.origin[2] + division.size[2] + 12)) : null);
     this.callbacks.anchors(positions.map(([axis, p]) => {
       const handle = this.handles.children.find(h => h.userData.axis === axis)!;
@@ -172,7 +176,7 @@ export class CabinetViewport {
   }
   startDivisionDrag(event: PointerEvent) {
     if (event.button !== 0) return;
-    const division = this.geometry.divisions.find(d => d.id === this.selected); if (!division) return;
+    const division = [...this.geometry.divisions, ...this.geometry.adjustable.shelves].find(d => d.id === this.selected); if (!division) return;
     const axis = division.axis === 'horizontal' ? 'height' : 'width';
     this.startDrag(axis, event, new THREE.Vector3(division.origin[0] + division.size[0] / 2, division.origin[1] + division.size[1] / 2, division.origin[2] + division.size[2] + 12));
     this.drag!.initial = division.position; this.drag!.featureId = division.id; this.drag!.centre = (division.min + division.max) / 2;
@@ -183,7 +187,7 @@ export class CabinetViewport {
       if (denominator < 0.002) return;
       const delta = ((event.clientX - x) * px + (event.clientY - y) * py) / denominator;
       if (featureId) {
-        const value = Math.abs(initial + delta - centre!) < 5 ? centre! : Math.round((initial + delta) / 5) * 5;
+        const value = this.cabinet.contents.some(s => s.id === featureId) ? initial + delta : Math.abs(initial + delta - centre!) < 5 ? centre! : Math.round((initial + delta) / 5) * 5;
         this.callbacks.previewDivision(featureId, Math.round(value * 10) / 10);
       } else this.callbacks.preview(axis, Math.round(initial + delta));
     } else this.renderer.domElement.style.cursor = this.hits(event, this.handles.children).length ? 'ew-resize' : 'grab';

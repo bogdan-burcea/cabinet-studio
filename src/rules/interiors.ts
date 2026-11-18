@@ -23,7 +23,7 @@ export function resolveInteriors(c: Cabinet, thickness: number, back: number, di
     const origin = [...bounds.origin] as Vec3, size = [...bounds.size] as Vec3;
     origin[axis] += before; size[axis] = divisionThickness;
     divisions.push({ id: node.featureId, nodeId: node.id, axis: node.axis, label, position: node.position,
-      origin, size, min, max, before, after, canRemove: node.children.every(child => child.kind === 'opening') });
+      origin, size, min, max, before, after, canRemove: node.children.every(child => child.kind === 'opening' && !c.contents.some(shelf => shelf.openingId === child.id)) });
     const lowSize = [...bounds.size] as Vec3; lowSize[axis] = before;
     const highSize = [...bounds.size] as Vec3; highSize[axis] = after;
     const highOrigin = [...bounds.origin] as Vec3; highOrigin[axis] += node.position + divisionThickness / 2;

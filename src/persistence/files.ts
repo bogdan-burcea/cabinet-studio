@@ -1,11 +1,11 @@
 import { defaultBinding, defaultCarcass, defaultInstallation, defaultMounting, type Cabinet, type Compartment } from '../domain/cabinet';
 import { evaluate, EVALUATOR_REVISION } from '../geometry/evaluate';
-export const AUTOSAVE_KEY = 'cabinet-studio.autosave.v6';
+export const AUTOSAVE_KEY = 'cabinet-studio.autosave.v7';
 export const LEGACY_AUTOSAVE_KEY = 'cabinet-studio.autosave.v1';
-export const PREVIOUS_AUTOSAVE_KEYS = ['cabinet-studio.autosave.v5', 'cabinet-studio.autosave.v4', 'cabinet-studio.autosave.v3', 'cabinet-studio.autosave.v2', 'cabinet-studio.autosave.v1'] as const;
+export const PREVIOUS_AUTOSAVE_KEYS = ['cabinet-studio.autosave.v6', 'cabinet-studio.autosave.v5', 'cabinet-studio.autosave.v4', 'cabinet-studio.autosave.v3', 'cabinet-studio.autosave.v2', 'cabinet-studio.autosave.v1'] as const;
 export function serialize(cabinet: Cabinet): string {
   evaluate(cabinet);
-  return JSON.stringify({ format: 'cabinet-studio', schemaVersion: 6, evaluatorRevision: EVALUATOR_REVISION, cabinet }, null, 2);
+  return JSON.stringify({ format: 'cabinet-studio', schemaVersion: 7, evaluatorRevision: EVALUATOR_REVISION, cabinet }, null, 2);
 }
 function object(value: unknown): value is Record<string, any> { return !!value && typeof value === 'object' && !Array.isArray(value); }
 function exact(value: unknown, keys: string[]) { return object(value) && Object.keys(value).length === keys.length && keys.every(k => k in value); }
@@ -21,6 +21,16 @@ function validTree(value: any, reserved: Set<string>, stage1: boolean, depth = 0
   reserved.add(value.featureId);
   return value.children.every((child: unknown) => validTree(child, reserved, stage1, depth + 1, count));
 }
+function reservedIdentities(cabinetId: string): string[] { return [cabinetId, ...['left', 'right', 'top', 'bottom', 'back', 'top-front-rail', 'top-rear-rail', 'back-upper-rail', 'back-lower-rail', 'plinth-front', 'plinth-left', 'plinth-right'].map(role => `${cabinetId}/panel/${role}`), `${cabinetId}/construction/top`, `${cabinetId}/construction/back`, `${cabinetId}/installation/feet`, `${cabinetId}/installation/plinth`, ...['', '/rail', '/left', '/right'].map(suffix => `${cabinetId}/installation/mounting${suffix}`), ...['front-left', 'front-right', 'rear-left', 'rear-right'].flatMap(name => ['', '/plate', '/post', '/base'].map(suffix => `${cabinetId}/installation/foot/${name}${suffix}`))]; }
+function contentIdentities(contents: any, cabinetId: string): string[] {
+  if (!Array.isArray(contents) || contents.length > 63) throw new Error('Invalid adjustable shelf contents.');
+  const ids = new Set<string>(), reserved = new Set(reservedIdentities(cabinetId));
+  for (const shelf of contents) {
+    if (!exact(shelf, ['id','kind','openingId','level','frontSetback','policyRevision','support']) || !identity(shelf.id) || reserved.has(shelf.id) || !identity(shelf.openingId) || shelf.kind !== 'adjustable-shelf' || shelf.policyRevision !== 'adjustable-1' || !Number.isInteger(shelf.level) || typeof shelf.frontSetback !== 'number' || !pin(shelf.support)) throw new Error('Invalid adjustable shelf data.');
+    for (const id of [shelf.id, ...['front-left','front-right','rear-left','rear-right'].map(side => `${shelf.id}/support/${side}`)]) { if (ids.has(id) || reserved.has(id)) throw new Error('Duplicate shelf/support identity.'); ids.add(id); }
+  }
+  return [...ids];
+}
 function validCarcass(value: any): boolean {
   return exact(value, ['construction', 'policyRevision', 'top', 'back']) && value.construction === 'rectangular-butt' && value.policyRevision === 'construction-1' &&
     exact(value.top, ['mode', 'frontDepth', 'rearDepth']) && ['full', 'rails'].includes(value.top.mode) &&
@@ -29,7 +39,7 @@ function validCarcass(value: any): boolean {
 }
 function validBinding(value: any): boolean { return exact(value, ['stock', 'finish', 'grain']) && pin(value.stock) && pin(value.finish) && ['none', 'u', 'v'].includes(value.grain); }
 function validBanding(value: any): boolean {
-  return object(value) && Object.keys(value).length <= 75 && Object.entries(value).every(([id, edges]) => identity(id) && object(edges) && Object.keys(edges).length > 0 && Object.entries(edges).every(([key, product]) => ['u-min', 'u-max', 'v-min', 'v-max'].includes(key) && pin(product)));
+  return object(value) && Object.keys(value).length <= 138 && Object.entries(value).every(([id, edges]) => identity(id) && object(edges) && Object.keys(edges).length > 0 && Object.entries(edges).every(([key, product]) => ['u-min', 'u-max', 'v-min', 'v-max'].includes(key) && pin(product)));
 }
 function validMounting(value: any): boolean {
   return exact(value, ['mode', 'policyRevision', 'geometry', 'wallGap', 'topOffset', 'sideInset', 'floorClearance']) &&
@@ -47,16 +57,17 @@ function validInstallation(value: any, previous = false): boolean {
 }
 export function deserializeWithInfo(text: string): { cabinet: Cabinet; migrated: boolean } {
   const doc = JSON.parse(text);
-  const revisions: Record<number, string> = { 1: 'carcass-1', 2: 'interiors-2', 3: 'construction-3', 4: 'materials-4', 5: 'installation-5', 6: EVALUATOR_REVISION };
+  const revisions: Record<number, string> = { 1: 'carcass-1', 2: 'interiors-2', 3: 'construction-3', 4: 'materials-4', 5: 'installation-5', 6: 'mounting-6', 7: EVALUATOR_REVISION };
   if (!object(doc) || doc.format !== 'cabinet-studio' || !Number.isInteger(doc.schemaVersion) || !Object.hasOwn(revisions, doc.schemaVersion) || doc.evaluatorRevision !== revisions[doc.schemaVersion])
     throw new Error('Unsupported cabinet format or revision. Your current cabinet and original file are unchanged.');
   const legacy = doc.schemaVersion < 4, oldConstruction = doc.schemaVersion < 3, c = doc.cabinet;
+  const contentIds = doc.schemaVersion >= 7 ? contentIdentities(c?.contents, c?.id) : [];
   const keys = ['id', 'name', 'envelope', 'carcass', 'compartments', 'contents', 'fronts', 'installation', 'materials', 'hardware', ...legacy ? [] : ['banding']];
   if (!exact(c, keys) || !identity(c.id) || typeof c.name !== 'string' || c.name.length > 100 || !exact(c.envelope, ['width', 'height', 'depth', 'origin']) ||
     !Array.isArray(c.envelope.origin) || c.envelope.origin.length !== 3 || !c.envelope.origin.every((n: unknown) => typeof n === 'number' && Number.isFinite(n)) ||
     !(oldConstruction ? exact(c.carcass, ['construction', 'policyRevision']) && c.carcass.construction === 'butt-full-top-inset-back' && c.carcass.policyRevision === 'concept-1' : validCarcass(c.carcass)) ||
-    !validTree(c.compartments, new Set([c.id, ...['left', 'right', 'top', 'bottom', 'back', 'top-front-rail', 'top-rear-rail', 'back-upper-rail', 'back-lower-rail', 'plinth-front', 'plinth-left', 'plinth-right'].map(role => `${c.id}/panel/${role}`), `${c.id}/construction/top`, `${c.id}/construction/back`, `${c.id}/installation/feet`, `${c.id}/installation/plinth`, ...['', '/rail', '/left', '/right'].map(suffix => `${c.id}/installation/mounting${suffix}`), ...['front-left', 'front-right', 'rear-left', 'rear-right'].flatMap(name => ['', '/plate', '/post', '/base'].map(suffix => `${c.id}/installation/foot/${name}${suffix}`))]), doc.schemaVersion === 1) ||
-    !Array.isArray(c.contents) || c.contents.length || !Array.isArray(c.fronts) || c.fronts.length || !(doc.schemaVersion < 5 ? exact(c.installation, ['type']) && c.installation.type === 'unassigned' : validInstallation(c.installation, doc.schemaVersion === 5)) ||
+    !validTree(c.compartments, new Set([...reservedIdentities(c.id), ...contentIds]), doc.schemaVersion === 1) ||
+    !Array.isArray(c.contents) || (doc.schemaVersion < 7 && c.contents.length > 0) || !Array.isArray(c.fronts) || c.fronts.length || !(doc.schemaVersion < 5 ? exact(c.installation, ['type']) && c.installation.type === 'unassigned' : validInstallation(c.installation, doc.schemaVersion === 5)) ||
     !(legacy ? exact(c.materials, ['carcass', 'back']) && pin(c.materials.carcass) && pin(c.materials.back) && c.materials.carcass.id === 'generic-panel-18' && c.materials.back.id === 'generic-back-6' :
       exact(c.materials, ['carcass', 'back', 'interior']) && validBinding(c.materials.carcass) && validBinding(c.materials.back) && (c.materials.interior === null || validBinding(c.materials.interior)) && validBanding(c.banding)) ||
     !Array.isArray(c.hardware) || c.hardware.length)
@@ -67,7 +78,7 @@ export function deserializeWithInfo(text: string): { cabinet: Cabinet; migrated:
   if (oldConstruction) result.carcass = defaultCarcass();
   if (legacy) { result.materials = { carcass: defaultBinding(c.materials.carcass), back: defaultBinding(c.materials.back), interior: null }; result.banding = {}; }
   evaluate(result);
-  return { cabinet: result, migrated: doc.schemaVersion < 6 };
+  return { cabinet: result, migrated: doc.schemaVersion < 7 };
 }
 export function deserialize(text: string): Cabinet { return deserializeWithInfo(text).cabinet; }
 export function downloadCabinet(cabinet: Cabinet) {

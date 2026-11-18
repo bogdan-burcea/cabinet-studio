@@ -13,7 +13,7 @@ export function Viewport(props: Props) {
   latest.current = props;
   const labels = useRef<Partial<Record<Axis, HTMLButtonElement | null>>>({});
   const divisionHandle = useRef<HTMLButtonElement>(null);
-  const division = props.evaluated.divisions.find(d => d.id === props.selection);
+  const division = [...props.evaluated.divisions, ...props.evaluated.adjustable.shelves].find(d => d.id === props.selection);
   const handles = useRef<Partial<Record<Axis, HTMLButtonElement | null>>>({});
   const [error, setError] = useState(''), [view, setView] = useState<ViewName>('isometric');
   useLayoutEffect(() => {

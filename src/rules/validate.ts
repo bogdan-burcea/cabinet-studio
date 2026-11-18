@@ -1,6 +1,7 @@
 import type { Axis, Cabinet } from '../domain/cabinet';
 import { stock, binding, finish, edgeProduct } from '../catalogue/materials';
 import { resolveInteriors } from './interiors';
+import { resolveAdjustable } from './adjustable';
 import { resolveMounting } from './mounting';
 import { resolveInstallation } from './installation';
 import { resolveConstruction } from './construction';
@@ -23,6 +24,7 @@ export function validate(c: Cabinet): Issue[] {
       if (record.kind !== (role === 'back' ? 'back' : 'panel')) throw new Error(`Select ${role === 'back' ? 'back-panel' : 'carcass-panel'} stock for the ${role} role.`);
     }
     const ids = new Set(['left', 'right', 'bottom', 'top', 'back', 'top-front-rail', 'top-rear-rail', 'back-upper-rail', 'back-lower-rail', 'plinth-front', 'plinth-left', 'plinth-right'].map(role => `${c.id}/panel/${role}`));
+    c.contents.forEach(shelf => ids.add(shelf.id));
     const collect = (node: Cabinet['compartments']) => { if (node.kind === 'split') { ids.add(node.featureId); node.children.forEach(collect); } }; collect(c.compartments);
     for (const [id, edges] of Object.entries(c.banding)) {
       if (!ids.has(id)) throw new Error('Edge banding refers to an unavailable panel. The previous cabinet is preserved.');
@@ -39,8 +41,11 @@ export function validate(c: Cabinet): Issue[] {
     issues.push(...resolveConstruction(c, t, b).issues);
     if (!issues.length) issues.push(...resolveInteriors(c, t, b, stock(c, 'interior').thickness).issues);
   }
+  if (!issues.some(issue => issue.severity === 'error')) issues.push(...resolveAdjustable(c, resolveInteriors(c, stock(c,'carcass').thickness, stock(c,'back').thickness, stock(c,'interior').thickness).openings).issues);
+  if (c.contents.length > 63) issues.push({ code: 'contents-complexity', featureId: c.id, severity: 'error', message: 'At most 63 adjustable shelves are supported.' });
   if (!issues.some(issue => issue.severity === 'error')) issues.push(...resolveInstallation(c).issues);
   if (!issues.some(issue => issue.severity === 'error')) issues.push(...resolveMounting(c).issues);
+  if (c.contents.length && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-adjustable', featureId: c.contents[0].id, severity: 'notice', message: 'Adjustable shelves use concept support levels and pads; no verified shelf fitting, bores or load capacity.' });
   if (c.installation.mounting.mode !== 'none' && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-mounting', featureId: `${c.id}/installation/mounting`, severity: 'notice', message: 'Concept wall layout only: no verified hanger/rail assembly, preparation, anchors or cabinet/wall load capacity.' });
   if (c.installation.type === 'feet-concept' && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-support', featureId: `${c.id}/installation/feet`, severity: 'notice', message: 'Concept feet only: no verified foot/clip assembly, drilling or load capacity.' });
   return issues;

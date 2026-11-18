@@ -36,7 +36,7 @@ export function duplicateDivision(c: Cabinet, featureId: string) {
 export function removeDivision(c: Cabinet, featureId: string): Cabinet {
   const division = findDivision(c.compartments, featureId);
   if (!division) throw new Error('This division no longer exists.');
-  if (division.children.some(child => child.kind !== 'opening')) throw new Error('Remove the divisions inside the child openings first. This preserves your nested interior.');
+  if (division.children.some(child => child.kind !== 'opening' || c.contents.some(s => s.openingId === child.id))) throw new Error('Remove the divisions and adjustable shelves inside the child openings first. This preserves your nested interior.');
   const banding = { ...c.banding }; delete banding[featureId];
   return { ...c, banding, compartments: transform(c.compartments, node => node.id === division.id, node => ({ id: node.id, kind: 'opening', children: [] })) };
 }

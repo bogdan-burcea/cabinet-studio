@@ -38,13 +38,17 @@ export function defaultInstallation(): Installation {
   return { type: 'unassigned', policyRevision: 'support-1', mounting: defaultMounting(), feet: { geometry: { id: 'concept-foot-60', revision: '1' }, height: 100, sideInset: 60, frontInset: 120, rearInset: 60 },
     plinth: { enabled: false, leftReturn: false, rightReturn: false, frontSetback: 60, topGap: 5, bottomGap: 0, material: null } };
 }
+export interface AdjustableShelf {
+  id: string; kind: 'adjustable-shelf'; openingId: string; level: number; frontSetback: number;
+  policyRevision: 'adjustable-1'; support: ProductPin;
+}
 export interface Cabinet {
   id: string;
   name: string;
   envelope: { width: number; height: number; depth: number; origin: Vec3 };
   carcass: Carcass;
   compartments: Compartment;
-  contents: never[];
+  contents: AdjustableShelf[];
   fronts: never[];
   installation: Installation;
   materials: MaterialBindings;

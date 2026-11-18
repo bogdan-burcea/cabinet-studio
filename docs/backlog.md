@@ -90,3 +90,17 @@ This section supersedes earlier deferred feet/plinth and schema notes. Current b
 - [ ] Verified feet/clips, adjustable shelf support fittings and user acceptance remain open.
 
 This section supersedes earlier deferred mounting and current-version notes. Stage 2 remains in progress. Current local branch `feat/stage-2-wall-mounting`; schema/evaluator 6 / `mounting-6`. No source push, hosting registration or publication.
+
+## Stage 2 — remaining concept software (v0.7.0)
+
+- [x] Adjustable contents independent of structural splits: stable identities, concept support levels/pads, side clearance and front setback.
+- [x] Numeric/button/selector/drag movement, legal-level guides, duplication/removal, minimum spacing, invalid dependency rejection and Undo/Redo.
+- [x] Interior material/edge evaluator shared by fixed and adjustable shelves; material thickness retains support levels.
+- [x] Reviewed fixed/adjustable conversions with identity/band preservation and no silent child/sibling loss.
+- [x] Reviewed open/base/wall-style/tall presets using the same model, suggested sizes opt-in, custom contents/settings retained.
+- [x] Schema 7 native/autosave, strict content/pad/tree identity validation and copied schemas 1–6 migration.
+- [x] Six supplied fitting references recorded with exact articles, sources and explicit NOT APPLIED status.
+- [x] 83 automated tests and TypeScript/Vite build; local browser checks of drag/numeric snapping, conversions, contents protection, presets, dependent rejection, native/autosave, themes and narrow view.
+- [ ] Full Stage 2 sign-off: matched hardware assembly drawings, regional companion selections, representative official-drawing fixtures, physical trials and structural acceptance remain incomplete. Product links alone do not verify those requirements.
+
+This is completion of the remaining concept-design software, not full specification acceptance or physical verification. Current local branch `feat/stage-2-completion`, native schema/evaluator 7 / `interiors-7`. Earlier deferred adjustable/preset notes are historical. Stage 3 is not started. No source push, hosting registration or publication.

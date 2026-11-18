@@ -127,12 +127,12 @@ test('material and banding previews can be cancelled and applied as one undoable
   store.redo(); assert.deepEqual(store.getSnapshot().committed, candidate);
 });
 
-test('schema 6 preserves stock/finish/grain pins, inheritance, dormant settings and all core/band geometry', () => {
+test('schema 7 preserves stock/finish/grain pins, inheritance, dormant settings and all core/band geometry', () => {
   let c = furnished(), panel = evaluate(c).panels.find(p => p.role === 'shelf')!;
   c = changeMaterial(c, 'interior', { ...binding('generic-panel-16'), finish: pin('white-concept'), grain: 'v' });
   c = setBanding(c, panel.id, 'v-max', pin('generic-edge-2'));
   c = setBanding(c, `${c.id}/panel/back`, 'u-min', pin('generic-edge-1'));
-  const text = serialize(c); assert.equal(JSON.parse(text).schemaVersion, 6);
+  const text = serialize(c); assert.equal(JSON.parse(text).schemaVersion, 7);
   const reopened = deserialize(text); assert.deepEqual(reopened, c); assert.deepEqual(evaluate(reopened), evaluate(c));
 });
 
@@ -161,7 +161,7 @@ test('unknown material, finish and band revisions, orphan panel settings and mal
     (d: any) => d.cabinet.banding[shelf.id] = { front: pin('generic-edge-1') },
     (d: any) => d.cabinet.banding[shelf.id] = { 'v-max': { id: 'generic-edge-1', revision: 'future' } },
     (d: any) => d.cabinet.compartments.featureId = '__proto__',
-    (d: any) => d.schemaVersion = 7
+    (d: any) => d.schemaVersion = 8
   ];
   for (const mutate of mutations) { const doc = JSON.parse(serialize(c)); mutate(doc); assert.throws(() => deserialize(JSON.stringify(doc))); }
 });
