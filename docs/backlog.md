@@ -8,7 +8,7 @@
 - [x] Graphite and Linen themes change shell, controls and viewport without domain changes.
 - [x] Exact initial research candidates recorded with explicit disabled status.
 - [ ] Complete official assembly verification, companion lists, revisions and fixtures before enabling hardware. Shelf support, foot/clip, handle and suspension still need exact regional selections.
-- [ ] Create/connect the separate private `cabinet-studio` GitHub repository. Local setup is complete; no remote or publication required for preview.
+- [x] Create/connect the separate private `cabinet-studio` GitHub source repository. Source sync is separate from publication.
 
 ## Stage 1 — basic cabinet
 

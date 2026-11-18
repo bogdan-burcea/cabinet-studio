@@ -41,6 +41,6 @@ Camera state and theme are presentation state; they are not cabinet intent or sa
 
 ## Repository
 
-This is a separate local Git repository, developed on `feat/stage-0-1`. Desired GitHub name/visibility: **cabinet-studio / private**, approved in the implementation chat. No remote is configured until the separate GitHub repository is created and connected. No files in `/Users/Bogdan/Projects/cabinet-workshop` are edited or copied into the new controller.
+This is a separate Git repository, developed on `feat/stage-0-1` and fast-forwarded to `main` after checks. The agreed private source repository is **https://github.com/bogdan-burcea/cabinet-studio** (`origin`). Source synchronization does not deploy the app. No files in `/Users/Bogdan/Projects/cabinet-workshop` are edited or copied into the new controller.
 
 See `docs/architecture.md`, `docs/backlog.md` and `docs/reference-review.md` for boundaries and staged follow-up work.
