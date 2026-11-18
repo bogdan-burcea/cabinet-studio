@@ -157,6 +157,9 @@ svg { flex: 0 0 auto; }
 .panel-banding { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--border); }
 .panel-banding h4 { margin: 0 0 var(--space-2); font-weight: 500; font-size: 11px; }
 .edge-choice { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; }
+.plinth-returns { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.installation-readout { margin-top: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3) var(--space-3) 0; }
+.installation-visibility { margin-top: var(--space-4); }
 .opening-picker select { width: 100%; min-height: var(--control-height); padding: var(--space-2); font: inherit; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); background: var(--field); }
 .interior-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
 .interior-actions button { font-size: 10px; padding: 0 var(--space-2); border: 1px solid var(--border); flex: 1; }

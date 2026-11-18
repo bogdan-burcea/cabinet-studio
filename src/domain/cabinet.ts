@@ -1,5 +1,5 @@
 export type Axis = 'width' | 'height' | 'depth';
-export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back' | 'shelf' | 'divider' | 'top-front-rail' | 'top-rear-rail' | 'back-upper-rail' | 'back-lower-rail';
+export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back' | 'shelf' | 'divider' | 'top-front-rail' | 'top-rear-rail' | 'back-upper-rail' | 'back-lower-rail' | 'plinth-front' | 'plinth-left' | 'plinth-right';
 export interface Carcass {
   construction: 'rectangular-butt'; policyRevision: 'construction-1';
   top: { mode: 'full' | 'rails'; frontDepth: number; rearDepth: number };
@@ -15,12 +15,21 @@ export interface SplitNode { id: string; kind: 'split'; featureId: string; axis:
 export type Compartment = OpeningNode | SplitNode;
 export type Vec3 = [number, number, number];
 export interface ProductPin { id: string; revision: string }
-export type MaterialRole = 'carcass' | 'back' | 'interior';
+export type MaterialRole = 'carcass' | 'back' | 'interior' | 'plinth';
 export type EdgeKey = 'u-min' | 'u-max' | 'v-min' | 'v-max';
 export interface MaterialBinding { stock: ProductPin; finish: ProductPin; grain: 'none' | 'u' | 'v' }
 export type MaterialBindings = { carcass: MaterialBinding; back: MaterialBinding; interior: MaterialBinding | null };
 export type EdgeBanding = Record<string, Partial<Record<EdgeKey, ProductPin>>>;
 export function defaultBinding(stock: ProductPin): MaterialBinding { return { stock, finish: { id: 'unspecified', revision: '1' }, grain: 'none' }; }
+export interface Installation {
+  type: 'unassigned' | 'floor' | 'feet-concept'; policyRevision: 'support-1';
+  feet: { geometry: ProductPin; height: number; sideInset: number; frontInset: number; rearInset: number };
+  plinth: { enabled: boolean; leftReturn: boolean; rightReturn: boolean; frontSetback: number; topGap: number; bottomGap: number; material: MaterialBinding | null };
+}
+export function defaultInstallation(): Installation {
+  return { type: 'unassigned', policyRevision: 'support-1', feet: { geometry: { id: 'concept-foot-60', revision: '1' }, height: 100, sideInset: 60, frontInset: 120, rearInset: 60 },
+    plinth: { enabled: false, leftReturn: false, rightReturn: false, frontSetback: 60, topGap: 5, bottomGap: 0, material: null } };
+}
 export interface Cabinet {
   id: string;
   name: string;
@@ -29,7 +38,7 @@ export interface Cabinet {
   compartments: Compartment;
   contents: never[];
   fronts: never[];
-  installation: { type: 'unassigned' };
+  installation: Installation;
   materials: MaterialBindings;
   banding: EdgeBanding;
   hardware: ProductPin[];
@@ -40,7 +49,7 @@ export function createCabinet(): Cabinet {
     id, name: 'Untitled cabinet', envelope: { width: 600, height: 720, depth: 560, origin: [0, 0, 0] },
     carcass: defaultCarcass(),
     compartments: { id: `${id}/opening`, kind: 'opening', children: [] }, contents: [], fronts: [],
-    installation: { type: 'unassigned' }, materials: {
+    installation: defaultInstallation(), materials: {
       carcass: defaultBinding({ id: 'generic-panel-18', revision: '1' }), back: defaultBinding({ id: 'generic-back-6', revision: '1' }), interior: null
     }, banding: {}, hardware: []
   };

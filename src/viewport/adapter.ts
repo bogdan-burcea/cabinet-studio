@@ -65,7 +65,7 @@ export class CabinetViewport {
       group.remove(child);
     }
   }
-  update(cabinet: Cabinet, geometry: EvaluatedCabinet, selected: string, theme: ViewportTheme, preview: boolean, cutaway: boolean) {
+  update(cabinet: Cabinet, geometry: EvaluatedCabinet, selected: string, theme: ViewportTheme, preview: boolean, cutaway: boolean, plinthVisible: boolean) {
     const first = !this.cabinet; this.cabinet = cabinet; this.geometry = geometry; this.theme = theme; this.selected = selected;
     this.scene.background = new THREE.Color(theme.background);
     (this.grid.material as THREE.LineBasicMaterial).color.set(theme.grid);
@@ -73,6 +73,7 @@ export class CabinetViewport {
     (this.grid.material as THREE.Material).depthWrite = false;
     this.clear(this.model); this.clear(this.handles); this.clear(this.dimensions);
     for (const panel of geometry.panels) {
+      if (panel.installationPart === 'plinth' && !plinthVisible) continue;
       const isSelected = selected === panel.id;
       const material = new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : isSelected ? theme.selected : finishColor(panel.finish.id, theme),
         roughness: 0.82, metalness: 0, transparent: (cutaway && panel.constructionPart === 'back') || preview, opacity: cutaway && panel.constructionPart === 'back' ? 0.12 : preview ? 0.68 : 1 });
@@ -88,8 +89,13 @@ export class CabinetViewport {
         this.model.add(strip);
       }
     }
+    for (const foot of geometry.installation.feet) for (const part of foot.parts) {
+      const shape = part.kind === 'plate' ? new THREE.BoxGeometry(...part.size) : new THREE.CylinderGeometry(part.size[0] / 2, part.size[0] / 2, part.size[1], 24);
+      const mesh = new THREE.Mesh(shape, new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : selected === foot.id ? theme.selected : theme.support, roughness: 0.65, metalness: 0.1, transparent: preview, opacity: preview ? 0.65 : 1 }));
+      mesh.position.set(...part.center); mesh.userData.id = foot.id; this.model.add(mesh);
+    }
     const { width: w, height: h, depth: d, origin: [ox, oy, oz] } = cabinet.envelope;
-    this.grid.position.set(ox + w / 2, oy - 1, oz + d / 2);
+    this.grid.position.set(ox + w / 2, geometry.installation.floorY - 1, oz + d / 2);
     for (const space of geometry.openings) {
       const opening = new THREE.Mesh(new THREE.PlaneGeometry(space.size[0], space.size[1]), new THREE.MeshBasicMaterial({ visible: selected === space.id, side: THREE.DoubleSide, color: theme.selected, transparent: true, opacity: 0.1, depthWrite: false }));
       opening.position.set(space.origin[0] + space.size[0] / 2, space.origin[1] + space.size[1] / 2, space.origin[2] + space.size[2] - 1);
@@ -191,7 +197,7 @@ export class CabinetViewport {
     const actions: Record<string, () => void> = { ArrowLeft: () => this.orbit(-0.15, 0), ArrowRight: () => this.orbit(0.15, 0), ArrowUp: () => this.orbit(0, -0.15), ArrowDown: () => this.orbit(0, 0.15), '+': () => this.zoom(0.85), '=': () => this.zoom(0.85), '-': () => this.zoom(1.15), f: () => this.fit() };
     if (actions[event.key]) { event.preventDefault(); actions[event.key](); }
   };
-  private center() { const { width, height, depth, origin } = this.cabinet.envelope; return new THREE.Vector3(origin[0] + width / 2, origin[1] + height / 2, origin[2] + depth / 2); }
+  private center() { const { width, height, depth, origin } = this.cabinet.envelope; return new THREE.Vector3(origin[0] + width / 2, origin[1] + (height - this.geometry.installation.supportHeight) / 2, origin[2] + depth / 2); }
   view(name: ViewName) {
     if (!this.cabinet) return;
     const directions: Record<ViewName, Vec3> = { isometric: [1.25, 0.8, 1.8], front: [0, 0, 1], side: [1, 0, 0], top: [0, 1, 0.001] };
@@ -199,7 +205,7 @@ export class CabinetViewport {
   }
   private distance() {
     const { width, height, depth } = this.cabinet.envelope;
-    const radius = Math.sqrt((width + 260) ** 2 + (height + 220) ** 2 + (depth + 180) ** 2) / 2;
+    const radius = Math.sqrt((width + 260) ** 2 + (height + this.geometry.installation.supportHeight + 220) ** 2 + (depth + 180) ** 2) / 2;
     const angle = Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * Math.min(1, this.camera.aspect));
     return radius / Math.sin(angle) * 1.08;
   }

@@ -20,6 +20,7 @@ export function ConstructionInspector(p: Props) {
   }, [p.preview, p.error]);
   function update(next: Carcass) {
     setDraft(next);
+    if (JSON.stringify(next) === JSON.stringify(p.committed.carcass)) { setValid(true); p.onCancel(); return true; }
     const ok = p.onPreview(changeConstruction(p.committed, next)); setValid(ok); return ok;
   }
   function cancel() { reset(); p.onCancel(); }

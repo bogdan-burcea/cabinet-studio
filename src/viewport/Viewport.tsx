@@ -5,7 +5,7 @@ import { viewportThemes, type ThemeName } from '../design-system/themes';
 import { CabinetViewport, type DimensionAnchor, type ViewName } from './adapter';
 import { Button, IconButton } from '../ui/components';
 interface Props {
-  cabinet: Cabinet; evaluated: EvaluatedCabinet; selection: string; theme: ThemeName; preview: boolean; cutaway: boolean;
+  cabinet: Cabinet; evaluated: EvaluatedCabinet; selection: string; theme: ThemeName; preview: boolean; cutaway: boolean; plinthVisible: boolean;
   onSelect(id: string): void; onEditDivision(): void; onPreviewDivision(id: string, value: number): void; onEdit(axis: Axis): void; onDragStart(): void; onPreview(axis: Axis, value: number): void; onCommit(): void; onCancel(): void;
 }
 export function Viewport(props: Props) {
@@ -33,10 +33,10 @@ export function Viewport(props: Props) {
       return () => { instance.dispose(); adapter.current = null; };
     } catch { setError('3D could not start. Enable WebGL in your browser. The inspector, history and cabinet files remain available.'); }
   }, []);
-  useEffect(() => { adapter.current?.update(props.cabinet, props.evaluated, props.selection, viewportThemes[props.theme], props.preview, props.cutaway); }, [props.cabinet, props.evaluated, props.selection, props.theme, props.preview, props.cutaway]);
+  useEffect(() => { adapter.current?.update(props.cabinet, props.evaluated, props.selection, viewportThemes[props.theme], props.preview, props.cutaway, props.plinthVisible); }, [props.cabinet, props.evaluated, props.selection, props.theme, props.preview, props.cutaway, props.plinthVisible]);
   return <div className="viewport" ref={host}>
     <div className="viewport-heading"><span className="eyebrow">YOUR WORKSPACE</span><h2>Make room for your ideas.</h2><p>Select an opening to add a shelf or divider.</p></div>
-    <div className="viewport-tag"><span className="status-dot"/> {props.preview ? 'Live preview' : 'Concept model'}<span className="tag-divider"/> mm</div>
+    <div className="viewport-tag"><span className="status-dot"/> {props.preview ? 'Live preview' : 'Concept model'}<span className="tag-divider"/> {props.evaluated.installation.installedHeight === null ? 'mm' : `Installed ${props.evaluated.installation.installedHeight} mm`}</div>
     {error && <div className="viewport-error" role="alert">{error}</div>}
     {!error && (['width', 'height', 'depth'] as const).map(axis => <button key={axis} ref={el => { labels.current[axis] = el; }} className={`dimension-label dimension-${axis}`} onClick={() => props.onEdit(axis)} aria-label={`Edit ${axis}, ${props.cabinet.envelope[axis]} millimetres`} title={`Edit ${axis}`}><span>{props.cabinet.envelope[axis]}</span><small>{axis === 'height' ? 'H' : axis === 'width' ? 'W' : 'D'}</small></button>)}
     {!error && (['width', 'height', 'depth'] as const).map(axis => <button key={`handle-${axis}`} ref={el => { handles.current[axis] = el; }} className="resize-handle" aria-label={`Resize ${axis} handle. Drag to resize; press Enter to edit.`} title={`Drag to resize ${axis}`} onPointerDown={event => { event.preventDefault(); adapter.current?.startDrag(axis, event.nativeEvent); }} onClick={() => props.onEdit(axis)}><span/></button>)}

@@ -8,24 +8,24 @@ interface Props {
   committed: Cabinet; preview: Cabinet | null; error: string | null; evaluated: EvaluatedCabinet; panel?: Panel;
   onPreview(c: Cabinet): boolean; onCommit(c: Cabinet): boolean; onCancel(): void;
 }
-const settings = (c: Cabinet) => JSON.stringify([c.materials, c.banding]);
+const settings = (c: Cabinet) => JSON.stringify([c.materials, c.banding, c.installation.plinth.material]);
 export function MaterialsInspector(p: Props) {
   const [draft, setDraft] = useState<Cabinet | null>(null), [valid, setValid] = useState(true), [role, setRole] = useState<MaterialRole>('carcass');
-  const model = draft ?? p.committed, selected = binding(model, role), inherited = role === 'interior' && model.materials.interior === null;
+  const model = draft ?? p.committed, selected = binding(model, role), inherited = (role === 'interior' && model.materials.interior === null) || (role === 'plinth' && model.installation.plinth.material === null);
   const pending = settings(model) !== settings(p.committed);
   function reset() { setDraft(null); setValid(true); }
   useEffect(reset, [p.committed]);
   useEffect(() => { if (p.panel) setRole(p.panel.materialRole); }, [p.panel?.id]);
   useEffect(() => { if (pending && ((!p.preview && !p.error) || (p.preview && settings(p.preview) !== settings(model)))) reset(); }, [p.preview, p.error]);
-  function update(next: Cabinet) { setDraft(next); const ok = p.onPreview(next); setValid(ok); }
+  function update(next: Cabinet) { setDraft(next); if (settings(next) === settings(p.committed)) { setValid(true); p.onCancel(); return; } const ok = p.onPreview(next); setValid(ok); }
   function materialChange(value: MaterialBinding | null) { update(changeMaterial(model, role, value)); }
   function cancel() { reset(); p.onCancel(); }
   const inactive = Object.keys(model.banding).filter(id => !p.evaluated.panels.some(panel => panel.id === id)).length;
   return <div onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); cancel(); } }}><Section title="Materials & edge banding" aside={<span className="unit-badge">PINNED REVISIONS</span>}>
-    <label className="construction-choice">Material role<select aria-label="Material role" value={role} onChange={e => setRole(e.target.value as MaterialRole)}><option value="carcass">Carcass & construction rails</option><option value="interior">Shelves & dividers</option><option value="back">Full back panel</option></select></label>
-    {role === 'interior' && <label className="material-inheritance"><input type="checkbox" checked={inherited} onChange={e => materialChange(e.target.checked ? null : structuredClone(binding(model, 'carcass')))}/> Use carcass material, finish & grain</label>}
+    <label className="construction-choice">Material role<select aria-label="Material role" value={role} onChange={e => setRole(e.target.value as MaterialRole)}><option value="carcass">Carcass & construction rails</option><option value="interior">Shelves & dividers</option><option value="back">Full back panel</option><option value="plinth">Plinth panels</option></select></label>
+    {(role === 'interior' || role === 'plinth') && <label className="material-inheritance"><input type="checkbox" checked={inherited} onChange={e => materialChange(e.target.checked ? null : structuredClone(binding(model, 'carcass')))}/> Use carcass material, finish & grain</label>}
     <label className="construction-choice">Stock<select aria-label="Material stock" disabled={inherited} value={selected.stock.id} onChange={e => materialChange({ ...selected, stock: { id: e.target.value, revision: '1' } })}>{Object.values(materials).filter(record => record.kind === (role === 'back' ? 'back' : 'panel')).map(record => <option key={record.id} value={record.id}>{record.name}</option>)}</select></label>
-    <p className="field-note">{inherited ? 'Inherited from carcass.' : role === 'interior' ? 'Explicit interior override.' : 'Applies to all panels using this role.'} Actual thickness: {stock(model, role).thickness} mm. Generic stock is conceptual.</p>
+    <p className="field-note">{inherited ? 'Inherited from carcass.' : (role === 'interior' || role === 'plinth') ? `Explicit ${role} override.` : 'Applies to all panels using this role.'} Actual thickness: {stock(model, role).thickness} mm. Generic stock is conceptual.</p>
     <details className="advanced-material"><summary>Finish & grain intent</summary>
       <label className="construction-choice">Finish<select aria-label="Material finish" value={selected.finish.id} disabled={inherited} onChange={e => materialChange({ ...selected, finish: { id: e.target.value, revision: '1' } })}>{Object.values(finishes).map(record => <option key={record.id} value={record.id}>{record.name}</option>)}</select></label>
       <label className="construction-choice">Grain<select aria-label="Material grain" value={selected.grain} disabled={inherited} onChange={e => materialChange({ ...selected, grain: e.target.value as MaterialBinding['grain'] })}><option value="none">No specified direction</option><option value="u">Along first face dimension (U)</option><option value="v">Along second face dimension (V)</option></select></label>

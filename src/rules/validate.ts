@@ -1,6 +1,7 @@
 import type { Axis, Cabinet } from '../domain/cabinet';
 import { stock, binding, finish, edgeProduct } from '../catalogue/materials';
 import { resolveInteriors } from './interiors';
+import { resolveInstallation } from './installation';
 import { resolveConstruction } from './construction';
 export interface Issue { code: string; featureId: string; message: string; severity: 'error' | 'notice' }
 // Application modelling limits, not manufacturer or load limits.
@@ -15,12 +16,12 @@ export function validate(c: Cabinet): Issue[] {
       issues.push({ code: `dimension-${axis}`, featureId: c.id, severity: 'error', message: `${axis[0].toUpperCase() + axis.slice(1)} must be ${min}–${max} mm, in 0.1 mm steps.` });
   }
   try {
-    for (const role of ['carcass', 'back', 'interior'] as const) {
+    for (const role of ['carcass', 'back', 'interior', 'plinth'] as const) {
       const record = stock(c, role); finish(binding(c, role).finish);
       if (!['none', 'u', 'v'].includes(binding(c, role).grain)) throw new Error('Unknown material grain direction.');
       if (record.kind !== (role === 'back' ? 'back' : 'panel')) throw new Error(`Select ${role === 'back' ? 'back-panel' : 'carcass-panel'} stock for the ${role} role.`);
     }
-    const ids = new Set(['left', 'right', 'bottom', 'top', 'back', 'top-front-rail', 'top-rear-rail', 'back-upper-rail', 'back-lower-rail'].map(role => `${c.id}/panel/${role}`));
+    const ids = new Set(['left', 'right', 'bottom', 'top', 'back', 'top-front-rail', 'top-rear-rail', 'back-upper-rail', 'back-lower-rail', 'plinth-front', 'plinth-left', 'plinth-right'].map(role => `${c.id}/panel/${role}`));
     const collect = (node: Cabinet['compartments']) => { if (node.kind === 'split') { ids.add(node.featureId); node.children.forEach(collect); } }; collect(c.compartments);
     for (const [id, edges] of Object.entries(c.banding)) {
       if (!ids.has(id)) throw new Error('Edge banding refers to an unavailable panel. The previous cabinet is preserved.');
@@ -37,5 +38,7 @@ export function validate(c: Cabinet): Issue[] {
     issues.push(...resolveConstruction(c, t, b).issues);
     if (!issues.length) issues.push(...resolveInteriors(c, t, b, stock(c, 'interior').thickness).issues);
   }
+  if (!issues.some(issue => issue.severity === 'error')) issues.push(...resolveInstallation(c).issues);
+  if (c.installation.type === 'feet-concept' && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-support', featureId: `${c.id}/installation/feet`, severity: 'notice', message: 'Concept feet only: no verified foot/clip assembly, drilling or load capacity.' });
   return issues;
 }

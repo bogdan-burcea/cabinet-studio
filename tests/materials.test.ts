@@ -127,18 +127,18 @@ test('material and banding previews can be cancelled and applied as one undoable
   store.redo(); assert.deepEqual(store.getSnapshot().committed, candidate);
 });
 
-test('schema 4 preserves stock/finish/grain pins, inheritance, dormant settings and all core/band geometry', () => {
+test('schema 5 preserves stock/finish/grain pins, inheritance, dormant settings and all core/band geometry', () => {
   let c = furnished(), panel = evaluate(c).panels.find(p => p.role === 'shelf')!;
   c = changeMaterial(c, 'interior', { ...binding('generic-panel-16'), finish: pin('white-concept'), grain: 'v' });
   c = setBanding(c, panel.id, 'v-max', pin('generic-edge-2'));
   c = setBanding(c, `${c.id}/panel/back`, 'u-min', pin('generic-edge-1'));
-  const text = serialize(c); assert.equal(JSON.parse(text).schemaVersion, 4);
+  const text = serialize(c); assert.equal(JSON.parse(text).schemaVersion, 5);
   const reopened = deserialize(text); assert.deepEqual(reopened, c); assert.deepEqual(evaluate(reopened), evaluate(c));
 });
 
 test('schema 3 migration retains exact top/back choices and nested intent and adds inherited defaults without changing finished geometry', () => {
   const expected = furnished(), { banding, ...withoutBanding } = expected;
-  const old = { ...withoutBanding, materials: { carcass: expected.materials.carcass.stock, back: expected.materials.back.stock } };
+  const old = { ...withoutBanding, installation: { type: 'unassigned' }, materials: { carcass: expected.materials.carcass.stock, back: expected.materials.back.stock } };
   const encoded = JSON.stringify({ format: 'cabinet-studio', schemaVersion: 3, evaluatorRevision: 'construction-3', cabinet: old });
   const result = deserializeWithInfo(encoded);
   assert.equal(result.migrated, true); assert.deepEqual(result.cabinet, expected); assert.deepEqual(shapes(result.cabinet), shapes(expected));
@@ -161,7 +161,7 @@ test('unknown material, finish and band revisions, orphan panel settings and mal
     (d: any) => d.cabinet.banding[shelf.id] = { front: pin('generic-edge-1') },
     (d: any) => d.cabinet.banding[shelf.id] = { 'v-max': { id: 'generic-edge-1', revision: 'future' } },
     (d: any) => d.cabinet.compartments.featureId = '__proto__',
-    (d: any) => d.schemaVersion = 5
+    (d: any) => d.schemaVersion = 6
   ];
   for (const mutate of mutations) { const doc = JSON.parse(serialize(c)); mutate(doc); assert.throws(() => deserialize(JSON.stringify(doc))); }
 });

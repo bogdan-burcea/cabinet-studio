@@ -62,3 +62,17 @@ Stage 2 remains in progress. Work is local on `feat/stage-2-interiors`; this inc
 - [ ] Remaining Stage 2: exact adjustable shelf supports, feet/plinth and verified wall mounting. No unverified fittings are enabled.
 
 Current work is local on `feat/stage-2-materials`, including the `feat/stage-2-construction` checkpoint. The older increment notes above are historical; the current schema/evaluator are 4 / `materials-4`. Nothing is published.
+
+## Stage 2 — increment 4: concept feet and plinth (v0.5.0)
+
+- [x] Unassigned/direct-floor/four-concept-foot support; body and installed heights kept distinct without moving the body.
+- [x] Foot height and centre setbacks; canonical plate/post/base geometry with stable identities.
+- [x] Front plinth, independent side returns, setback and top/floor gaps; explicit cover visibility for inspection.
+- [x] Inherited/overridden plinth materials and per-panel edges use the existing evaluator.
+- [x] Clearance rejection, reviewed transactions, Undo/Redo and dormant settings retained.
+- [x] Schema 5 native/autosave and copied migrations from schemas 1–4; all prior features preserved.
+- [x] 58 regression tests, build and local browser review.
+- [ ] Exact verified foot/clip pack, companion fixings, attachment rules, physical fixtures and support/load/stability checks. Concept geometry does not complete hardware verification.
+- [ ] Adjustable shelf fittings, verified wall mounting and user review remain open.
+
+This section supersedes earlier deferred feet/plinth and schema notes. Current branch is `feat/stage-2-installation`; schema/evaluator 5 / `installation-5`. No source push, hosting registration or publication.
