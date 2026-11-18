@@ -99,14 +99,14 @@ test('new divisions can be added to a child opening with distinct identities and
   assert.deepEqual(store.getSnapshot().committed, small);
 });
 
-test('version 2 round trip preserves nested intent, product pins and all evaluated geometry', () => {
+test('version 3 round trip preserves nested intent, product pins and all evaluated geometry', () => {
   const { c } = nested(), encoded = serialize(c), doc = JSON.parse(encoded);
-  assert.equal(doc.schemaVersion, 2); assert.equal(doc.evaluatorRevision, 'interiors-2');
+  assert.equal(doc.schemaVersion, 3); assert.equal(doc.evaluatorRevision, 'construction-3');
   assert.deepEqual(deserialize(encoded), c); assert.deepEqual(evaluate(deserialize(encoded)), evaluate(c));
 });
 
 test('Stage 1 migrations operate on copies, preserve every panel and identity, and retain a separate autosave key', () => {
-  const c = createCabinet(), legacy = JSON.stringify({ format: 'cabinet-studio', schemaVersion: 1, evaluatorRevision: 'carcass-1', cabinet: c });
+  const c = createCabinet(), legacy = JSON.stringify({ format: 'cabinet-studio', schemaVersion: 1, evaluatorRevision: 'carcass-1', cabinet: { ...c, carcass: { construction: 'butt-full-top-inset-back', policyRevision: 'concept-1' } } });
   const result = deserializeWithInfo(legacy);
   assert.equal(result.migrated, true); assert.deepEqual(result.cabinet, c);
   assert.deepEqual(evaluate(result.cabinet).panels, evaluate(c).panels);
@@ -123,7 +123,7 @@ test('malformed trees, duplicate IDs, unknown policies and future formats are re
     (d: any) => d.cabinet.compartments.policyRevision = 'adjustable-unknown',
     (d: any) => d.cabinet.compartments.axis = 'diagonal',
     (d: any) => d.cabinet.compartments.position = 9000,
-    (d: any) => d.schemaVersion = 3,
+    (d: any) => d.schemaVersion = 4,
     (d: any) => { d.schemaVersion = 1; d.evaluatorRevision = 'carcass-1'; }
   ];
   for (const mutate of mutations) { const doc = JSON.parse(serialize(c)); mutate(doc); assert.throws(() => deserialize(JSON.stringify(doc))); }

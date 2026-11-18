@@ -1,5 +1,14 @@
 export type Axis = 'width' | 'height' | 'depth';
-export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back' | 'shelf' | 'divider';
+export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back' | 'shelf' | 'divider' | 'top-front-rail' | 'top-rear-rail' | 'back-upper-rail' | 'back-lower-rail';
+export interface Carcass {
+  construction: 'rectangular-butt'; policyRevision: 'construction-1';
+  top: { mode: 'full' | 'rails'; frontDepth: number; rearDepth: number };
+  back: { mode: 'full' | 'rails'; upperHeight: number; lowerHeight: number };
+}
+export function defaultCarcass(): Carcass {
+  return { construction: 'rectangular-butt', policyRevision: 'construction-1',
+    top: { mode: 'full', frontDepth: 80, rearDepth: 80 }, back: { mode: 'full', upperHeight: 80, lowerHeight: 80 } };
+}
 export type DivisionAxis = 'horizontal' | 'vertical';
 export interface OpeningNode { id: string; kind: 'opening'; children: [] }
 export interface SplitNode { id: string; kind: 'split'; featureId: string; axis: DivisionAxis; position: number; policyRevision: 'fixed-1'; children: [Compartment, Compartment] }
@@ -10,7 +19,7 @@ export interface Cabinet {
   id: string;
   name: string;
   envelope: { width: number; height: number; depth: number; origin: Vec3 };
-  carcass: { construction: 'butt-full-top-inset-back'; policyRevision: 'concept-1' };
+  carcass: Carcass;
   compartments: Compartment;
   contents: never[];
   fronts: never[];
@@ -22,7 +31,7 @@ export function createCabinet(): Cabinet {
   const id = crypto.randomUUID();
   return {
     id, name: 'Untitled cabinet', envelope: { width: 600, height: 720, depth: 560, origin: [0, 0, 0] },
-    carcass: { construction: 'butt-full-top-inset-back', policyRevision: 'concept-1' },
+    carcass: defaultCarcass(),
     compartments: { id: `${id}/opening`, kind: 'opening', children: [] }, contents: [], fronts: [],
     installation: { type: 'unassigned' }, materials: {
       carcass: { id: 'generic-panel-18', revision: '1' }, back: { id: 'generic-back-6', revision: '1' }

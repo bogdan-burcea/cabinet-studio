@@ -1,5 +1,6 @@
 import type { Cabinet, Compartment, DivisionAxis, Vec3 } from '../domain/cabinet';
 import type { Issue } from './validate';
+import { resolveConstruction } from './construction';
 export const MIN_OPENING = 60; // Conceptual modelling policy, not a hardware specification.
 export interface Opening { id: string; label: string; origin: Vec3; size: Vec3 }
 export interface Division {
@@ -7,8 +8,8 @@ export interface Division {
   origin: Vec3; size: Vec3; min: number; max: number; before: number; after: number; canRemove: boolean;
 }
 export function resolveInteriors(c: Cabinet, thickness: number, back: number) {
-  const root: Opening = { id: c.compartments.id, label: 'Interior', origin: [thickness, thickness, back].map((v, i) => v + c.envelope.origin[i]) as Vec3,
-    size: [c.envelope.width - 2 * thickness, c.envelope.height - 2 * thickness, c.envelope.depth - back] };
+  const construction = resolveConstruction(c, thickness, back);
+  const root: Opening = { id: c.compartments.id, label: 'Interior', ...construction.opening };
   const openings: Opening[] = [], divisions: Division[] = [], issues: Issue[] = [];
   function walk(node: Compartment, bounds: Opening, depth: number) {
     if (depth > 32 || divisions.length > 63) { issues.push({ code: 'interior-complexity', featureId: node.id, severity: 'error', message: 'This prototype supports at most 63 divisions and 32 nested levels.' }); return; }

@@ -75,7 +75,7 @@ export class CabinetViewport {
     for (const panel of geometry.panels) {
       const isSelected = selected === panel.id;
       const material = new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : isSelected ? theme.selected : theme.panel,
-        roughness: 0.82, metalness: 0, transparent: (cutaway && panel.role === 'back') || preview, opacity: cutaway && panel.role === 'back' ? 0.12 : preview ? 0.68 : 1 });
+        roughness: 0.82, metalness: 0, transparent: (cutaway && panel.constructionPart === 'back') || preview, opacity: cutaway && panel.constructionPart === 'back' ? 0.12 : preview ? 0.68 : 1 });
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(...panel.size), material);
       mesh.position.set(...panel.center); mesh.userData.id = panel.id;
       const edge = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color: isSelected ? theme.selected : theme.edge, transparent: true, opacity: 0.65 }));
