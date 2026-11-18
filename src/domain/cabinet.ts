@@ -1,5 +1,5 @@
 export type Axis = 'width' | 'height' | 'depth';
-export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back' | 'shelf' | 'divider' | 'top-front-rail' | 'top-rear-rail' | 'back-upper-rail' | 'back-lower-rail' | 'plinth-front' | 'plinth-left' | 'plinth-right';
+export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back' | 'shelf' | 'divider' | 'top-front-rail' | 'top-rear-rail' | 'back-upper-rail' | 'back-lower-rail' | 'plinth-front' | 'plinth-left' | 'plinth-right' | 'door';
 export interface Carcass {
   construction: 'rectangular-butt'; policyRevision: 'construction-1';
   top: { mode: 'full' | 'rails'; frontDepth: number; rearDepth: number };
@@ -15,7 +15,7 @@ export interface SplitNode { id: string; kind: 'split'; featureId: string; axis:
 export type Compartment = OpeningNode | SplitNode;
 export type Vec3 = [number, number, number];
 export interface ProductPin { id: string; revision: string }
-export type MaterialRole = 'carcass' | 'back' | 'interior' | 'plinth';
+export type MaterialRole = 'carcass' | 'back' | 'interior' | 'plinth' | 'front';
 export type EdgeKey = 'u-min' | 'u-max' | 'v-min' | 'v-max';
 export interface MaterialBinding { stock: ProductPin; finish: ProductPin; grain: 'none' | 'u' | 'v' }
 export type MaterialBindings = { carcass: MaterialBinding; back: MaterialBinding; interior: MaterialBinding | null };
@@ -42,6 +42,13 @@ export interface AdjustableShelf {
   id: string; kind: 'adjustable-shelf'; openingId: string; level: number; frontSetback: number;
   policyRevision: 'adjustable-1'; support: ProductPin;
 }
+export interface SlabDoor {
+  id: string; kind: 'slab-door'; policyRevision: 'slab-1';
+  region: { left: number; right: number; bottom: number; top: number };
+  placement: 'overlay' | 'inset'; handing: 'left' | 'right'; reveal: number; clearance: number;
+  material: MaterialBinding | null;
+  handle: { geometry: ProductPin; kind: 'none' | 'knob' | 'pull'; pitch: number; orientation: 'vertical' | 'horizontal'; edgeOffset: number; height: 'top' | 'centre' | 'bottom'; endOffset: number };
+}
 export interface Cabinet {
   id: string;
   name: string;
@@ -49,7 +56,7 @@ export interface Cabinet {
   carcass: Carcass;
   compartments: Compartment;
   contents: AdjustableShelf[];
-  fronts: never[];
+  fronts: SlabDoor[];
   installation: Installation;
   materials: MaterialBindings;
   banding: EdgeBanding;

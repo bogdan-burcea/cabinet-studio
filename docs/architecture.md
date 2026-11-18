@@ -12,7 +12,7 @@ Intent + pinned stock/finish/band records + construction policies → validation
 - `viewport/`: replaceable Three.js adapter, picking, projected constrained handles and camera. Renders canonical cores/strips, finished outlines, ghost previews and legal position guides. Ordinary edits preserve camera. All direct operations have numeric, keyboard or button alternatives.
 - `ui/`: separate construction/material/interior inspectors and element list. One preview owner at a time; starting another feature's edit cancels the previous unapplied draft. Roles and inheritance are explicit. The UI consumes evaluated dimensions, not independent construction calculations.
 - `design-system/`: semantic tokens, shared control styling, icon adapter, Graphite/Linen themes and finish presentation palette. Finish IDs are cabinet data; their rendered colours are presentation. Theme changes cannot change product identities or dimensions.
-- `persistence/`: strict native schema 7 / evaluator `interiors-7`, tree complexity/identity validation, revision checks and copied migrations from schemas 1–6. Browser autosave v7 preserves older keys. A corrupt newest record never silently falls back to an older one.
+- `persistence/`: strict native schema 8 / evaluator `fronts-8`, tree complexity/identity validation, revision checks and copied migrations from schemas 1–7. Browser autosave v8 preserves older keys. A corrupt newest record never silently falls back to an older one.
 
 Evaluation remains small and synchronous. Future asynchronous work must carry revision IDs and reject stale results. Native-file reading already checks the command revision before installing its result.
 
@@ -42,7 +42,7 @@ Removing a leaf division explicitly removes its own edge intent; Undo restores t
 
 Schema 1 (`carcass-1`) and schema 2 (`interiors-2`) gain full-top/full-back defaults as copies. Schema 3 (`construction-3`) retains exact top/back settings. All gain unspecified finishes, no specified grain, inherited interiors and no bands, preserving existing stock pins and finished geometry. Original files and browser keys remain untouched; migration is disclosed. Unknown future schemas/revisions never substitute products or reset to defaults.
 
-No nesting, CAM/export, production documents, labels, costs, project/room layout, legacy Cabinet Workshop importer or placeholder services. No hosting manifest, site registration or automatic deployment. Development remains local, on `feat/stage-2-completion`; publication requires explicit user instruction.
+No nesting, CAM/export, production documents, labels, costs, project/room layout, legacy Cabinet Workshop importer or placeholder services. No hosting manifest, site registration or automatic deployment. Development remains local, on `feat/stage-3-fronts`; publication requires explicit user instruction.
 
 ## Installation policy `support-1`
 
@@ -73,3 +73,13 @@ Schema 7 / `interiors-7` permits only known adjustable contents and strict pins.
 ## Viewport selection policy
 
 `viewport/picking.ts` separates virtual opening targets from visible physical parts. The nearest visible solid surface controls occlusion. Interior shelf/divider faces and their strips/support pads can be selected behind an opening plane; carcass surfaces behind the plane remain opening background. Foreground carcass/back parts retain normal picking; back-cutaway meshes/strips explicitly pass through. This policy only affects selection and never modifies domain/geometry or persisted intent. Real Three.js raycasting fixtures cover the proxy/occlusion cases.
+
+## Stage 3 — independent slab fronts and handles
+
+`Cabinet.fronts` stores slab IDs, normalized independent coverage rectangles, overlay/inset placement, handing, reveal/clearance, optional material binding and concept handle intent. Front regions are not compartment IDs; creating a cover over an opening captures a region, and later interior edits do not move/delete it. One cover may span several compartments. Splitting preserves the first ID and copies binding, handle and band intent to a new ID. Removal clears that door's bands; Undo restores both.
+
+`catalogue/fronts.ts` owns declared concept defaults/handle geometry. `rules/fronts.ts` derives closed slabs, edge pivots, handle primitives, depth and compatibility issues. It checks coverage bounds/overlap, model-size policies, handle envelopes and inset collisions against canonical construction/interior bodies. Existing contents are never trimmed to accept a door. Exact fitting rules are deferred by user instruction; no hinge, screw, bore or load claim is invented.
+
+The existing material/band pipeline accepts role `front` with a panel ID. Each door may inherit carcass material/finish/grain or override it. Material changes can target the selected door or all fronts, without extending/changing the existing material-role storage. Closed dimensions, core/strips, handle pins and all previous intent survive native round trips. Schema 8 / `fronts-8` validates exact door/region/handle shapes and identities against fronts, handle parts, contents, structural tree and installation IDs. Schemas 1–7 upgrade as copies with empty fronts and unchanged geometry; older keys/files remain untouched.
+
+`commands/fronts.ts` owns immutable add/update/split/remove transactions. `FrontInspector` reviews one draft through the existing store, supports correction after invalid edits and cancels when another preview takes ownership. `viewport/front-pose.ts` defines clamped illustrative opening. The Three.js adapter groups a door's core, bands and handles about its conceptual edge pivot; pose/visibility stay in React presentation state. Canonical geometry remains closed and is never reconstructed from meshes. Recursive picking handles transformed front groups while retaining opening/interior picking semantics. Fit uses displayed bounds including posed doors and floor reference; ordinary edits preserve camera.

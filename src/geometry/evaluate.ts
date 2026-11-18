@@ -2,18 +2,20 @@ import type { Cabinet, PanelRole, MaterialRole, Vec3 } from '../domain/cabinet';
 import { stock } from '../catalogue/materials';
 import { validate, type Issue } from '../rules/validate';
 import { panelMaterials } from './banding';
+import { resolveFronts } from '../rules/fronts';
 import { resolveAdjustable } from '../rules/adjustable';
 import { resolveMounting } from '../rules/mounting';
 import { resolveInstallation } from '../rules/installation';
 import { resolveConstruction } from '../rules/construction';
 import { resolveInteriors, type Division, type Opening } from '../rules/interiors';
-export const EVALUATOR_REVISION = 'interiors-7';
+export const EVALUATOR_REVISION = 'fronts-8';
 export interface Panel extends ReturnType<typeof panelMaterials> {
   id: string; role: PanelRole; label: string; size: Vec3; center: Vec3; materialRole: MaterialRole;
   provenance: string; orientation: 'yz' | 'xz' | 'xy'; constructionPart?: 'top' | 'back'; installationPart?: 'plinth';
 }
 export interface EvaluatedCabinet {
   revision: typeof EVALUATOR_REVISION; cabinetId: string; panels: Panel[]; opening: Opening; openings: Opening[]; divisions: Division[];
+  fronts: ReturnType<typeof resolveFronts>;
   adjustable: ReturnType<typeof resolveAdjustable>;
   mounting: ReturnType<typeof resolveMounting>;
   installation: ReturnType<typeof resolveInstallation>;
@@ -41,7 +43,9 @@ export function evaluate(c: Cabinet): EvaluatedCabinet {
   basePanels.push(...adjustable.shelves.map(shelf => ({ id: shelf.id, role: 'shelf' as const, label: shelf.label, size: shelf.size, center: shelf.origin.map((v,i) => v+shelf.size[i]/2) as Vec3, materialRole: 'interior' as const, provenance: `${shelf.id}/adjustable-1`, orientation: 'xz' as const })));
   const installation = resolveInstallation(c);
   basePanels.push(...installation.panels.map(panel => ({ ...panel, materialRole: 'plinth' as const, installationPart: 'plinth' as const, provenance: `${c.id}/installation/support-1` })));
+  const fronts = resolveFronts(c,basePanels);
+  basePanels.push(...fronts.doors);
   const panels: Panel[] = basePanels.map(panel => ({ ...panel, ...panelMaterials(c, panel) }));
-  return { revision: EVALUATOR_REVISION, cabinetId: c.id, issues, adjustable, installation, mounting: resolveMounting(c), panels, opening: interiors.root, openings: interiors.openings, divisions: interiors.divisions,
+  return { revision: EVALUATOR_REVISION, cabinetId: c.id, issues, fronts, adjustable, installation, mounting: resolveMounting(c), panels, opening: interiors.root, openings: interiors.openings, divisions: interiors.divisions,
     construction: { rearSetback: construction.rearSetback, topGap: construction.topGap, backGap: construction.backGap } };
 }

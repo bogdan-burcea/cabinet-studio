@@ -27,8 +27,9 @@ export function edgeProduct(pin: ProductPin) {
   if (!record || record.revision !== pin.revision) throw new Error(`Unavailable edge band revision: ${pin.id}@${pin.revision}`);
   return record;
 }
-export function binding(c: Cabinet, role: MaterialRole) {
+export function binding(c: Cabinet, role: MaterialRole, panelId?: string) {
+  if (role === 'front') return (panelId ? c.fronts.find(door => door.id === panelId) : c.fronts[0])?.material ?? c.materials.carcass;
   if (role === 'plinth') return c.installation.plinth.material ?? c.materials.carcass;
   return role === 'interior' ? c.materials.interior ?? c.materials.carcass : c.materials[role];
 }
-export function stock(c: Cabinet, role: MaterialRole) { return material(binding(c, role).stock); }
+export function stock(c: Cabinet, role: MaterialRole, panelId?: string) { return material(binding(c, role, panelId).stock); }

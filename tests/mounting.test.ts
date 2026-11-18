@@ -91,12 +91,12 @@ test('mounting previews, cancellation, apply and Undo/Redo restore support trans
   store.preview(next); store.commit(); store.undo(); assert.deepEqual(store.getSnapshot().committed, c); assert.equal(store.getSnapshot().canUndo, false);
   store.redo(); assert.deepEqual(evaluate(store.getSnapshot().committed), evaluate(next));
 });
-test('schema 7 round trips mounting modes including retained foot/plinth/material/edge settings and pinned revisions', () => {
+test('schema 8 round trips mounting modes including retained foot/plinth/material/edge settings and pinned revisions', () => {
   const c = furnished();
   for (const mode of ['none', 'restraint-concept', 'suspended-concept'] as const) {
     const next = changeMounting(c, { ...defaultMounting(), mode });
     const serialized = serialize(next), result = deserializeWithInfo(serialized);
-    assert.equal(JSON.parse(serialized).schemaVersion, 7); assert.equal(JSON.parse(serialized).evaluatorRevision, 'interiors-7'); assert.equal(result.migrated, false);
+    assert.equal(JSON.parse(serialized).schemaVersion, 8); assert.equal(JSON.parse(serialized).evaluatorRevision, 'fronts-8'); assert.equal(result.migrated, false);
     assert.deepEqual(result.cabinet, next); assert.deepEqual(evaluate(result.cabinet), evaluate(next));
   }
 });
@@ -105,7 +105,7 @@ test('schema 5 migration copies all feet, plinth, construction, interiors, mater
   const text = JSON.stringify({ format: 'cabinet-studio', schemaVersion: 5, evaluatorRevision: 'installation-5', cabinet: old });
   const result = deserializeWithInfo(text); assert.equal(result.migrated, true); assert.deepEqual(result.cabinet, expected);
   assert.deepEqual(evaluate(result.cabinet).panels, evaluate(expected).panels); assert.deepEqual(evaluate(result.cabinet).installation, evaluate(expected).installation);
-  assert.equal(JSON.parse(text).cabinet.installation.mounting, undefined); assert.ok(PREVIOUS_AUTOSAVE_KEYS.includes('cabinet-studio.autosave.v5')); assert.equal(AUTOSAVE_KEY, 'cabinet-studio.autosave.v7');
+  assert.equal(JSON.parse(text).cabinet.installation.mounting, undefined); assert.ok(PREVIOUS_AUTOSAVE_KEYS.includes('cabinet-studio.autosave.v5')); assert.equal(AUTOSAVE_KEY, 'cabinet-studio.autosave.v8');
 });
 test('unknown mounting revisions, malformed data, invented hardware and reserved part identities fail without replacing current state', () => {
   const c = furnished(), store = new CabinetStore(c);
@@ -120,7 +120,7 @@ test('unknown mounting revisions, malformed data, invented hardware and reserved
     (d: any) => d.cabinet.compartments.featureId = `${c.id}/installation/mounting/rail`,
     (d: any) => d.cabinet.compartments.id = `${c.id}/installation/mounting`,
     (d: any) => d.cabinet.hardware.push({ id: 'hanger', revision: '1' }),
-    (d: any) => d.schemaVersion = 8
+    (d: any) => d.schemaVersion = 9
   ];
   for (const mutate of mutations) { const doc = JSON.parse(serialize(c)); mutate(doc); assert.throws(() => store.commit(deserialize(JSON.stringify(doc)))); assert.deepEqual(store.getSnapshot().committed, c); }
 });

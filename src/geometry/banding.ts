@@ -4,7 +4,7 @@ export interface PanelEdge { id: string; key: EdgeKey; label: string; product: P
 export const faceAxes = { yz: [2, 1], xz: [0, 2], xy: [0, 1] } as const;
 export const edgeNames = { yz: ['Rear', 'Front', 'Bottom', 'Top'], xz: ['Left', 'Right', 'Rear', 'Front'], xy: ['Left', 'Right', 'Bottom', 'Top'] } as const;
 export function panelMaterials(c: Cabinet, panel: { id: string; materialRole: MaterialRole; size: Vec3; center: Vec3; orientation: keyof typeof faceAxes }) {
-  const selected: MaterialBinding = binding(c, panel.materialRole), record = material(selected.stock);
+  const selected: MaterialBinding = binding(c, panel.materialRole, panel.id), record = material(selected.stock);
   const [u, v] = faceAxes[panel.orientation], keys: EdgeKey[] = ['u-min', 'u-max', 'v-min', 'v-max'];
   const products = keys.map(key => c.banding[panel.id]?.[key] ?? null), widths = products.map(pin => pin ? edgeProduct(pin).thickness : 0);
   const lower = panel.center.map((n, i) => n - panel.size[i] / 2) as Vec3;

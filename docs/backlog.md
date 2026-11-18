@@ -104,3 +104,17 @@ This section supersedes earlier deferred mounting and current-version notes. Sta
 - [ ] Full Stage 2 sign-off: matched hardware assembly drawings, regional companion selections, representative official-drawing fixtures, physical trials and structural acceptance remain incomplete. Product links alone do not verify those requirements.
 
 This is completion of the remaining concept-design software, not full specification acceptance or physical verification. Current local branch `feat/stage-2-completion`, native schema/evaluator 7 / `interiors-7`. Earlier deferred adjustable/preset notes are historical. Stage 3 is not started. No source push, hosting registration or publication.
+
+## Stage 3 — slab doors and handles (v0.8.0)
+
+- [x] Independent front coverage regions: full-height cover, pairs, cover over an opening area and proportional horizontal/vertical splits.
+- [x] Reviewed left/right handing, concept overlay/inset placement, reveal/clearance and explicit inset/coverage dependency rejection.
+- [x] Per-door inherited/overridden stock, finish/grain and four-edge banding through the existing pipeline.
+- [x] None/knob/pull concepts, pinned geometry, pitch, direction, height and edge offsets with face-envelope checks.
+- [x] Illustrative 0–110° opening, close-all and front visibility; canonical intent and inspection state kept separate.
+- [x] Stable picking in posed groups, Structure/compact selection and Fit including displayed bounds; preserve Stage 2 selection fixes.
+- [x] Atomic preview/Apply/Cancel, Undo/Redo, strict schema 8/autosave and copied schemas 1–7 migration.
+- [x] 102 automated tests, TypeScript/Vite build and targeted local browser review of dependencies, history, files, poses, themes and compact controls.
+- [ ] Exact hinges/plates, handles, screws, drilling and verified motion/clearance are deferred to a later stage by explicit user instruction. Earlier Stage 2 fitting-verification items remain deferred, not blockers for this concept increment.
+
+Stage 3 concept slab-door/handle work is locally reviewable on `feat/stage-3-fronts`; exact fittings are not activated or claimed verified. Stage 4 is not started. No source push, hosting registration or publication.

@@ -1,6 +1,7 @@
 import type { Axis, Cabinet } from '../domain/cabinet';
 import { stock, binding, finish, edgeProduct } from '../catalogue/materials';
 import { resolveInteriors } from './interiors';
+import { resolveFronts } from './fronts';
 import { resolveAdjustable } from './adjustable';
 import { resolveMounting } from './mounting';
 import { resolveInstallation } from './installation';
@@ -23,7 +24,9 @@ export function validate(c: Cabinet): Issue[] {
       if (!['none', 'u', 'v'].includes(binding(c, role).grain)) throw new Error('Unknown material grain direction.');
       if (record.kind !== (role === 'back' ? 'back' : 'panel')) throw new Error(`Select ${role === 'back' ? 'back-panel' : 'carcass-panel'} stock for the ${role} role.`);
     }
+    for (const door of c.fronts) { const selected=binding(c,'front',door.id); if(stock(c,'front',door.id).kind!=='panel') throw new Error('Slab doors require panel stock.'); finish(selected.finish); if(!['none','u','v'].includes(selected.grain))throw new Error('Unknown front grain direction.'); }
     const ids = new Set(['left', 'right', 'bottom', 'top', 'back', 'top-front-rail', 'top-rear-rail', 'back-upper-rail', 'back-lower-rail', 'plinth-front', 'plinth-left', 'plinth-right'].map(role => `${c.id}/panel/${role}`));
+    c.fronts.forEach(door => ids.add(door.id));
     c.contents.forEach(shelf => ids.add(shelf.id));
     const collect = (node: Cabinet['compartments']) => { if (node.kind === 'split') { ids.add(node.featureId); node.children.forEach(collect); } }; collect(c.compartments);
     for (const [id, edges] of Object.entries(c.banding)) {
@@ -45,6 +48,8 @@ export function validate(c: Cabinet): Issue[] {
   if (c.contents.length > 63) issues.push({ code: 'contents-complexity', featureId: c.id, severity: 'error', message: 'At most 63 adjustable shelves are supported.' });
   if (!issues.some(issue => issue.severity === 'error')) issues.push(...resolveInstallation(c).issues);
   if (!issues.some(issue => issue.severity === 'error')) issues.push(...resolveMounting(c).issues);
+  if (!issues.some(issue=>issue.severity==='error')) issues.push(...resolveFronts(c).issues);
+  if(c.fronts.length && !issues.some(issue=>issue.severity==='error')) issues.push({code:'provisional-fronts',featureId:c.fronts[0].id,severity:'notice',message:'Slab fronts and handles are conceptual. Exact fittings, drilling and motion/collision verification are deferred.'});
   if (c.contents.length && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-adjustable', featureId: c.contents[0].id, severity: 'notice', message: 'Adjustable shelves use concept support levels and pads; no verified shelf fitting, bores or load capacity.' });
   if (c.installation.mounting.mode !== 'none' && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-mounting', featureId: `${c.id}/installation/mounting`, severity: 'notice', message: 'Concept wall layout only: no verified hanger/rail assembly, preparation, anchors or cabinet/wall load capacity.' });
   if (c.installation.type === 'feet-concept' && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-support', featureId: `${c.id}/installation/feet`, severity: 'notice', message: 'Concept feet only: no verified foot/clip assembly, drilling or load capacity.' });

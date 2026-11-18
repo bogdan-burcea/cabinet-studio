@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BoxGeometry, DoubleSide, Mesh, MeshBasicMaterial, PlaneGeometry, Raycaster, Vector3 } from 'three';
+import { BoxGeometry, Group, DoubleSide, Mesh, MeshBasicMaterial, PlaneGeometry, Raycaster, Vector3 } from 'three';
 import { pickCabinetElement, type PickKind } from '../src/viewport/picking.ts';
 function box(id: string, kind: PickKind, size: [number,number,number], position: [number,number,number]) {
   const mesh = new Mesh(new BoxGeometry(...size),new MeshBasicMaterial({side:DoubleSide}));mesh.position.set(...position);mesh.userData={id,pickKind:kind};mesh.updateMatrixWorld(true);return mesh;
@@ -39,4 +39,13 @@ test('banded shelf strips and support pads resolve to their owning shelf, and em
 test('carcass interior walls behind the opening proxy preserve empty-opening selection',()=>{
   const side=box('inside-side','part',[20,200,100],[0,0,0]);
   assert.equal(pickCabinetElement(ray([0,0,300],[0,0,-1]),[side,opening()],'cabinet'),'opening');
+});
+
+test('closed and inset fronts occlude opening proxies while opened door groups remain pickable',()=>{
+  const front=box('door','front',[100,100,18],[0,0,50]);
+  assert.equal(pickCabinetElement(ray([0,0,300],[0,0,-1]),[opening(),front],'cabinet'),'door');
+  const group=new Group();group.add(front);group.updateMatrixWorld(true);
+  assert.equal(pickCabinetElement(ray([0,0,300],[0,0,-1]),[opening(),group],'cabinet'),'door');
+  group.position.x=200;group.updateMatrixWorld(true);
+  assert.equal(pickCabinetElement(ray([0,0,300],[0,0,-1]),[opening(),group],'cabinet'),'opening');
 });

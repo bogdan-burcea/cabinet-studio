@@ -115,3 +115,18 @@ Screenshots and a native example are alongside the repository. These are softwar
 Reproduced an invisible opening proxy intercepting a visible shelf-surface click and selecting Opening 5. The viewport picker now treats opening planes as interaction proxies, prioritizes visible shelf/divider/support/band geometry, and retains empty-opening selection against carcass background surfaces. Opaque foreground geometry still occludes hidden shelves; transparent back construction and its band strips pass through for picking. Canonical cabinet geometry, intent, saved revisions and history are unchanged.
 
 89 tests pass (six added real Three.js raycasting regressions) and TypeScript/Vite build passes. Browser direct clicks selected Fixed shelf 1, Adjustable shelf 1, Opening 1 and Divider 1 correctly in the narrow preview. Structure selection also selected Fixed shelf 2 and restored the matching inspector/move handle. No browser error logs were captured. Local screenshot: `preview-shelf-selection-fixed.jpg` alongside the repository. No publication or source push.
+
+# Stage 3 — slab doors and handles (v0.8.0)
+
+102 tests pass; TypeScript/Vite build passes. Thirteen added regressions cover preservation of all Stage 2 features, paired slab/handle composition across 24 stock/width/back combinations, independence from interior edits, region splits and identity/band copying, valid empty-carcase inset and rejected interior conflicts, handle placement/handing/style, invalid fits and dependent resizing, per-door material inheritance/override and bands, atomic history/removal, presentation-only inspection rotations, schema 8 strict round trips and schema 7 copy migration, and nested front picking/occlusion. Existing 89 regressions pass. The known Three.js chunk-size advisory remains.
+
+Local browser review on the existing 600 × 720 × 560 mm furnished cabinet:
+
+- Previewed/applied a pair of 297 × 716 × 18 mm overlay slabs over all five openings. One Undo removed the pair and exhausted that step; Redo restored it. WebGL canvas click selected Slab door 2 through the new transformed picking path.
+- Inset placement conflicted with the existing interiors: Apply disabled and the committed layout remained intact. Cancel restored the overlay settings. Knob/handing changes applied atomically and Undo restored the original right-hand pull layout.
+- Overrode only door 2 to 16 mm white-concept stock and a 1 mm right-edge band. Door 1 kept its inherited 18 mm material; original shelf/divider/plinth materials and bands remained. A bottom/top front split preview created a third slab; Apply/Undo restored the pair without changing the interior tree.
+- Opened both doors to 90° using keyboard-accessible sliders. Their panels/bands/handles moved together and the original interiors were visible. Hiding fronts allowed the canvas to select Divider 1; re-showing retained inspection state. Fit included opened geometry.
+- Saved native schema 8 while doors were open, changed a handle to None, reopened the file and reloaded. Pull intent returned; inspection angle reset to 0° because pose is presentation-only. Prior materials/banding, feet/plinth, mounting and interiors were retained.
+- Reviewed closed Graphite and open Linen views and compact 760 × 900 controls. No browser error logs were captured. JPG captures and a native example are alongside the repository.
+
+This is concept design under the user's explicit deferral of exact fittings. No hinge/plate/handle products, fixings, drilling, physical installation or swept/adjacent-door collision verification is claimed. No reference edits, Stage 4 work, source push or publication.
