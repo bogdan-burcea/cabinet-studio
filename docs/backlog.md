@@ -118,3 +118,80 @@ This is completion of the remaining concept-design software, not full specificat
 - [ ] Exact hinges/plates, handles, screws, drilling and verified motion/clearance are deferred to a later stage by explicit user instruction. Earlier Stage 2 fitting-verification items remain deferred, not blockers for this concept increment.
 
 Stage 3 concept slab-door/handle work is locally reviewable on `feat/stage-3-fronts`; exact fittings are not activated or claimed verified. Stage 4 is not started. No source push, hosting registration or publication.
+
+## Historical interface work — reverted
+
+The interface-only checkboxes below describe earlier work. The user reverted these layouts and controls to the original Stage 3 interface before Stage 4. Their completion marks are historical, not current UI availability. Later cabinet rules and native compatibility were preserved.
+
+### Workspace usability
+
+- [x] Full-height 3D focus, compact side summaries and collapsible element groups.
+- [x] Contextual icon actions, tooltips and focused modal editors for existing features.
+- [x] Side-header file/history commands and secondary command menu.
+- [x] Recoverable Backspace deletion with editable-field and nested-content protection.
+- [x] Configure shelf/divider position and setback before creation; suggest clearance behind inset slabs.
+
+### Workspace polish and door review — 0.10.0
+
+- [x] Immediate settings changes with Undo; no separate preview/apply stage.
+- [x] Focused door, handle, split and band editors; selected top/back and foot/plinth editors restrict their fields.
+- [x] Remove selection dropdown and hide controls; defer all material/finish/grain controls.
+- [x] Connected split-door placement changes both leaves; hinge edges require mounting panels at both concept positions.
+- [x] Correct inset bounds at internal divider/shelf faces; reject unsupported or ill-fitting splits and dependent changes.
+- [x] Offer validated combined repairs for inset clearance, hinge support/alignment and oversized handles.
+- [x] Solid/transparent/wireframe display, adjustable exploded view; contrasting, individually selectable edge strips and handles.
+
+### Kumo and linked layout — 0.11.0
+
+- [x] Double-click any picked element to open its specific editor, including handles and edge bands.
+- [x] Pin matching door boundaries to supporting divisions; moving either updates dependent dimensions.
+- [x] Persistent Keep centred constraint follows cabinet/parent resizing and saves in native files.
+- [x] View modes available from the bottom camera bar.
+- [x] Recommended cabinet type/width/size controls inside Cabinet dimensions; size-only, one Undo step.
+- [x] Actual Cloudflare Kumo buttons, inputs, selects, dialogs, tooltips, dropdowns, checkboxes/switches and theme tokens behind replaceable controls.
+
+## Stage 4 — first exact-article TANDEMBOX pack (0.12.0)
+
+- [x] Pinned 500 mm BLUMOTION / M / SW principal fittings with official catalogue evidence and source revision.
+- [x] External drawers in leaf openings, stacked front allocations, continuous runner supports and dependency/collision rejection.
+- [x] Exact 16 mm bottom/back deductions; distinct purchased metal envelopes and board components.
+- [x] Original inspector, Structure/3D selection, Preview/Apply/Cancel, inspection extension, Undo/Redo and schema 12 native/autosave.
+- [x] 126 tests, build and local browser creation/history/autosave review; old furnished cabinet retained on the main origin.
+- [ ] Complete regional front/back/base fastener articles and quantities, assembly-template preparation and physical fitting trial.
+- [ ] Verified inner-tray pack, other lengths/heights and additional motion systems remain later increments.
+
+This is the first Stage 4 implementation, not full production/physical acceptance. See `stage-4-antaro.md`. No reference edits, source push or publication.
+
+## Official Blum source integration — requested 18 November 2026
+
+Use official Cabinet Configurator information in this existing standalone project. First validation target is a drawer cabinet with a Blum box system, starting with the existing antaro M 500 mm pack. See [source and validation plan](blum-source-plan.md).
+
+- [x] Record observed official report/CAD/BXF2 export surfaces and evidence boundaries.
+- [ ] Capture a matching configured-drawer reference and original exports with source metadata/fingerprints.
+- [ ] Inspect available formats and compare articles, board deductions and evidenced fitting/preparation geometry with the pinned pack.
+- [ ] Add focused reference fixtures and explicit pack revisions for validated changes.
+- [ ] Establish the permitted asset distribution scope before bundling official files for distribution.
+
+No runtime changes, new manufacturer verification claim, manufacturing output or publication in this documentation increment.
+
+## Current priority — simple cabinet UX baseline
+
+Feature expansion is paused by user request. Default app now exposes only a five-panel cabinet, dimensions/drag resize, selection/panel inspection, camera, name, New/Open/Save and Undo/Redo. Retain the existing design while iterating on the fundamental experience. Do not reintroduce advanced controls until requested.
+
+Previous Stage 4 interface is preserved as `AdvancedApp.tsx`; its implementation and tests remain intact. The simple editor has a separate autosave and rejects advanced files without removing features. Next: collect feedback and refine one interaction at a time, then agree which capability to add back.
+
+## Simple editor — Cabineo and part inspection
+
+Added Cabineo 8/12 from the Workshop reference behind independent catalogue, rule, command and flat-face modules. Full panels and fixed interiors only; preserve None for existing cabinets. Added face-up part thumbnails, optional opposite-face inspection, and matched fitting positions in 3D. Removed generic Interior guidance for selected parts and the move tooltip; header separators share one style. Physical trial and manufacturing geometry remain deferred; see `cabineo.md`.
+
+## Back seating and expanded inspection
+
+Added selected-back thickness, inset/applied/grooves-or-dados/rebate seating, rear inset and seat depth. Geometry, receiving pockets, interior depth, Cabineo layout and native file intent update together. Existing defaults and identities survive. Added thumbnail expansion (Escape/focus return), removed LOCAL and the cabinet-row icon, and removed empty Interior guidance. All Cabineo bores now appear in 3D inspection; simplified fittings have stronger outlines. Manufacturing booleans for circular bores, back fixing articles/holes and physical assembly checks remain outside this iteration.
+
+## One-face planning, true holes, stock and puzzle corners
+
+Implemented reversible stock thickness and interlocking corner intent, matched interior fastener preservation, common-face Cabineo placement where possible, opposed-face/interference notices, numeric increment/decrement controls, actual merged blind-hole cutouts, and puzzle profiles in the 3D/flat previews. Native 15 migrates unchanged; current format is 16. Corner profiles use a target finger width and even divisions. Physical assembly, tool-radius reliefs and production exports remain outside this local preview iteration.
+
+## CNC controls and interior finger joints
+
+Added numeric 3–24 mm stock; total clearance defaults to 2 mm for wooden connection cuts; explicit cutter-sized dogbones; opposed receiver-pilot through conversion; per-side Cabineo count with spacing checks; contextual finger end joints for fixed shelves and dividers. Official Evo horizontal number-input controls replace custom split arrows. Shared clipped cut profiles repair preview overdraw and keep 3D dogbones consistent. Native 17 and strict parsing preserve earlier identities and intent; machining defaults apply to regenerated wood cuts. Physical trial, CNC export and load verification remain outside this local preview.

@@ -1,3 +1,6 @@
+import {panelDisplayGeometry} from './part-mesh';
+import {fitCamera, updateProjection, type CabinetCamera} from './camera-fit';
+import {explodedOffset,type RenderMode} from './display';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { Axis, Cabinet, Vec3 } from '../domain/cabinet';
@@ -8,13 +11,16 @@ import { finishColor, type ViewportTheme } from '../design-system/themes';
 export type ViewName = 'isometric' | 'front' | 'side' | 'top' | 'rear';
 export interface DimensionAnchor { axis: Axis; x: number; y: number; handleX: number; handleY: number }
 interface Callbacks {
+  usableHeight?(): number; editDivision?():void;
   select(id: string): void; dragStart(): void; preview(axis: Axis, value: number): void; commit(): void; cancel(): void;
   anchors(anchors: DimensionAnchor[]): void; divisionAnchor(point: { x: number; y: number } | null): void; previewDivision(id: string, value: number): void;
 }
 export class CabinetViewport {
   readonly renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
-  private camera = new THREE.PerspectiveCamera(36, 1, 1, 50000);
+  private perspective = new THREE.PerspectiveCamera(36, 1, 1, 50000);
+  private elevation = new THREE.OrthographicCamera(-500, 500, 500, -500, 1, 50000);
+  private camera: CabinetCamera = this.perspective;
   private controls: OrbitControls;
   private model = new THREE.Group();
   private handles = new THREE.Group();
@@ -25,6 +31,7 @@ export class CabinetViewport {
   private cabinet!: Cabinet;
   private geometry!: EvaluatedCabinet;
   private selected = '';
+  private explosion = 0;
   private theme!: ViewportTheme;
   private down: { x: number; y: number } | null = null;
   private drag: { axis: Axis; x: number; y: number; initial: number; px: number; py: number; featureId?: string; centre?: number } | null = null;
@@ -59,7 +66,7 @@ export class CabinetViewport {
   }
   private resize() {
     const { width, height } = this.host.getBoundingClientRect();
-    this.renderer.setSize(width, height); this.camera.aspect = width / Math.max(1, height); this.camera.updateProjectionMatrix();
+    this.renderer.setSize(width, height); updateProjection(this.camera, this.area());
   }
   private clear(group: THREE.Group) {
     for (const child of [...group.children]) {
@@ -67,27 +74,27 @@ export class CabinetViewport {
       group.remove(child);
     }
   }
-  update(cabinet: Cabinet, geometry: EvaluatedCabinet, selected: string, theme: ViewportTheme, preview: boolean, cutaway: boolean, plinthVisible: boolean, frontsVisible:boolean, doorAngles:Record<string,number>) {
+  update(cabinet: Cabinet, geometry: EvaluatedCabinet, selected: string, theme: ViewportTheme, preview: boolean, cutaway: boolean, plinthVisible: boolean, frontsVisible:boolean, doorAngles:Record<string,number>,renderMode:RenderMode='solid',explosion=0) {
+    this.explosion=explosion;
     const first = !this.cabinet; this.cabinet = cabinet; this.geometry = geometry; this.theme = theme; this.selected = selected;
     this.scene.background = new THREE.Color(theme.background);
     (this.grid.material as THREE.LineBasicMaterial).color.set(theme.grid);
-    (this.grid.material as THREE.Material).transparent = true; (this.grid.material as THREE.Material).opacity = 0.07;
+    (this.grid.material as THREE.Material).transparent = true; (this.grid.material as THREE.Material).opacity = 0.007; // 20% of the previous grid intensity.
     (this.grid.material as THREE.Material).depthWrite = false;
     this.clear(this.model); this.clear(this.handles); this.clear(this.dimensions);
     const frontGroups=new Map<string,THREE.Group>();
     if(frontsVisible)for(const door of geometry.fronts.doors){const group=new THREE.Group();group.position.set(...door.pivot);group.rotation.y=inspectionRotation(door.handing,doorAngles[door.id]??0);frontGroups.set(door.id,group);this.model.add(group);}
-    const attach=(mesh:THREE.Object3D,center:Vec3,id:string)=>{const group=frontGroups.get(id);mesh.position.set(...center);if(group){mesh.position.sub(group.position);group.add(mesh);}else this.model.add(mesh);};
+    const attach=(mesh:THREE.Object3D,center:Vec3,id:string)=>{const group=frontGroups.get(id);mesh.position.set(...center);const panel=geometry.panels.find(p=>p.id===id);if(panel&&explosion)mesh.position.add(new THREE.Vector3(...explodedOffset(panel.role,panel.center,[cabinet.envelope.origin[0]+cabinet.envelope.width/2,cabinet.envelope.origin[1]+cabinet.envelope.height/2,cabinet.envelope.origin[2]+cabinet.envelope.depth/2],explosion)));if(group){mesh.position.sub(group.position);group.add(mesh);}else this.model.add(mesh);};
     for (const panel of geometry.panels) {
       if(panel.role==='door'&&!frontsVisible)continue;
       if (panel.installationPart === 'plinth' && !plinthVisible) continue;
       const isSelected = selected === panel.id;
       const material = new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : isSelected ? theme.selected : finishColor(panel.finish.id, theme),
         roughness: 0.82, metalness: 0, transparent: (cutaway && panel.constructionPart === 'back') || preview, opacity: cutaway && panel.constructionPart === 'back' ? 0.12 : preview ? 0.68 : 1 });
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(...panel.coreSize), material);
+      const mesh = new THREE.Mesh(panelDisplayGeometry(panel,geometry.pockets,[...geometry.cabineo.flatMap(j=>j.bores),...geometry.backFasteners]), material);
       mesh.position.set(...panel.coreCenter); mesh.userData.id = panel.id; mesh.userData.pickKind = panel.role==='door'?'front':panel.role === 'shelf' || panel.role === 'divider' ? 'interior' : panel.constructionPart === 'back' ? 'back' : 'part'; mesh.userData.pickThrough = cutaway && panel.constructionPart === 'back';
-      const outline = new THREE.BoxGeometry(...panel.size);
-      const edge = new THREE.LineSegments(new THREE.EdgesGeometry(outline), new THREE.LineBasicMaterial({ color: isSelected ? theme.selected : theme.edge, transparent: true, opacity: 0.65 })); outline.dispose();
-      edge.position.set(...panel.center.map((v, i) => v - panel.coreCenter[i]) as Vec3);
+      const edge = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry,20), new THREE.LineBasicMaterial({ color: isSelected ? theme.selected : renderMode==='wireframe'?theme.wire:theme.edge, transparent: true, opacity: renderMode==='wireframe'?1:(theme.edgeOpacity??.65) }));
+
       mesh.add(edge); attach(mesh,panel.coreCenter,panel.id);
       for (const band of panel.edges.filter(edge => edge.product)) {
         const strip = new THREE.Mesh(new THREE.BoxGeometry(...band.size), material.clone()); strip.position.set(...band.center); strip.userData.id = panel.id; strip.userData.pickKind = mesh.userData.pickKind; strip.userData.pickThrough = mesh.userData.pickThrough;
@@ -100,6 +107,16 @@ export class CabinetViewport {
       const mesh=new THREE.Mesh(shape,new THREE.MeshStandardMaterial({color:preview?theme.ghost:theme.frontHandle,metalness:0.65,roughness:0.35,transparent:preview,opacity:preview?0.65:1}));if(part.shape==='cylinder')mesh.rotation.x=Math.PI/2;
       mesh.userData.id=part.ownerId;mesh.userData.pickKind='front';attach(mesh,part.center,part.ownerId);
     }
+    for(const drawer of geometry.drawers.drawers)for(const part of drawer.parts){
+      const active=selected===drawer.id,metal=part.material==='steel';
+      const mesh=new THREE.Mesh(new THREE.BoxGeometry(...part.size),new THREE.MeshStandardMaterial({color:preview?theme.ghost:active?theme.selected:metal?'#e2e4e5':theme.panel,roughness:metal?.45:.82,metalness:metal?.35:0,transparent:preview,opacity:preview?.65:1}));
+      mesh.position.set(...part.center);mesh.position.z+=part.moving?(doorAngles[drawer.id]??0)*5:0;
+      mesh.userData.id=drawer.id;mesh.userData.pickKind='interior';
+      mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),new THREE.LineBasicMaterial({color:active?theme.selected:theme.edge,transparent:true,opacity:.5})));this.model.add(mesh);
+    }
+    if(renderMode!=='solid')this.model.traverse(object=>{
+      if(object instanceof THREE.Mesh){const materials=Array.isArray(object.material)?object.material:[object.material];for(const material of materials){material.transparent=true;material.opacity=object.userData.accessory?(renderMode==='wireframe'?.18:.65):object.userData.bore?.7:renderMode==='wireframe'?0:.23;material.depthWrite=false;material.side=THREE.DoubleSide;}}
+    });
     for (const foot of geometry.installation.feet) for (const part of foot.parts) {
       const shape = part.kind === 'plate' ? new THREE.BoxGeometry(...part.size) : new THREE.CylinderGeometry(part.size[0] / 2, part.size[0] / 2, part.size[1], 24);
       const mesh = new THREE.Mesh(shape, new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : selected === foot.id ? theme.selected : theme.support, roughness: 0.65, metalness: 0.1, transparent: preview, opacity: preview ? 0.65 : 1 }));
@@ -146,6 +163,7 @@ export class CabinetViewport {
       const ball = new THREE.Mesh(new THREE.SphereGeometry(11, 16, 12), new THREE.MeshBasicMaterial({ color: theme.handle, depthTest: false }));
       ball.renderOrder = 10; ball.position.set(handle[0] + ox, handle[1] + oy, handle[2] + oz); ball.userData.axis = axis; this.handles.add(ball);
     }
+    this.handles.visible=!explosion;this.dimensions.visible=!explosion;
     if (first) this.view('isometric');
   }
   private project(point: THREE.Vector3) {
@@ -174,12 +192,13 @@ export class CabinetViewport {
   private pointerDown = (event: PointerEvent) => {
     if (event.button !== 0) return;
     this.down = { x: event.clientX, y: event.clientY };
-    const hit = this.hits(event, this.handles.children)[0];
+    const hit = this.explosion?undefined:this.hits(event, this.handles.children)[0];
     if (hit) {
       event.stopImmediatePropagation(); this.startDrag(hit.object.userData.axis, event);
     }
   };
   startDrag(axis: Axis, event: PointerEvent, point?: THREE.Vector3) {
+    if(this.explosion)return;
     if (event.button !== 0) return;
     this.controls.enabled = false; this.renderer.domElement.setPointerCapture(event.pointerId);
     const start = point ?? this.handles.children.find(h => h.userData.axis === axis)!.position.clone();
@@ -204,10 +223,10 @@ export class CabinetViewport {
         const value = this.cabinet.contents.some(s => s.id === featureId) ? initial + delta : Math.abs(initial + delta - centre!) < 5 ? centre! : Math.round((initial + delta) / 5) * 5;
         this.callbacks.previewDivision(featureId, Math.round(value * 10) / 10);
       } else this.callbacks.preview(axis, Math.round(initial + delta));
-    } else this.renderer.domElement.style.cursor = this.hits(event, this.handles.children).length ? 'ew-resize' : 'grab';
+    } else this.renderer.domElement.style.cursor = !this.explosion&&this.hits(event, this.handles.children).length ? 'ew-resize' : 'grab';
   };
   private pointerUp = (event: PointerEvent) => {
-    if (this.drag) { this.drag = null; this.controls.enabled = true; this.callbacks.commit(); }
+    if (this.drag) { const tap=this.drag.featureId&&Math.hypot(event.clientX-this.drag.x,event.clientY-this.drag.y)<4; this.drag = null; this.controls.enabled = true; if(tap){this.callbacks.cancel();this.callbacks.editDivision?.();}else this.callbacks.commit(); }
     else if (this.down && Math.hypot(event.clientX - this.down.x, event.clientY - this.down.y) < 5) {
       this.setPointerRay(event);
       this.callbacks.select(pickCabinetElement(this.raycaster, this.model.children, this.cabinet.id));
@@ -227,28 +246,38 @@ export class CabinetViewport {
     const bounds=new THREE.Box3(new THREE.Vector3(x,this.geometry.installation.floorY,z),new THREE.Vector3(x+width,y+height,z+depth));
     return bounds.expandByObject(this.model);
   }
-  private center() { return this.displayBounds().getCenter(new THREE.Vector3()); }
+  private area() {
+    const width = Math.max(1, this.host.clientWidth), height = Math.max(1, this.host.clientHeight);
+    return {width, height, usableHeight: Math.max(80, Math.min(height, this.callbacks.usableHeight?.() ?? height))};
+  }
   view(name: ViewName) {
     if (!this.cabinet) return;
-    const directions: Record<ViewName, Vec3> = { isometric: [1.25, 0.8, 1.8], front: [0, 0, 1], side: [1, 0, 0], rear: [-1.25, 0.6, -1.8], top: [0, 1, 0.001] };
-    this.controls.target.copy(this.center()); this.camera.position.copy(this.center()).add(new THREE.Vector3(...directions[name]).normalize().multiplyScalar(this.distance())); this.controls.update();
-  }
-  private distance() {
-    const size=this.displayBounds().getSize(new THREE.Vector3());
-    const radius=Math.sqrt((size.x+260)**2+(size.y+220)**2+(size.z+180)**2)/2;
-    const angle = Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * Math.min(1, this.camera.aspect));
-    return radius / Math.sin(angle) * 1.08;
+    // Flush pending damping before changing the camera and its coordinate frame.
+    this.controls.enableDamping = false; this.controls.update();
+    this.camera = name === 'isometric' ? this.perspective : this.elevation;
+    this.controls.object = this.camera;
+    this.controls.enableRotate = name === 'isometric';
+    this.camera.up.set(...(name === 'top' ? [0, 0, -1] : [0, 1, 0]) as Vec3);
+    const directions: Record<ViewName, Vec3> = {isometric: [1.25, .8, 1.8], front: [0, 0, 1], side: [1, 0, 0], rear: [0, 0, -1], top: [0, 1, 0]};
+    this.controls.target.copy(this.displayBounds().getCenter(new THREE.Vector3()));
+    fitCamera(this.camera, this.displayBounds(), new THREE.Vector3(...directions[name]), this.area());
+    this.controls.update(); this.controls.enableDamping = true;
   }
   fit() {
+    if (!this.cabinet) return;
+    this.controls.enableDamping = false; this.controls.update();
     const direction = this.camera.position.clone().sub(this.controls.target).normalize();
-    this.controls.target.copy(this.center()); this.camera.position.copy(this.center()).add(direction.multiplyScalar(this.distance())); this.controls.update();
+    this.controls.target.copy(this.displayBounds().getCenter(new THREE.Vector3()));
+    fitCamera(this.camera, this.displayBounds(), direction, this.area());
+    this.controls.update(); this.controls.enableDamping = true;
   }
   orbit(theta: number, phi: number) {
+    if (this.camera instanceof THREE.OrthographicCamera) return;
     const offset = this.camera.position.clone().sub(this.controls.target), spherical = new THREE.Spherical().setFromVector3(offset);
     spherical.theta += theta; spherical.phi = Math.max(0.02, Math.min(Math.PI - 0.02, spherical.phi + phi));
     this.camera.position.copy(this.controls.target).add(new THREE.Vector3().setFromSpherical(spherical)); this.controls.update();
   }
-  zoom(factor: number) { const offset = this.camera.position.clone().sub(this.controls.target).multiplyScalar(factor); offset.clampLength(250, 12000); this.camera.position.copy(this.controls.target).add(offset); this.controls.update(); }
+  zoom(factor: number) { if (this.camera instanceof THREE.OrthographicCamera) { this.camera.zoom = THREE.MathUtils.clamp(this.camera.zoom / factor, .1, 10); this.camera.updateProjectionMatrix(); return; } const offset = this.camera.position.clone().sub(this.controls.target).multiplyScalar(factor); offset.clampLength(250, 12000); this.camera.position.copy(this.controls.target).add(offset); this.controls.update(); }
   dispose() {
     this.disposed = true; this.renderer.setAnimationLoop(null); this.resizeObserver.disconnect(); this.controls.dispose();
     const canvas = this.renderer.domElement;

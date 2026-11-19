@@ -1,0 +1,30 @@
+/* Simple workspace layout; all new colours use the existing theme tokens. */
+.simple-workspace{grid-template-rows:var(--header-height) minmax(0,1fr)}
+.simple-workspace .app-header{gap:16px}
+.simple-workspace .document-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.cabinet-name-row{display:flex;align-items:center;gap:4px;margin:0 12px 16px;padding:8px;border-radius:var(--radius);min-width:0}
+.cabinet-name-row.selected{background:var(--selected)}
+.cabinet-name-row>button{flex:none;padding:0;width:28px;min-height:32px;color:var(--text-muted)}
+.cabinet-name-row>input{width:100%;padding:4px 6px;background:transparent;border:1px solid transparent;color:var(--text);font-weight:600}
+.cabinet-name-row>input:hover{border-color:var(--border)}
+.cabinet-name-row>input:focus{background:var(--field);border-color:var(--focus)}
+.simple-workspace .camera-toolbar{bottom:48px;gap:2px;max-width:calc(100% - 24px);flex-wrap:wrap;width:max-content;justify-content:center}
+.simple-workspace .camera-toolbar .icon-button{width:32px;padding:0}
+:root[data-theme="linen"]{--display:'Manrope',var(--font);--radius-sm:4px;--radius:7px;--radius-lg:12px}
+@media(max-width:800px){.simple-workspace .workspace{grid-template-columns:150px minmax(200px,1fr) 240px}.simple-workspace .elements-panel{display:block}.simple-workspace .brand{font-size:16px}.simple-workspace .local-badge{display:none}.simple-workspace .app-header{padding:0 12px}.cabinet-name-row{margin:0 4px 12px;padding:4px}.simple-workspace .document-actions{gap:2px}}
+@media(max-width:600px){.simple-workspace{height:auto;min-height:100dvh;overflow:visible;grid-template-rows:auto 1fr}.simple-workspace .app-header{min-height:66px;flex-wrap:wrap;padding:8px 12px;gap:8px}.simple-workspace .document-actions{margin-left:0;gap:2px}.simple-workspace .workspace{grid-template-columns:1fr}.simple-workspace .elements-panel{padding-bottom:0}.simple-workspace .elements-panel .panel-heading,.simple-workspace .elements-panel .tree-children{display:none}.cabinet-name-row{margin:8px 12px}.simple-workspace .canvas-area{height:460px}.simple-workspace .camera-toolbar{bottom:16px}.simple-workspace .inspector{border-left:0;border-top:1px solid var(--border)}}
+.header-separator{height:28px;width:1px;background:var(--border);margin:0 6px;flex:none}
+.simple-workspace .document-actions>.icon-button{width:36px;padding:0}
+.simple-workspace .inspector-title h2{margin-top:0}
+.simple-workspace .construction-choice select{width:100%;min-width:0}
+
+.structure-disclosure{flex-shrink:0}
+.structure-disclosure>summary{list-style:none;cursor:pointer;align-items:center;justify-content:flex-start;gap:8px;padding:0 12px 8px 4px;min-height:28px}
+.structure-disclosure>summary::-webkit-details-marker{display:none}
+.structure-disclosure>summary>span{flex:1}
+.structure-disclosure>summary>small{font:10px var(--mono);letter-spacing:0}
+.structure-disclosure[open]>summary>svg{transform:rotate(90deg)}
+.structure-disclosure>summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.simple-select{display:block;position:relative;margin-top:8px}
+.simple-workspace .simple-select select{appearance:none;padding-right:36px}
+.simple-select>svg{position:absolute;right:12px;top:50%;transform:translateY(-50%) rotate(90deg);color:var(--text-muted);pointer-events:none}

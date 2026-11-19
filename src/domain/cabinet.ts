@@ -1,9 +1,12 @@
+export interface CncSettings {revision:'cnc-1';tolerance:number;bitDiameter:number;dogbones:boolean;throughOpposed:boolean;cabineoPerSide:number}
 export type Axis = 'width' | 'height' | 'depth';
 export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back' | 'shelf' | 'divider' | 'top-front-rail' | 'top-rear-rail' | 'back-upper-rail' | 'back-lower-rail' | 'plinth-front' | 'plinth-left' | 'plinth-right' | 'door';
 export interface Carcass {
+  machining?:CncSettings;
+  corner?:{mode:'puzzle';revision:'puzzle-1';pitch:number};
   construction: 'rectangular-butt'; policyRevision: 'construction-1';
   top: { mode: 'full' | 'rails'; frontDepth: number; rearDepth: number };
-  back: { mode: 'full' | 'rails'; upperHeight: number; lowerHeight: number };
+  back: { mode: 'full' | 'rails'; upperHeight: number; lowerHeight: number; joint?: {revision:'back-1';mode:'inset'|'applied'|'groove'|'rebate';inset:number;depth:number;clearance:number;fastener?:{id:'hafele-26009765';revision:'rpc-1';perSide:number}} };
 }
 export function defaultCarcass(): Carcass {
   return { construction: 'rectangular-butt', policyRevision: 'construction-1',
@@ -11,7 +14,7 @@ export function defaultCarcass(): Carcass {
 }
 export type DivisionAxis = 'horizontal' | 'vertical';
 export interface OpeningNode { id: string; kind: 'opening'; children: [] }
-export interface SplitNode { id: string; kind: 'split'; featureId: string; axis: DivisionAxis; position: number; policyRevision: 'fixed-1'; children: [Compartment, Compartment] }
+export interface SplitNode {joint?:{mode:'finger';revision:'finger-1';pitch:number}; id: string; kind: 'split'; featureId: string; axis: DivisionAxis; position: number; policyRevision: 'fixed-1' | 'fixed-2';  frontSetback?: number; anchor?: 'centre'; children: [Compartment, Compartment] }
 export type Compartment = OpeningNode | SplitNode;
 export type Vec3 = [number, number, number];
 export interface ProductPin { id: string; revision: string }
@@ -45,9 +48,14 @@ export interface AdjustableShelf {
 export interface SlabDoor {
   id: string; kind: 'slab-door'; policyRevision: 'slab-1';
   region: { left: number; right: number; bottom: number; top: number };
+  boundaryLinks?: Partial<Record<'left'|'right'|'bottom'|'top',string>>;
   placement: 'overlay' | 'inset'; handing: 'left' | 'right'; reveal: number; clearance: number;
   material: MaterialBinding | null;
   handle: { geometry: ProductPin; kind: 'none' | 'knob' | 'pull'; pitch: number; orientation: 'vertical' | 'horizontal'; edgeOffset: number; height: 'top' | 'centre' | 'bottom'; endOffset: number };
+}
+export interface MetalDrawer {
+  id:string; kind:'metal-drawer'; policyRevision:'antaro-external-1'; pack:ProductPin;
+  openingId:string; offset:number; frontHeight:number;
 }
 export interface Cabinet {
   id: string;
@@ -57,6 +65,7 @@ export interface Cabinet {
   compartments: Compartment;
   contents: AdjustableShelf[];
   fronts: SlabDoor[];
+  drawers?: MetalDrawer[];
   installation: Installation;
   materials: MaterialBindings;
   banding: EdgeBanding;

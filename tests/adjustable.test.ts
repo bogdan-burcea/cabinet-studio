@@ -86,7 +86,7 @@ test('fixed/adjustable conversion previews preserve panel identity and banding; 
   const multiple=duplicateAdjustable(converted,fixed.featureId).cabinet;assert.throws(()=>adjustableToFixed(multiple,fixed.featureId),/Remove other/);
   const store=new CabinetStore(c);store.preview(converted);store.cancel();assert.deepEqual(store.getSnapshot().committed,c);store.commit(converted);store.undo();assert.deepEqual(store.getSnapshot().committed,c);
 });
-test('schema 8 preserves all adjustable intent/geometry and schema 6 migrates a copy without changing prior features',()=>{
+test('schema 11 preserves all adjustable intent/geometry and schema 6 migrates a copy without changing prior features',()=>{
   const {cabinet:c}=withShelf();assert.deepEqual(deserialize(serialize(c)),c);assert.deepEqual(evaluate(deserialize(serialize(c))),evaluate(c));
   const previous=furnished(),text=JSON.stringify({format:'cabinet-studio',schemaVersion:6,evaluatorRevision:'mounting-6',cabinet:previous}),result=deserializeWithInfo(text);
   assert.equal(result.migrated,true);assert.deepEqual(result.cabinet,previous);assert.deepEqual(evaluate(result.cabinet),evaluate(previous));assert.ok(PREVIOUS_AUTOSAVE_KEYS.includes('cabinet-studio.autosave.v6'));assert.deepEqual(JSON.parse(text).cabinet,previous);

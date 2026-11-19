@@ -1,3 +1,8 @@
+import {validateCnc} from './cnc';
+import {resolveBackFasteners} from './back-fasteners';
+import {joineryPanels,resolveCabineo} from './cabineo';
+import {validHardware} from '../catalogue/cabineo';
+import {resolveDrawers} from './drawers';
 import type { Axis, Cabinet } from '../domain/cabinet';
 import { stock, binding, finish, edgeProduct } from '../catalogue/materials';
 import { resolveInteriors } from './interiors';
@@ -13,6 +18,7 @@ export const dimensionLimits: Record<Axis, { min: number; max: number }> = {
 };
 export function validate(c: Cabinet): Issue[] {
   const issues: Issue[] = [];
+  try{validateCnc(c);}catch(e){issues.push({code:'cnc-settings',featureId:c.id,severity:'error',message:(e as Error).message});}
   for (const axis of ['width', 'height', 'depth'] as const) {
     const value = c.envelope[axis], { min, max } = dimensionLimits[axis];
     if (!Number.isFinite(value) || value < min || value > max || Math.abs(value * 10 - Math.round(value * 10)) > 1e-6)
@@ -38,7 +44,7 @@ export function validate(c: Cabinet): Issue[] {
     }
   }
   catch (error) { issues.push({ code: 'material-revision', featureId: c.id, severity: 'error', message: (error as Error).message }); }
-  if (c.hardware.length) issues.push({ code: 'hardware-unavailable', featureId: c.id, severity: 'error', message: 'This version has no enabled hardware assemblies. The original file is unchanged.' });
+  if (!validHardware(c.hardware)) issues.push({ code: 'hardware-unavailable', featureId: c.id, severity: 'error', message: 'Unsupported hardware assembly or revision. The original file is unchanged.' });
   if (!issues.some(i => i.severity === 'error')) {
     const t = stock(c, 'carcass').thickness, b = stock(c, 'back').thickness;
     issues.push(...resolveConstruction(c, t, b).issues);
@@ -49,9 +55,13 @@ export function validate(c: Cabinet): Issue[] {
   if (!issues.some(issue => issue.severity === 'error')) issues.push(...resolveInstallation(c).issues);
   if (!issues.some(issue => issue.severity === 'error')) issues.push(...resolveMounting(c).issues);
   if (!issues.some(issue=>issue.severity==='error')) issues.push(...resolveFronts(c).issues);
+  if (!issues.some(issue=>issue.severity==='error')) issues.push(...resolveDrawers(c).issues);
   if(c.fronts.length && !issues.some(issue=>issue.severity==='error')) issues.push({code:'provisional-fronts',featureId:c.fronts[0].id,severity:'notice',message:'Slab fronts and handles are conceptual. Exact fittings, drilling and motion/collision verification are deferred.'});
   if (c.contents.length && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-adjustable', featureId: c.contents[0].id, severity: 'notice', message: 'Adjustable shelves use concept support levels and pads; no verified shelf fitting, bores or load capacity.' });
   if (c.installation.mounting.mode !== 'none' && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-mounting', featureId: `${c.id}/installation/mounting`, severity: 'notice', message: 'Concept wall layout only: no verified hanger/rail assembly, preparation, anchors or cabinet/wall load capacity.' });
   if (c.installation.type === 'feet-concept' && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-support', featureId: `${c.id}/installation/feet`, severity: 'notice', message: 'Concept feet only: no verified foot/clip assembly, drilling or load capacity.' });
+  if(c.hardware.length&&!issues.some(i=>i.severity==='error'))try{resolveCabineo(c);}catch(e){issues.push({code:'cabineo-layout',featureId:c.id,severity:'error',message:(e as Error).message});}
+  if(!issues.some(i=>i.severity==='error'))try{resolveBackFasteners(c);}catch(e){issues.push({code:'back-fasteners',featureId:`${c.id}/panel/back`,severity:'error',message:(e as Error).message});}
+  if(!issues.some(i=>i.severity==='error'))try{joineryPanels(c);}catch(e){issues.push({code:'interior-finger',featureId:c.id,severity:'error',message:(e as Error).message});}
   return issues;
 }
