@@ -1,3 +1,4 @@
+import {cupSetbackMax} from '../catalogue/hinges';
 import {resizeCabinet} from './dimensions';
 import {resolveFronts} from '../rules/fronts';
 import {corrections} from './corrections';
@@ -30,7 +31,11 @@ export function editRepairs(candidate:Cabinet,previous:Cabinet):EditRepair[]{
   add(`Raise feet to ${height} mm for a 40 mm plinth`,{...candidate,installation:{...candidate.installation,feet:{...candidate.installation.feet,height}}});
  }
  if(candidate.fronts.length){
-  if(/Blum 110° hinges require/.test(message))add('Use 16 mm stock for the hinge assembly',setStockThickness(candidate,16));
+  if(message.includes('cup setback'))add('Fit cup setbacks to the selected hinge application',{
+   ...candidate,fronts:candidate.fronts.map(d=>d.hinge&&d.hinge.cupDistance>cupSetbackMax(d.hinge.id,d.placement==='inset')?
+    {...d,hinge:{...d.hinge,cupDistance:cupSetbackMax(d.hinge.id,d.placement==='inset')}}:d),
+  });
+  if(/Blum (110|155)° hinges require/.test(message))add('Use 16 mm stock for the hinge assembly',setStockThickness(candidate,16));
   if(/Hinge positions/.test(message)){
    try{const shapes=previous.fronts.length?evaluate(previous).fronts.doors:[];add('Fit hinge setbacks to the door height',{...candidate,fronts:candidate.fronts.map(d=>{const shape=shapes.find(p=>p.id===d.id);return d.hinge&&shape?{...d,hinge:{...d.hinge,endOffset:Math.max(35,Math.min(d.hinge.endOffset,Math.floor((shape.size[1]-45*(d.hinge.count-1))/2)))}}:d;})});}catch{}
   }
@@ -79,6 +84,11 @@ export function editRepairs(candidate:Cabinet,previous:Cabinet):EditRepair[]{
    add('Remove incompatible Cabineo fasteners',setCabineo(candidate,''));
   }
   if(message.includes('Ixconnect')||message.includes('back connectors')){
+   if(joint?.fastener&&message.includes('hanger notches'))search(joint.fastener.perSide-1,1,-1,n=>setBackPanel(candidate,{fastener:{...joint.fastener!,perSide:n}}),n=>`Fit ${n} back connectors per side below the hanger notches`);
+   if(joint?.fastener&&message.includes('hanger access notch')){
+    const start=joint.fastener.offset??0;
+    for(const direction of [-1,1])search(start+direction,direction*Math.floor(candidate.envelope.width/2-50),direction,n=>setBackPanel(candidate,{fastener:{...joint.fastener!,offset:n}}),n=>`Set back fixing offset to ${n} mm`);
+   }
    if(joint?.fastener&&joint.fastener.perSide===prior?.fastener?.perSide)search(joint.fastener.perSide-1,1,-1,n=>setBackPanel(candidate,{fastener:{...joint.fastener!,perSide:n}}),n=>`Reduce back connectors to ${n} per side`);
    add('Remove incompatible back fasteners',setBackFastener(candidate,false));
   }

@@ -41,7 +41,15 @@ export function panelDisplayEdges(panel:Panel,mesh:THREE.BufferGeometry,pockets:
  for(let i=0;i<vertices.count;i+=2){const a=[vertices.getX(i),vertices.getY(i),vertices.getZ(i)],b=[vertices.getX(i+1),vertices.getY(i+1),vertices.getZ(i+1)],delta=a.map((n,j)=>b[j]-n);
   const orthogonal=delta.filter(n=>Math.abs(n)>.0001).length<=1;
   const curved=circles.some(circle=>{const axes=[0,1,2].filter(j=>j!==circle.axis),radius=(point:number[])=>Math.hypot(...axes.map(j=>point[j]+panel.coreCenter[j]-circle.center[j]));return Math.abs(delta[circle.axis])<.0001&&Math.hypot(...delta)<=circle.radius*.132+.001&&[a,b].every(point=>Math.abs(radius(point)-circle.radius)<.001);});
-  if(orthogonal||curved)positions.push(...a,...b);
+  const diagonal=pockets.some(p=>{
+   if(p.panelId!==panel.id||!p.triangle||Math.abs(delta[p.axis])>.001)return false;
+   const [,start,end]=p.triangle,axis=[0,1,2].find(i=>i!==2&&i!==p.axis)!;
+   return [a,b].every(point=>{
+    const t=(point[axis]+panel.coreCenter[axis]-start[axis])/(end[axis]-start[axis]);
+    return t>=-.001&&t<=1.001&&Math.abs(point[2]+panel.coreCenter[2]-(start[2]+t*(end[2]-start[2])))<.001;
+   });
+  });
+  if(orthogonal||curved||diagonal)positions.push(...a,...b);
  }
  original.dispose();const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));return geometry;
 }

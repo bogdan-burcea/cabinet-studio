@@ -1,6 +1,6 @@
 import {partPreview} from '../geometry/part-preview';
 import type {BackPocket} from '../rules/back-panel';
-import {faceAxes} from '../geometry/banding';
+import {machiningFaces} from '../rules/machining-review';
 import {useState,useEffect,useRef,useId} from 'react';
 import type {Panel} from '../geometry/evaluate';
 import type {CabineoBore} from '../rules/cabineo';
@@ -9,12 +9,14 @@ import {partFace,preferredFace} from '../geometry/part-face';
 import {Section,IconButton} from './components';
 export function PartThumbnail({panel,joints,pockets=[],backBores=[],drilling=[]}:{panel:Panel;joints:CabineoJoint[];pockets?:BackPocket[];backBores?:CabineoBore[];drilling?:CabineoBore[]}){
  const bores=[...joints.flatMap(j=>j.bores),...backBores,...drilling],preferred=preferredFace(panel,bores),[flipped,setFlipped]=useState(false);
- const sign=flipped?-preferred as 1|-1:preferred,face=partFace(panel,bores,sign),opposed=bores.some(b=>b.panelId===panel.id&&b.sign===sign);
+ const faces=machiningFaces(panel,bores,pockets),opposed=faces.size===2;
+ const primary=faces.size===1?[...faces][0]:preferred;
+ const sign=flipped&&opposed?-primary as 1|-1:primary as 1|-1,face=partFace(panel,bores,sign);
  const [expanded,setExpanded]=useState(false),dialog=useRef<HTMLDialogElement>(null),title=useId();
  useEffect(()=>{if(expanded)dialog.current?.showModal();else dialog.current?.close();},[expanded]);
  const preview=partPreview(panel,bores,pockets,sign);
  const scale=Math.min(232/face.width,184/face.height),w=face.width*scale,h=face.height*scale,x=(280-w)/2,y=(232-h)/2;
- const image=<svg className="part-thumbnail" viewBox="0 0 280 256" role="img" aria-label={`${panel.label}, flat ${flipped?'opposite':'machinable'} face, ${face.width} by ${face.height} millimetres, ${face.bores.length} bores`}>
+ const image=<svg className="part-thumbnail" viewBox="0 0 280 256" role="img" aria-label={`${panel.label}, flat ${flipped&&opposed?'opposite':'machinable'} face, ${face.width} by ${face.height} millimetres, ${face.bores.length} bores`}>
 
    <svg x={x} y={y} width={w} height={h} viewBox={`0 0 ${face.width} ${face.height}`} overflow="visible"><path className="part-outline" d={preview.outline} vectorEffect="non-scaling-stroke" fillRule="evenodd"/><path className="back-pocket" d={preview.slots} vectorEffect="non-scaling-stroke" fillRule="evenodd"/>{preview.bores.map(b=><path key={b.kind} className={b.kind==='housing'?'housing-bore':'receiver-bore'} d={b.path} vectorEffect="non-scaling-stroke" fillRule="evenodd"/>)}</svg>
    <text x="140" y={y+h+18} textAnchor="middle">{+face.width.toFixed(1)} mm</text><text x={x-10} y="116" textAnchor="middle" transform={`rotate(-90 ${x-10} 116)`}>{+face.height.toFixed(1)} mm</text>

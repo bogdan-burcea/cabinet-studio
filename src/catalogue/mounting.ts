@@ -5,6 +5,7 @@ export const conceptMounting = {
   railHeight: 30, railDepth: 5, bracketWidth: 30, bracketHeight: 50, minWallGap: 15, bracketSeparation: 10
 } as const;
 export function mountingGeometry(pin: ProductPin) {
+  if(pin.id==='blum-48n0510'&&pin.revision==='1')return conceptMounting;
   if (pin.id !== conceptMounting.id || pin.revision !== conceptMounting.revision) throw new Error('Unavailable wall-mounting geometry revision. No fitting substitution was made.');
   return conceptMounting;
 }

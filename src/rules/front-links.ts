@@ -1,7 +1,17 @@
 import type {Cabinet,SlabDoor} from '../domain/cabinet';
 import {stock} from '../catalogue/materials';
-import {resolveInteriors} from './interiors';
+import {resolveInteriors,type Division} from './interiors';
 export const frontBoundaries=['left','right','bottom','top'] as const;
+export function divisionAtDoorBoundary(c:Cabinet,region:SlabDoor['region'],part:Division,key:typeof frontBoundaries[number]){
+ const vertical=key==='left'||key==='right';
+ if(part.axis!==(vertical?'vertical':'horizontal'))return false;
+ const {width,height,origin:[x,y]}=c.envelope,axis=vertical?0:1,cross=1-axis;
+ const target=(vertical?x:y)+region[key]*(vertical?width:height);
+ const low=vertical?y+region.bottom*height:x+region.left*width;
+ const high=vertical?y+region.top*height:x+region.right*width;
+ return Math.abs(part.origin[axis]+part.size[axis]/2-target)<.11&&
+  Math.min(high,part.origin[cross]+part.size[cross])>Math.max(low,part.origin[cross]);
+}
 export function interiorLayout(c:Cabinet){return resolveInteriors(c,stock(c,'carcass').thickness,stock(c,'back').thickness,stock(c,'interior').thickness);}
 export function effectiveDoor(c:Cabinet,door:SlabDoor):SlabDoor {
  if(!door.boundaryLinks)return door;
@@ -18,10 +28,8 @@ export function attachFrontBoundaries(c:Cabinet):Cabinet {
  const layout=interiorLayout(c);
  return {...c,fronts:c.fronts.map(door=>{
   const r=effectiveDoor(c,door).region,links={...door.boundaryLinks};
-  for(const key of frontBoundaries){if(links[key]||r[key]===0||r[key]===1)continue;const axis=key==='left'||key==='right'?0:1,cross=1-axis;
-   const coordinate=c.envelope.origin[axis]+r[key]*(axis===0?c.envelope.width:c.envelope.height);
-   const low=c.envelope.origin[cross]+r[axis===0?'bottom':'left']*(axis===0?c.envelope.height:c.envelope.width),high=c.envelope.origin[cross]+r[axis===0?'top':'right']*(axis===0?c.envelope.height:c.envelope.width);
-   const match=layout.divisions.find(p=>p.axis===(axis===0?'vertical':'horizontal')&&Math.abs(p.origin[axis]+p.size[axis]/2-coordinate)<.11&&Math.min(high,p.origin[cross]+p.size[cross])-Math.max(low,p.origin[cross])>0);
+  for(const key of frontBoundaries){if(links[key]||r[key]===0||r[key]===1)continue;
+   const match=layout.divisions.find(p=>divisionAtDoorBoundary(c,r,p,key));
    if(match)links[key]=match.id;
   }
   return Object.keys(links).length?{...door,boundaryLinks:links}:door;

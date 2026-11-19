@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {defaultHinge} from '../src/catalogue/hinges.ts';
+import {safeDoorAngles} from '../src/rules/door-motion.ts';
 import {createCabinet} from '../src/domain/cabinet.ts';
 import {evaluate} from '../src/geometry/evaluate.ts';
 import {addSimpleDoors,editSimpleDoors} from '../src/commands/simple-doors.ts';
@@ -34,5 +36,35 @@ test('exploded shelves use a compact forward gap and remain separate from doors 
  for(let i=0;i<panels.length;i++)for(let j=i+1;j<panels.length;j++){const a=panels[i],b=panels[j],x=offsets.get(a.id)!,y=offsets.get(b.id)!;assert.ok(![0,1,2].every(k=>Math.min(a.center[k]+x[k]+a.size[k]/2,b.center[k]+y[k]+b.size[k]/2)-Math.max(a.center[k]+x[k]-a.size[k]/2,b.center[k]+y[k]-b.size[k]/2)>1e-6),`${a.label} / ${b.label}`);}
 });
 test('bulk paired doors select only new stable IDs and old simple files remain readable',()=>{
- const base=createCabinet(),split=addDivision(base,base.compartments.id,'vertical',282),ids=evaluate(split.cabinet).openings.map(o=>o.id),pairs=addSimpleDoors(split.cabinet,'pair',ids);assert.equal(pairs.featureIds.length,4);assert.deepEqual(new Set(pairs.featureIds),new Set(pairs.cabinet.fronts.map(d=>d.id)));assert.doesNotThrow(()=>evaluate(pairs.cabinet));const doc=JSON.parse(serialize(base));assert.equal(doc.schemaVersion,31);doc.schemaVersion=21;doc.evaluatorRevision='interiors-21';assert.deepEqual(deserializeWithInfo(JSON.stringify(doc)),{cabinet:base,migrated:true});
+ const base=createCabinet(),split=addDivision(base,base.compartments.id,'vertical',282),ids=evaluate(split.cabinet).openings.map(o=>o.id),pairs=addSimpleDoors(split.cabinet,'pair',ids);assert.equal(pairs.featureIds.length,4);assert.deepEqual(new Set(pairs.featureIds),new Set(pairs.cabinet.fronts.map(d=>d.id)));assert.doesNotThrow(()=>evaluate(pairs.cabinet));const doc=JSON.parse(serialize(base));assert.equal(doc.schemaVersion,34);doc.schemaVersion=21;doc.evaluatorRevision='interiors-21';assert.deepEqual(deserializeWithInfo(JSON.stringify(doc)),{cabinet:base,migrated:true});
+});
+
+test('Blum 155° selects the matching arm and plate, including the third plate pilot',()=>{
+ const {cabinet,featureIds:[id]}=addSimpleDoors(createCabinet(),'single');
+ for(const placement of ['overlay','inset'] as const){
+  const fitted={...cabinet,fronts:cabinet.fronts.map(d=>({...d,placement,hinge:defaultHinge('blum-clip-155')}))};
+  const e=evaluate(fitted),hinge=e.doorHardware.hinges[0],inside=placement==='inset';
+  assert.equal(hinge.article,inside?'71B7650':'71B7550');
+  assert.equal(hinge.plate,inside?'175H7190':'175H7100');
+  assert.equal(hinge.maxAngle,155);
+  assert.deepEqual(e.drilling.filter(b=>b.kind==='hinge-cup').map(b=>[b.diameter,b.depth]),[[35,11.7],[35,11.7]]);
+  const supportPilots=e.drilling.filter(b=>b.id.startsWith(hinge.id+'/plate-screw/'));
+  const line=cabinet.envelope.depth-37-(inside?e.fronts.doors[0].size[2]+1.5:0);
+  assert.deepEqual(supportPilots.map(b=>[b.point[1]-hinge.y,b.point[2]]),[[0,line-26],[-16,line],[16,line]]);
+  assert.deepEqual(readSimpleCabinet(serialize(fitted)),fitted);
+  if(!inside){
+   const open=safeDoorAngles(e,{},[id],155);assert.equal(open.blocked,false);assert.equal(open.angles[id],155);
+   const legacy=JSON.parse(serialize(fitted));legacy.schemaVersion=33;legacy.evaluatorRevision='wall-clearance-33';
+   assert.throws(()=>deserializeWithInfo(JSON.stringify(legacy)),/requires cabinet file version 34/);
+  }
+ }
+});
+
+test('paired doors can preview their individual 110° and 155° limits together',()=>{
+ const {cabinet,featureIds:[left,right]}=addSimpleDoors(createCabinet(),'pair');
+ const fitted={...cabinet,fronts:cabinet.fronts.map(d=>({...d,hinge:defaultHinge(d.id===left?'blum-clip-110':'blum-clip-155')}))};
+ const e=evaluate(fitted),open=safeDoorAngles(e,{},[left,right],155);
+ assert.equal(open.blocked,false);
+ assert.deepEqual(open.angles,{[left]:110,[right]:155});
+ assert.deepEqual(safeDoorAngles(e,open.angles,[left,right],0).angles,{[left]:0,[right]:0});
 });

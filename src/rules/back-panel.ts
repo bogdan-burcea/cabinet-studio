@@ -1,6 +1,6 @@
 import {cnc} from './cnc';
 import type {Cabinet,Vec3} from '../domain/cabinet';
-export interface BackPocket {reliefs?:{center:Vec3;radius:number}[];kind?:'puzzle';id:string;panelId:string;origin:Vec3;size:Vec3;axis:0|1|2;face:1|-1}
+export interface BackPocket {reliefs?:{center:Vec3;radius:number}[];triangle?:[Vec3,Vec3,Vec3];kind?:'puzzle'|'corner-clearance'|'hanger-access';id:string;panelId:string;origin:Vec3;size:Vec3;axis:0|1|2;face:1|-1}
 /** Back seating intent is independent of UI, stock catalogue and rendering. */
 export function backLayout(c:Cabinet,t:number,b:number){
  const {width:w,height:h,depth:d,origin:o}=c.envelope;

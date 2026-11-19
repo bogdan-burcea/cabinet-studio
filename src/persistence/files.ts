@@ -1,13 +1,15 @@
+import {usesBlumWallHanger} from '../rules/wall-hanging';
+import {setWallHanging} from '../commands/wall-hanging';
 import {clearInsetInteriors} from '../commands/corrections';
 import {validHardware} from '../catalogue/cabineo';
 import { defaultBinding, defaultCarcass, defaultInstallation, defaultMounting, type Cabinet, type Compartment } from '../domain/cabinet';
 import { evaluate, EVALUATOR_REVISION } from '../geometry/evaluate';
-export const AUTOSAVE_KEY = 'cabinet-studio.autosave.v31';
+export const AUTOSAVE_KEY = 'cabinet-studio.autosave.v34';
 export const LEGACY_AUTOSAVE_KEY = 'cabinet-studio.autosave.v1';
-export const PREVIOUS_AUTOSAVE_KEYS = ['cabinet-studio.autosave.v30', 'cabinet-studio.autosave.v29', 'cabinet-studio.autosave.v28', 'cabinet-studio.autosave.v27', 'cabinet-studio.autosave.v26', 'cabinet-studio.autosave.v25', 'cabinet-studio.autosave.v24', 'cabinet-studio.autosave.v23', 'cabinet-studio.autosave.v22', 'cabinet-studio.autosave.v21', 'cabinet-studio.autosave.v20', 'cabinet-studio.autosave.v19', 'cabinet-studio.autosave.v18', 'cabinet-studio.autosave.v17', 'cabinet-studio.autosave.v16', 'cabinet-studio.autosave.v15', 'cabinet-studio.autosave.v14', 'cabinet-studio.autosave.v13', 'cabinet-studio.autosave.v12', 'cabinet-studio.autosave.v11', 'cabinet-studio.autosave.v10', 'cabinet-studio.autosave.v9', 'cabinet-studio.autosave.v8', 'cabinet-studio.autosave.v7', 'cabinet-studio.autosave.v6', 'cabinet-studio.autosave.v5', 'cabinet-studio.autosave.v4', 'cabinet-studio.autosave.v3', 'cabinet-studio.autosave.v2', 'cabinet-studio.autosave.v1'] as const;
+export const PREVIOUS_AUTOSAVE_KEYS = ['cabinet-studio.autosave.v33', 'cabinet-studio.autosave.v32', 'cabinet-studio.autosave.v31', 'cabinet-studio.autosave.v30', 'cabinet-studio.autosave.v29', 'cabinet-studio.autosave.v28', 'cabinet-studio.autosave.v27', 'cabinet-studio.autosave.v26', 'cabinet-studio.autosave.v25', 'cabinet-studio.autosave.v24', 'cabinet-studio.autosave.v23', 'cabinet-studio.autosave.v22', 'cabinet-studio.autosave.v21', 'cabinet-studio.autosave.v20', 'cabinet-studio.autosave.v19', 'cabinet-studio.autosave.v18', 'cabinet-studio.autosave.v17', 'cabinet-studio.autosave.v16', 'cabinet-studio.autosave.v15', 'cabinet-studio.autosave.v14', 'cabinet-studio.autosave.v13', 'cabinet-studio.autosave.v12', 'cabinet-studio.autosave.v11', 'cabinet-studio.autosave.v10', 'cabinet-studio.autosave.v9', 'cabinet-studio.autosave.v8', 'cabinet-studio.autosave.v7', 'cabinet-studio.autosave.v6', 'cabinet-studio.autosave.v5', 'cabinet-studio.autosave.v4', 'cabinet-studio.autosave.v3', 'cabinet-studio.autosave.v2', 'cabinet-studio.autosave.v1'] as const;
 export function serialize(cabinet: Cabinet): string {
   evaluate(cabinet);
-  return JSON.stringify({ format: 'cabinet-studio', schemaVersion: 31, evaluatorRevision: EVALUATOR_REVISION, cabinet }, null, 2);
+  return JSON.stringify({ format: 'cabinet-studio', schemaVersion: 34, evaluatorRevision: EVALUATOR_REVISION, cabinet }, null, 2);
 }
 function object(value: unknown): value is Record<string, any> { return !!value && typeof value === 'object' && !Array.isArray(value); }
 function exact(value: unknown, keys: string[]) { return object(value) && Object.keys(value).length === keys.length && keys.every(k => k in value); }
@@ -50,10 +52,10 @@ function frontIdentities(fronts:any,cabinetId:string,contentIds:string[],constra
   }
   return ids;
 }
-function validCarcass(value:any,seating=false,fixings=false,corners=false,machining=false,drilling=false,autoPilots=false,adjustableFixings=false,supports=false):boolean{
+function validCarcass(value:any,seating=false,fixings=false,corners=false,machining=false,drilling=false,autoPilots=false,adjustableFixings=false,supports=false,throughRepairs=false,wallClearance=false,assemblyHardware=false):boolean{
  if(!object(value)||!exact(value,['construction','policyRevision','top','back',...(corners&&Object.hasOwn(value,'corner')?['corner']:[]),...(machining&&Object.hasOwn(value,'machining')?['machining']:[])]))return false;
  if(Object.hasOwn(value,'corner')&&(!corners||!exact(value.corner,['mode','revision','pitch'])||value.corner.mode!=='puzzle'||value.corner.revision!=='puzzle-1'||typeof value.corner.pitch!=='number'))return false;
- if(Object.hasOwn(value,'machining')){const m=value.machining;if(!machining||!exact(m,['revision','tolerance','bitDiameter','dogbones','throughOpposed','cabineoPerSide',...(supports&&Object.hasOwn(m,'bottomFace')?['bottomFace']:[])])||m.revision!=='cnc-1'||typeof m.dogbones!=='boolean'||typeof m.throughOpposed!=='boolean'||![m.tolerance,m.bitDiameter,m.cabineoPerSide].every(n=>typeof n==='number'&&Number.isFinite(n)))return false;}
+ if(Object.hasOwn(value,'machining')){const m=value.machining;if(!machining||!exact(m,['revision','tolerance','bitDiameter','dogbones','throughOpposed','cabineoPerSide',...(supports&&Object.hasOwn(m,'bottomFace')?['bottomFace']:[]),...(assemblyHardware&&Object.hasOwn(m,'bottomFastenersThrough')?['bottomFastenersThrough']:[]),...(throughRepairs&&Object.hasOwn(m,'throughHoles')?['throughHoles']:[]),...['shelfRowInsets','rearChamfers'].filter(k=>wallClearance&&Object.hasOwn(m,k))])||m.revision!=='cnc-1'||typeof m.dogbones!=='boolean'||typeof m.throughOpposed!=='boolean'||![m.tolerance,m.bitDiameter,m.cabineoPerSide].every(n=>typeof n==='number'&&Number.isFinite(n)))return false;}
  if(!exact(value.top,['mode','frontDepth','rearDepth'])||!object(value.back)||!exact(value.back,['mode','upperHeight','lowerHeight',...(seating&&Object.hasOwn(value.back,'joint')?['joint']:[])]))return false;
  if(Object.hasOwn(value.back,'joint')){const j=value.back.joint;if(!seating||!exact(j,['revision','mode','inset','depth','clearance',...(fixings&&Object.hasOwn(j,'fastener')?['fastener']:[]),...(drilling&&Object.hasOwn(j,'fingerPitch')?['fingerPitch']:[]),...(drilling&&Object.hasOwn(j,'pilots')?['pilots']:[])])||j.revision!=='back-1'||!['inset','applied','groove','rebate',...(drilling?['finger']:[])].includes(j.mode)||![j.inset,j.depth,j.clearance].every(n=>typeof n==='number'&&Number.isFinite(n)))return false;
   if(Object.hasOwn(j,'fingerPitch')&&(!drilling||typeof j.fingerPitch!=='number'||!Number.isFinite(j.fingerPitch)))return false;
@@ -82,7 +84,7 @@ function validInstallation(value: any, previous = false,supports=false): boolean
 }
 export function deserializeWithInfo(text: string): { cabinet: Cabinet; migrated: boolean } {
   const doc = JSON.parse(text);
-  const revisions: Record<number, string> = { 1: 'carcass-1', 2: 'interiors-2', 3: 'construction-3', 4: 'materials-4', 5: 'installation-5', 6: 'mounting-6', 7: 'interiors-7', 8: 'fronts-8', 9: 'workspace-9', 10: 'doors-10', 11: 'constraints-11', 12: 'drawers-12', 13: 'joinery-13', 14: 'back-14', 15: 'back-fixings-15', 16: 'machining-16', 17: 'cnc-17', 18: 'fit-18', 19: 'drilling-19', 20: 'shelf-patterns-20', 21: 'interiors-21', 22: 'simple-doors-22', 23: 'door-hardware-23', 24: 'review-24', 25: 'alerts-names-25', 26: 'base-supports-26', 27: 'support-drilling-27', 28: 'inspector-holes-28', 29: 'inset-safety-29', 30: 'divider-clearance-30', 31: EVALUATOR_REVISION };
+  const revisions: Record<number, string> = { 1: 'carcass-1', 2: 'interiors-2', 3: 'construction-3', 4: 'materials-4', 5: 'installation-5', 6: 'mounting-6', 7: 'interiors-7', 8: 'fronts-8', 9: 'workspace-9', 10: 'doors-10', 11: 'constraints-11', 12: 'drawers-12', 13: 'joinery-13', 14: 'back-14', 15: 'back-fixings-15', 16: 'machining-16', 17: 'cnc-17', 18: 'fit-18', 19: 'drilling-19', 20: 'shelf-patterns-20', 21: 'interiors-21', 22: 'simple-doors-22', 23: 'door-hardware-23', 24: 'review-24', 25: 'alerts-names-25', 26: 'base-supports-26', 27: 'support-drilling-27', 28: 'inspector-holes-28', 29: 'inset-safety-29', 30: 'divider-clearance-30', 31: 'protruding-divider-31', 32: 'through-repairs-32', 33: 'wall-clearance-33', 34: EVALUATOR_REVISION };
   if (!object(doc) || doc.format !== 'cabinet-studio' || !Number.isInteger(doc.schemaVersion) || !Object.hasOwn(revisions, doc.schemaVersion) || doc.evaluatorRevision !== revisions[doc.schemaVersion])
     throw new Error('Unsupported cabinet format or revision. Your current cabinet and original file are unchanged.');
   const legacy = doc.schemaVersion < 4, oldConstruction = doc.schemaVersion < 3, c = doc.cabinet;
@@ -102,7 +104,7 @@ export function deserializeWithInfo(text: string): { cabinet: Cabinet; migrated:
   if(c&&Object.hasOwn(c,'cabinetType')&&!['open','base','wall','tall'].includes(c.cabinetType))throw Error('Invalid cabinet type.');
   if (!exact(c, keys) || !identity(c.id) || typeof c.name !== 'string' || c.name.length > 100 || !exact(c.envelope, ['width', 'height', 'depth', 'origin']) ||
     !Array.isArray(c.envelope.origin) || c.envelope.origin.length !== 3 || !c.envelope.origin.every((n: unknown) => typeof n === 'number' && Number.isFinite(n)) ||
-    !(oldConstruction ? exact(c.carcass, ['construction', 'policyRevision']) && c.carcass.construction === 'butt-full-top-inset-back' && c.carcass.policyRevision === 'concept-1' : validCarcass(c.carcass,doc.schemaVersion>=14,doc.schemaVersion>=15,doc.schemaVersion>=16,doc.schemaVersion>=17,doc.schemaVersion>=19,doc.schemaVersion>=21,doc.schemaVersion>=25,doc.schemaVersion>=27)) ||
+    !(oldConstruction ? exact(c.carcass, ['construction', 'policyRevision']) && c.carcass.construction === 'butt-full-top-inset-back' && c.carcass.policyRevision === 'concept-1' : validCarcass(c.carcass,doc.schemaVersion>=14,doc.schemaVersion>=15,doc.schemaVersion>=16,doc.schemaVersion>=17,doc.schemaVersion>=19,doc.schemaVersion>=21,doc.schemaVersion>=25,doc.schemaVersion>=27,doc.schemaVersion>=32,doc.schemaVersion>=33,doc.schemaVersion>=34)) ||
     !validTree(c.compartments, new Set([...reservedIdentities(c.id), ...contentIds, ...frontIds, ...drawerIds]), doc.schemaVersion === 1, doc.schemaVersion >= 9, doc.schemaVersion >= 11,doc.schemaVersion>=17) ||
     !Array.isArray(c.contents) || (doc.schemaVersion < 7 && c.contents.length > 0) || !Array.isArray(c.fronts) || (doc.schemaVersion < 8 && c.fronts.length > 0) || !(doc.schemaVersion < 5 ? exact(c.installation, ['type']) && c.installation.type === 'unassigned' : validInstallation(c.installation, doc.schemaVersion === 5,doc.schemaVersion>=27)) ||
     !(legacy ? exact(c.materials, ['carcass', 'back']) && pin(c.materials.carcass) && pin(c.materials.back) && c.materials.carcass.id === 'generic-panel-18' && c.materials.back.id === 'generic-back-6' :
@@ -110,6 +112,8 @@ export function deserializeWithInfo(text: string): { cabinet: Cabinet; migrated:
     !validHardware(c.hardware) || (doc.schemaVersion<13&&c.hardware.length))
     throw new Error('This cabinet contains invalid or unsupported data. Your current cabinet is unchanged.');
   let result = structuredClone(c) as Cabinet;
+  if(doc.schemaVersion<34&&result.fronts.some(d=>d.hinge?.id==='blum-clip-155'))
+    throw Error('The Blum 155° hinge requires cabinet file version 34.');
   if (doc.schemaVersion < 5) result.installation = defaultInstallation();
   if (doc.schemaVersion === 5) result.installation.mounting = defaultMounting();
   if (oldConstruction) result.carcass = defaultCarcass();
@@ -119,8 +123,11 @@ export function deserializeWithInfo(text: string): { cabinet: Cabinet; migrated:
   if(doc.schemaVersion<25)for(const door of result.fronts)if(door.hinge)delete (door.hinge as unknown as Record<string,unknown>).softClose;
   if(result.installation.feet.drilling)result.installation.feet.drilling.through=true;
   if(doc.schemaVersion<29&&result.fronts.some(d=>d.placement==='inset'))result=clearInsetInteriors(result).cabinet;
+  if(doc.schemaVersion<33&&result.installation.mounting.geometry.id==='blum-48n0510')throw Error('Blum wall hanging requires cabinet file version 33.');
+  const retiredHanging=usesBlumWallHanger(result)&&result.cabinetType!=='wall';
+  if(retiredHanging)result=setWallHanging(result,false);
   evaluate(result);
-  return { cabinet: result, migrated: doc.schemaVersion < 31 };
+  return { cabinet: result, migrated: doc.schemaVersion < 34 || retiredHanging };
 }
 export function deserialize(text: string): Cabinet { return deserializeWithInfo(text).cabinet; }
 export function downloadCabinet(cabinet: Cabinet) {

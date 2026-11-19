@@ -4,7 +4,7 @@ import { handleGeometry } from '../catalogue/fronts';
 import { resolveConstruction } from './construction';
 import { resolveInteriors } from './interiors';
 import { resolveAdjustable } from './adjustable';
-import {effectiveDoor} from './front-links';
+import {divisionAtDoorBoundary,effectiveDoor,interiorLayout} from './front-links';
 import type { Issue } from './validate';
 export interface FrontBody { id: string; label: string; role: 'door'; materialRole: 'front'; orientation: 'xy'; size: Vec3; center: Vec3; pivot: Vec3; handing: SlabDoor['handing']; placement: SlabDoor['placement']; provenance: string }
 export interface FrontHandlePart { id: string; ownerId: string; shape: 'box' | 'cylinder'; size: Vec3; center: Vec3 }
@@ -42,6 +42,7 @@ export function resolveFronts(c: Cabinet, obstacles?: Bounds[]) {
   const { width:w,height:h,depth:d,origin:[ox,oy,oz] } = c.envelope, carcass = stock(c,'carcass').thickness;
   if (c.fronts.length>32) issues.push({code:'front-complexity',featureId:c.id,severity:'error',message:'At most 32 slab doors are supported.'});
   let resolved:SlabDoor[];try{resolved=c.fronts.map(f=>effectiveDoor(c,f));}catch(error){return {doors,handles,issues:[{code:'front-link',featureId:c.id,severity:'error' as const,message:(error as Error).message}],overallDepth:d};}
+  let divisions:ReturnType<typeof interiorLayout>['divisions']|undefined;
   for (const [index,front] of resolved.entries()) {
     const label=`Slab door ${index+1}`, fail=(message:string)=>issues.push({code:'front-layout',featureId:front.id,severity:'error',message:`${label}: ${message} The previous cabinet is preserved.`});
     const r=front.region, handle=front.handle;
@@ -52,20 +53,19 @@ export function resolveFronts(c: Cabinet, obstacles?: Bounds[]) {
     if(!['none','knob','pull','hole'].includes(handle.kind)||!['vertical','horizontal'].includes(handle.orientation)||!['top','centre','bottom'].includes(handle.height)||!(profile.pitches as readonly number[]).includes(handle.pitch)||!precise(handle.edgeOffset,10,200)||!precise(handle.endOffset,10,300)) {fail('unsupported handle style, pitch, placement or offset.');continue;}
     if(handle.horizontal!==undefined&&!['latch','left','centre','right'].includes(handle.horizontal)||handle.diameter!==undefined&&!precise(handle.diameter,10,80)||handle.projection!==undefined&&!precise(handle.projection,12,80)||handle.drillDiameter!==undefined&&!precise(handle.drillDiameter,2,8)){fail('unsupported handle dimensions or position.');continue;}
     const thickness=stock(c,'front',front.id).thickness;
-    const inset=(axis:0|1,n:number)=>{
-      if(front.placement!=='inset')return 0;if(n===0||n===1)return carcass;
-      if(axis!==0)return 0;
-      const target=ox+w*n,rear=oz+d-front.clearance-thickness;
-      const layout=resolveInteriors(c,carcass,stock(c,'back').thickness,stock(c,'interior').thickness);
-      // A protruding divider stays full depth. Rectangular leaves stop beside
-      // its faces; only a divider behind the door rear can be covered.
-      return Math.max(0,...layout.divisions.filter(p=>p.axis==='vertical'&&Math.abs(p.origin[0]+p.size[0]/2-target)<.11&&p.origin[2]+p.size[2]>rear+.001&&p.origin[1]+p.size[1]>oy+h*r.bottom&&p.origin[1]<oy+h*r.top).map(p=>p.size[0]/2));
+    const rear=oz+d+(front.placement==='overlay'?front.clearance:-front.clearance-thickness);
+    const inset=(key:'left'|'right'|'bottom'|'top')=>{
+      if(front.placement!=='inset')return 0;
+      if(r[key]===0||r[key]===1)return carcass;
+      const axis=key==='left'||key==='right'?0:1;
+      // A division that reaches into the door depth stays exposed between leaves.
+      divisions??=interiorLayout(c).divisions;
+      return Math.max(0,...divisions.filter(p=>p.origin[2]+p.size[2]>rear+.001&&divisionAtDoorBoundary(c,r,p,key)).map(p=>p.size[axis]/2));
     };
-    const x1=ox+w*r.left+inset(0,r.left)+front.reveal*(r.left===0?1:0.5), x2=ox+w*r.right-inset(0,r.right)-front.reveal*(r.right===1?1:0.5);
-    const y1=oy+h*r.bottom+inset(1,r.bottom)+front.reveal*(r.bottom===0?1:0.5), y2=oy+h*r.top-inset(1,r.top)-front.reveal*(r.top===1?1:0.5);
+    const x1=ox+w*r.left+inset('left')+front.reveal*(r.left===0?1:0.5), x2=ox+w*r.right-inset('right')-front.reveal*(r.right===1?1:0.5);
+    const y1=oy+h*r.bottom+inset('bottom')+front.reveal*(r.bottom===0?1:0.5), y2=oy+h*r.top-inset('top')-front.reveal*(r.top===1?1:0.5);
     if(x2-x1<80||x2-x1>1200||y2-y1<120) {fail('concept slab width must be 80–1200 mm and height at least 120 mm. Adjust the layout, reveal or cabinet size.');continue;}
     if(!supportedHingeSides(c,front).includes(front.handing)){issues.push({code:'hinge-support',featureId:front.id,severity:'error',message:`${label}: the ${front.handing} hinge edge needs a side panel or vertical divider at both mounting positions, reaching the front mounting zone. Change hinge side or add a supporting divider.`});continue;}
-    const rear=oz+d+(front.placement==='overlay'?front.clearance:-front.clearance-thickness);
     const door:FrontBody={id:front.id,label,role:'door',materialRole:'front',orientation:'xy',size:[x2-x1,y2-y1,thickness],center:[(x1+x2)/2,(y1+y2)/2,rear+thickness/2],pivot:[front.handing==='left'?x1:x2,(y1+y2)/2,rear],handing:front.handing,placement:front.placement,provenance:`${front.id}/slab-1`};
     if(front.placement==='inset'&&(obstacles??=frontObstacles(c)).some(body=>overlaps(door,body))) {fail('inset slab conflicts with existing construction or interiors. Set back the affected interiors or keep overlay placement.');continue;}
     const conflict=resolved.find((other,j)=>j<index&&r.left<other.region.right-1e-8&&r.right>other.region.left+1e-8&&r.bottom<other.region.top-1e-8&&r.top>other.region.bottom+1e-8);

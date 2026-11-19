@@ -101,7 +101,7 @@ test('new divisions can be added to a child opening with distinct identities and
 
 test('version 12 round trip preserves nested intent, product pins and all evaluated geometry', () => {
   const { c } = nested(), encoded = serialize(c), doc = JSON.parse(encoded);
-  assert.equal(doc.schemaVersion, 31); assert.equal(doc.evaluatorRevision, 'protruding-divider-31');
+  assert.equal(doc.schemaVersion, 34); assert.equal(doc.evaluatorRevision, 'assembly-hardware-34');
   assert.deepEqual(deserialize(encoded), c); assert.deepEqual(evaluate(deserialize(encoded)), evaluate(c));
 });
 
@@ -124,7 +124,7 @@ test('malformed trees, duplicate IDs, unknown policies and future formats are re
     (d: any) => d.cabinet.compartments.policyRevision = 'adjustable-unknown',
     (d: any) => d.cabinet.compartments.axis = 'diagonal',
     (d: any) => d.cabinet.compartments.position = 9000,
-    (d: any) => d.schemaVersion = 32,
+    (d: any) => d.schemaVersion++,
     (d: any) => { d.schemaVersion = 1; d.evaluatorRevision = 'carcass-1'; }
   ];
   for (const mutate of mutations) { const doc = JSON.parse(serialize(c)); mutate(doc); assert.throws(() => deserialize(JSON.stringify(doc))); }

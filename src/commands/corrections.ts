@@ -1,9 +1,9 @@
 import type {Cabinet} from '../domain/cabinet';
 import {conceptHandle} from '../catalogue/fronts';
-import {effectiveDoor} from '../rules/front-links';
+import {divisionAtDoorBoundary,effectiveDoor,frontBoundaries} from '../rules/front-links';
 import {stock} from '../catalogue/materials';
 import {validate} from '../rules/validate';
-import {resolveInteriors} from '../rules/interiors';
+import {resolveInteriors,type Division} from '../rules/interiors';
 import {supportedHingeSides} from '../rules/fronts';
 import {addDivision,moveDivision,setDivisionSetback} from './interiors';
 import {setShelfSetback} from './adjustable';
@@ -12,8 +12,8 @@ const legal=(c:Cabinet)=>!validate(c).some(i=>i.severity==='error');
 export function clearInsetInteriors(c:Cabinet):{cabinet:Cabinet;changed:string[]} {
  let next=c;const changed:string[]=[],{width:w,height:h,depth:d,origin:[ox,oy,oz]}=c.envelope;
  const interiors=resolveInteriors(c,stock(c,'carcass').thickness,stock(c,'back').thickness,stock(c,'interior').thickness);
- const required=(origin:number[],size:number[],vertical=false)=>Math.max(0,...c.fronts.map(f=>effectiveDoor(c,f)).filter(f=>f.placement==='inset'&&!(vertical&&[f.region.left,f.region.right].some(edge=>Math.abs(ox+w*edge-origin[0]-size[0]/2)<.11))&&origin[0]+size[0]>ox+w*f.region.left+0.1&&origin[0]<ox+w*f.region.right-0.1&&origin[1]+size[1]>oy+h*f.region.bottom+0.1&&origin[1]<oy+h*f.region.top-0.1).map(f=>origin[2]+size[2]-(oz+d-f.clearance-stock(c,'front',f.id).thickness)+1));
- for(const part of interiors.divisions){const gap=required(part.origin,part.size,part.axis==='vertical');if(gap>0){const node=findNode(c.compartments,part.id)!;next=setDivisionSetback(next,part.id,(node.frontSetback??0)+gap);changed.push(part.label);}}
+ const required=(origin:number[],size:number[],division?:Division)=>Math.max(0,...c.fronts.map(f=>effectiveDoor(c,f)).filter(f=>f.placement==='inset'&&!(division&&frontBoundaries.some(key=>divisionAtDoorBoundary(c,f.region,division,key)))&&origin[0]+size[0]>ox+w*f.region.left+0.1&&origin[0]<ox+w*f.region.right-0.1&&origin[1]+size[1]>oy+h*f.region.bottom+0.1&&origin[1]<oy+h*f.region.top-0.1).map(f=>origin[2]+size[2]-(oz+d-f.clearance-stock(c,'front',f.id).thickness)+1));
+ for(const part of interiors.divisions){const gap=required(part.origin,part.size,part);if(gap>0){const node=findNode(c.compartments,part.id)!;next=setDivisionSetback(next,part.id,(node.frontSetback??0)+gap);changed.push(part.label);}}
  for(const shelf of c.contents){const o=interiors.openings.find(o=>o.id===shelf.openingId);if(!o)continue;const target=required(o.origin,o.size);if(target>shelf.frontSetback){next=setShelfSetback(next,shelf.id,target);changed.push('Adjustable shelf');}}
  return {cabinet:next,changed};
 }

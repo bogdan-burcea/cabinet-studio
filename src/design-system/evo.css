@@ -70,6 +70,7 @@ input::-webkit-inner-spin-button{appearance:none}
 .data-row strong{font-weight:var(--font-weight-bold);text-align:right}
 .interior-actions{display:flex;flex-wrap:wrap;gap:var(--spacing-100);margin-top:var(--spacing-200)}
 .interior-actions>.btn{flex:1;white-space:nowrap}
+.interior-action-divider{border:0;border-top:1px solid var(--color-border-subtle);margin:var(--spacing-200) 0 0}
 .field-note{font-size:var(--font-size-body);line-height:var(--font-line-height-250);color:var(--color-foreground-secondary);margin-top:var(--spacing-200)}
 .camera-toolbar{position:absolute;left:50%;bottom:48px;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:var(--spacing-100);width:max-content;max-width:calc(100% - 32px);padding:var(--spacing-100);background:var(--color-background-elevated);border:1px solid var(--color-border-subtle);border-radius:calc(var(--border-radius-150) * .75);box-shadow:var(--shadow-subtle)}
 .camera-presets{border:0;min-width:0;padding:var(--spacing-50);background:var(--color-background-primary)}
@@ -231,6 +232,7 @@ ul.inspector-accordion .details__content.inspector-section{margin:0;padding:4px 
 .inspector-accordion .details__content>.construction-choice,.support-group>.construction-choice{margin:0 0 16px}
 .construction-choice>.select{margin-top:8px}
 .inspector-section>.select+.dimension-field,.construction-choice+.dimension-field{margin-top:16px}
+.field-pair>.construction-choice+.dimension-field{margin-top:0}
 .inspector-section>.field-pair+.construction-choice,.construction-choice+.field-pair,.construction-choice+.support-group{margin-top:16px}
 .support-group{margin:24px 0}
 .support-group h4{font-size:var(--font-size-body);margin:0 0 16px}
@@ -238,3 +240,5 @@ ul.inspector-accordion .details__content.inspector-section{margin:0;padding:4px 
 /* Avoid adding a field's top gap to the preceding control's bottom gap. */
 .inspector-section>.select{display:block;margin-bottom:0}
 .inspector-section>.construction-choice+.dimension-field,.inspector-section>.construction-choice+.field-pair,.inspector-section>.field-pair+.construction-choice{margin-top:0}
+
+button.add-adjustable-shelf{margin-top:var(--spacing-200)}

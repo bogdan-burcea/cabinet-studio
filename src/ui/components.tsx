@@ -28,9 +28,11 @@ export function Section({title,aside,children}:{title:string;aside?:ReactNode;ch
 }
 
 export function Notice({message,error=false,onDismiss,onAction}:{message:string;error?:boolean;onDismiss():void;onAction?():void}){
- const callback=useRef(onDismiss);callback.current=onDismiss;const [paused,setPaused]=useState(false),[leaving,setLeaving]=useState(false),ending=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
- const dismiss=()=>{setLeaving(true);clearTimeout(ending.current);ending.current=setTimeout(()=>callback.current(),200);};
- useEffect(()=>{setLeaving(false);clearTimeout(ending.current);if(paused)return;const timer=setTimeout(dismiss,6000);return()=>clearTimeout(timer);},[message,paused]);
+ const callback=useRef(onDismiss);callback.current=onDismiss;const [paused,setPaused]=useState(false),[leaving,setLeaving]=useState(false),ending=useRef<ReturnType<typeof setTimeout>|undefined>(undefined),closing=useRef(false);
+ const dismiss=()=>{if(closing.current)return;closing.current=true;setLeaving(true);clearTimeout(ending.current);ending.current=setTimeout(()=>callback.current(),200);};
+ // Hover/focus may pause automatic expiry, but must never cancel a dismissal.
+ useEffect(()=>{closing.current=false;setLeaving(false);clearTimeout(ending.current);},[message]);
+ useEffect(()=>{if(paused||leaving)return;const timer=setTimeout(dismiss,6000);return()=>clearTimeout(timer);},[message,paused,leaving]);
  useEffect(()=>()=>clearTimeout(ending.current),[]);
  return <section className={`notice snackbar-dialog snackbar-dialog--transition ${leaving?'snackbar-dialog--hide':'snackbar-dialog--show'}`} aria-label={error?'Attention':'Cabinet update'} onPointerEnter={()=>setPaused(true)} onPointerLeave={()=>setPaused(false)} onFocusCapture={()=>setPaused(true)} onBlurCapture={()=>setPaused(false)} role={error?'alert':'status'}><div className="snackbar-dialog__window">{error&&<Icon name="attention" size={24}/>}<div className="snackbar-dialog__main"><p>{message.replace(/[.!]$/,'')}</p></div><div className="snackbar-dialog__actions"><button className="link-button" onClick={onAction?()=>{onAction();dismiss();}:dismiss}>{onAction?'Resolve':'Dismiss'}</button></div></div></section>;
 }

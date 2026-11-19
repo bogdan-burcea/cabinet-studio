@@ -14,7 +14,7 @@ export function addAdjustable(c: Cabinet, openingId: string, options: {frontSetb
   if (!opening) throw new Error('Select an available leaf opening for an adjustable shelf.');
   const t = stock(c, 'interior').thickness, p = conceptShelfSupport;
   const max = Math.floor((opening.size[1] - p.minClear - t - p.firstLevel) / p.pitch);
-  const levels = Array.from({ length: Math.max(0, max + 1) }, (_, n) => n).filter(n => c.contents.filter(s => s.openingId === openingId).every(s => Math.abs(s.level - n) * p.pitch >= t + p.minClear));
+  const levels = Array.from({ length: Math.max(0, max + 1) }, (_, n) => n).filter(n => c.contents.filter(s => s.openingId === openingId).every(s => Math.abs(e.adjustable.shelves.find(p=>p.id===s.id)!.position-(p.firstLevel+n*p.pitch+t/2)) >= t + p.minClear-1e-6));
   levels.sort((a,b) => Math.abs(p.firstLevel + a*p.pitch + t/2 - opening.size[1]/2) - Math.abs(p.firstLevel + b*p.pitch + t/2 - opening.size[1]/2));
   if (!levels.length) throw new Error('No free concept support level leaves 60 mm clear above/between shelves in this opening.');
   const shelf = { ...defaultShelf(openingId, options.level ?? levels[0]), ...(options.id?{id:options.id}:{}), frontSetback:options.frontSetback ?? 10, ...(options.holes===undefined?{}:{drilling:{revision:'shelf-holes-1' as const,count:options.holes,firstLevel:Math.max(0,Math.min((options.level??levels[0])-Math.floor(options.holes/2),max+1-options.holes))}}) };
@@ -96,11 +96,29 @@ function centreNewShelfHoles(c:Cabinet,id:string):Cabinet{
 }
 export function addSimpleAdjustable(c:Cabinet,openingId:string,frontInset=0){
  const e=evaluate(c),o=e.openings.find(o=>o.id===openingId);if(!o)throw Error('Select an opening for this shelf.');
- const bounds=shelfHoleBounds(c,o),count=Math.min(5,Math.max(0,Math.floor((bounds.max-bounds.min)/32)+1));
- if(count<1)throw Error('This opening is too short for an adjustable shelf and its clearance.');
- const result=addAdjustable(c,openingId,{frontSetback:frontInset,holes:count}),t=stock(c,'interior').thickness;
- const partner=c.contents.find(s=>{if(!s.drilling)return false;const other=e.openings.find(p=>p.id===s.openingId)!;return Math.abs(other.origin[1]-o.origin[1])<.001&&Math.abs(other.size[1]-o.size[1])<.001&&(Math.abs(o.origin[0]+o.size[0]+t-other.origin[0])<.001||Math.abs(other.origin[0]+other.size[0]+t-o.origin[0])<.001);});
- const half=(count-1)*16,center=Math.round(Math.min(bounds.max-half,Math.max(bounds.min+half,o.size[1]/2))*10)/10;
- const drilling=partner?structuredClone(partner.drilling!):{revision:'shelf-holes-1' as const,count,firstLevel:0,anchor:Math.abs(center-o.size[1]/2)<.051?'centre' as const:'height' as const,center};
- return {...result,cabinet:{...result.cabinet,contents:result.cabinet.contents.map(s=>s.id===result.featureId?{...s,level:partner?partner.level:Math.floor((count-1)/2),drilling}:s)}};
+ const bounds=shelfHoleBounds(c,o),t=stock(c,'interior').thickness,pad=conceptShelfSupport.padSize[1]/2,clear=conceptShelfSupport.minClear;
+ const siblings=e.adjustable.shelves.filter(s=>s.nodeId===openingId).sort((a,b)=>a.position-b.position);
+ const fits=(underside:number)=>underside>=clear-1e-6&&underside+t+clear<=o.size[1]+1e-6&&siblings.every(s=>Math.abs(underside+t/2-s.position)>=t+clear-1e-6);
+ // Keep symmetry with an available opposing set, never reuse an occupied level.
+ const partners=c.contents.filter(s=>{if(!s.drilling)return false;const other=e.openings.find(p=>p.id===s.openingId)!;return Math.abs(other.origin[1]-o.origin[1])<.001&&Math.abs(other.size[1]-o.size[1])<.001&&(Math.abs(o.origin[0]+o.size[0]+t-other.origin[0])<.001||Math.abs(other.origin[0]+other.size[0]+t-o.origin[0])<.001);});
+ const partner=partners.find(s=>fits(e.adjustable.shelves.find(p=>p.id===s.id)!.underside));
+ let drilling:NonNullable<AdjustableShelf['drilling']>,level:number;
+ if(partner){drilling=structuredClone(partner.drilling!);level=partner.level;}
+ else{
+  const countMax=Math.floor((bounds.max-bounds.min)/32)+1;if(countMax<1)throw Error('This opening is too short for an adjustable shelf and its clearance.');
+  const firstSibling=c.contents.find(s=>s.openingId===openingId&&s.drilling),count=Math.min(5,countMax),half=(count-1)*16;
+  const defaultCenter=Math.round(Math.min(bounds.max-half,Math.max(bounds.min+half,o.size[1]/2))*10)/10;
+  const phase=firstSibling?shelfPattern(c,firstSibling,o).ys[0]:siblings.length?conceptShelfSupport.firstLevel-pad:defaultCenter;
+  const first=phase+Math.ceil((bounds.min-phase-1e-6)/32)*32,last=phase+Math.floor((bounds.max-phase+1e-6)/32)*32;
+  const ys=Array.from({length:Math.max(0,Math.round((last-first)/32)+1)},(_,i)=>first+i*32).filter(y=>fits(y+pad));
+  const gaps=[...siblings.map((s,i)=>({low:i?siblings[i-1].underside+t:0,high:s.underside})),{low:siblings.length?siblings.at(-1)!.underside+t:0,high:o.size[1]}].sort((a,b)=>(b.high-b.low)-(a.high-a.low)||a.low-b.low);
+  let selected:number|undefined;
+  for(const gap of gaps){const available=ys.filter(y=>y+pad>=gap.low+clear-1e-6&&y+pad+t+clear<=gap.high+1e-6),target=siblings.length?(gap.low+gap.high-t)/2-pad:defaultCenter;available.sort((a,b)=>Math.abs(a-target)-Math.abs(b-target)||a-b);if(available.length){selected=available[0];break;}}
+  if(selected===undefined)throw Error('No space for another adjustable shelf: keep at least 60 mm clear between panels. Move an existing shelf or enlarge the opening.');
+  const actualCount=Math.min(count,Math.round((last-first)/32)+1),windowFirst=Math.min(last-(actualCount-1)*32,Math.max(first,selected-Math.floor((actualCount-1)/2)*32)),center=Math.round((windowFirst+(actualCount-1)*16)*10)/10;
+  level=Math.round((selected-windowFirst)/32);
+  drilling={revision:'shelf-holes-1',count:actualCount,firstLevel:0,anchor:Math.abs(center-o.size[1]/2)<.051?'centre':'height',center};
+ }
+ const shelf={...defaultShelf(openingId,level),frontSetback:frontInset,drilling};
+ return {cabinet:{...c,contents:[...c.contents,shelf]},featureId:shelf.id};
 }

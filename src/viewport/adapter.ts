@@ -6,7 +6,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { Axis, Cabinet, Vec3 } from '../domain/cabinet';
 import type { EvaluatedCabinet } from '../geometry/evaluate';
 import { inspectionRotation } from './front-pose';
-import {openingPivot} from '../rules/door-motion';
+import {doorAngleLimit,openingPivot} from '../rules/door-motion';
 import { pickCabinetElement } from './picking';
 import { finishColor, type ViewportTheme } from '../design-system/themes';
 export type ViewName = 'isometric' | 'front' | 'side' | 'top' | 'rear';
@@ -37,7 +37,7 @@ export class CabinetViewport {
   private down: { x: number; y: number } | null = null;
   private drag: { axis: Axis; x: number; y: number; initial: number; px: number; py: number; featureId?: string; centre?: number } | null = null;
   private disposed = false;
-  private doorGroups=new Map<string,{group:THREE.Group;handing:'left'|'right';target:number}>();
+  private doorGroups=new Map<string,{group:THREE.Group;handing:'left'|'right';target:number;limit:number}>();
   private displayedAngles=new Map<string,number>();
   private frameTime=0;
   constructor(private host: HTMLElement, private callbacks: Callbacks) {
@@ -66,7 +66,7 @@ export class CabinetViewport {
     canvas.addEventListener('keydown', this.keyDown);
     this.resizeObserver = new ResizeObserver(() => this.resize()); this.resizeObserver.observe(host);
     this.resize();
-    this.renderer.setAnimationLoop((time) => { if (this.disposed) return; const delta=Math.min(.05,Math.max(0,(time-this.frameTime)/1000));this.frameTime=time;for(const [id,entry] of this.doorGroups){const current=this.displayedAngles.get(id)??0,next=current+Math.sign(entry.target-current)*Math.min(Math.abs(entry.target-current),120*delta);this.displayedAngles.set(id,next);entry.group.rotation.y=inspectionRotation(entry.handing,next);} this.controls.update(); this.renderer.render(this.scene, this.camera); this.updateAnchors(); });
+    this.renderer.setAnimationLoop((time) => { if (this.disposed) return; const delta=Math.min(.05,Math.max(0,(time-this.frameTime)/1000));this.frameTime=time;for(const [id,entry] of this.doorGroups){const current=this.displayedAngles.get(id)??0,next=current+Math.sign(entry.target-current)*Math.min(Math.abs(entry.target-current),120*delta);this.displayedAngles.set(id,next);entry.group.rotation.y=inspectionRotation(entry.handing,next,entry.limit);} this.controls.update(); this.renderer.render(this.scene, this.camera); this.updateAnchors(); });
   }
   private resize() {
     const { width, height } = this.host.getBoundingClientRect();
@@ -87,7 +87,7 @@ export class CabinetViewport {
     (this.grid.material as THREE.Material).depthWrite = false;
     this.clear(this.model); this.clear(this.handles); this.clear(this.dimensions);
     const frontGroups=new Map<string,THREE.Group>();this.doorGroups.clear();
-    if(frontsVisible)for(const door of geometry.fronts.doors.filter(d=>!hiddenIds.includes(d.id))){const group=new THREE.Group();group.position.set(...openingPivot(door));const target=explosion?0:doorAngles[door.id]??0;if(explosion)this.displayedAngles.set(door.id,0);group.rotation.y=inspectionRotation(door.handing,this.displayedAngles.get(door.id)??0);this.doorGroups.set(door.id,{group,handing:door.handing,target});frontGroups.set(door.id,group);this.model.add(group);}
+    if(frontsVisible)for(const door of geometry.fronts.doors.filter(d=>!hiddenIds.includes(d.id))){const group=new THREE.Group();group.position.set(...openingPivot(door));const limit=doorAngleLimit(geometry,door.id),target=explosion?0:Math.min(limit,doorAngles[door.id]??0);if(explosion)this.displayedAngles.set(door.id,0);group.rotation.y=inspectionRotation(door.handing,this.displayedAngles.get(door.id)??0,limit);this.doorGroups.set(door.id,{group,handing:door.handing,target,limit});frontGroups.set(door.id,group);this.model.add(group);}
     const offsets=explodedLayout(geometry.panels,explosion);
     const attach=(mesh:THREE.Object3D,center:Vec3,id:string)=>{const group=frontGroups.get(id);mesh.position.set(...center);const panel=geometry.panels.find(p=>p.id===id);if(panel&&explosion)mesh.position.add(new THREE.Vector3(...offsets.get(panel.id)!));if(group){mesh.position.sub(group.position);group.add(mesh);}else this.model.add(mesh);};
     for (const panel of geometry.panels) {

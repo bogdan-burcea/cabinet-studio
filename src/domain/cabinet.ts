@@ -1,4 +1,4 @@
-export interface CncSettings {revision:'cnc-1';tolerance:number;bitDiameter:number;dogbones:boolean;throughOpposed:boolean;cabineoPerSide:number;bottomFace?:'inside'|'outside'}
+export interface CncSettings {revision:'cnc-1';tolerance:number;bitDiameter:number;dogbones:boolean;throughOpposed:boolean;cabineoPerSide:number;shelfRowInsets?:{front:number;rear:number};rearChamfers?:Record<string,{low?:number;high?:number}>;bottomFace?:'inside'|'outside';bottomFastenersThrough?:boolean;throughHoles?:Record<string,'fasteners'|'adjustment'>}
 export type Axis = 'width' | 'height' | 'depth';
 export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back' | 'shelf' | 'divider' | 'top-front-rail' | 'top-rear-rail' | 'back-upper-rail' | 'back-lower-rail' | 'plinth-front' | 'plinth-left' | 'plinth-right' | 'door';
 export interface Carcass {
@@ -53,7 +53,7 @@ export interface SlabDoor {
   placement: 'overlay' | 'inset'; handing: 'left' | 'right'; reveal: number; clearance: number;
   material: MaterialBinding | null;
   handle: { geometry: ProductPin; kind: 'none' | 'knob' | 'pull' | 'hole'; pitch: number; orientation: 'vertical' | 'horizontal'; edgeOffset: number; height: 'top' | 'centre' | 'bottom'; endOffset: number; horizontal?: 'latch'|'left'|'centre'|'right'; diameter?: number; projection?: number; drillDiameter?: number };
-  hinge?: {id:'blum-clip-110'; revision:'blum-1'; count:number; endOffset:number; cupDistance:number;offsets?:number[]};
+  hinge?: {id:'blum-clip-110'|'blum-clip-155'; revision:'blum-1'; count:number; endOffset:number; cupDistance:number;offsets?:number[]};
 }
 export interface MetalDrawer {
   id:string; kind:'metal-drawer'; policyRevision:'antaro-external-1'; pack:ProductPin;

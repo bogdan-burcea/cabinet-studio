@@ -1,3 +1,4 @@
+import {usesBlumWallHanger} from './wall-hanging';
 import {footDrilling} from './foot-drilling';
 import {doorHardware} from './door-hardware';
 import {backPilots} from './applied-back';
@@ -65,7 +66,7 @@ export function validate(c: Cabinet): Issue[] {
   try{doorHardware(c,resolveFronts(c).doors);}catch(error){issues.push({code:'door-hardware',featureId:c.id,severity:'error',message:(error as Error).message});}
   if(c.fronts.length && !issues.some(issue=>issue.severity==='error')) issues.push({code:'provisional-fronts',featureId:c.fronts[0].id,severity:'notice',message:'Blum hinge cup geometry follows the pinned drawing; screw pilots and handle bodies are application choices. Load capacity and Blum linkage motion remain unverified.'});
   if (c.contents.length && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-adjustable', featureId: c.contents[0].id, severity: 'notice', message: 'Adjustable shelves use concept support levels and pads; no verified fitting or load capacity. Explicit drilling patterns are geometric studies.' });
-  if (c.installation.mounting.mode !== 'none' && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-mounting', featureId: `${c.id}/installation/mounting`, severity: 'notice', message: 'Concept wall layout only: no verified hanger/rail assembly, preparation, anchors or cabinet/wall load capacity.' });
+  if (c.installation.mounting.mode !== 'none' && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-mounting', featureId: `${c.id}/installation/mounting`, severity: 'notice', message: usesBlumWallHanger(c)?'Blum hanger pilots and back access notches are included. Wall anchors and load capacity require separate verification.':'Concept wall layout only: no verified hanger/rail assembly, preparation, anchors or cabinet/wall load capacity.' });
   if(!issues.some(i=>i.severity==='error'))try{footDrilling(c);}catch(error){issues.push({code:'foot-pilot',featureId:c.id,severity:'error',message:(error as Error).message});}
   if (c.installation.type === 'feet-concept' && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-support', featureId: `${c.id}/installation/feet`, severity: 'notice', message: 'Concept feet only: no verified foot/clip assembly, drilling or load capacity.' });
   if(c.hardware.length&&!issues.some(i=>i.severity==='error'))try{resolveCabineo(c);}catch(e){issues.push({code:'cabineo-layout',featureId:c.id,severity:'error',message:(e as Error).message});}

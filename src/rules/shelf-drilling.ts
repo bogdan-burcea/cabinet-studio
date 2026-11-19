@@ -1,3 +1,4 @@
+import {cnc} from './cnc';
 import type {Cabinet,AdjustableShelf,Vec3} from '../domain/cabinet';
 import type {JoineryPanel,CabineoBore} from './cabineo';
 import type {Opening} from './interiors';
@@ -24,9 +25,11 @@ export function shelfDrilling(c:Cabinet,panels:JoineryPanel[],openings:Opening[]
  // shallower shelf therefore keeps the divider rows aligned for both faces.
  const bores:CabineoBore[]=[];
  for(const set of sets){
-  const {shelf,panel,side,ys}=set,thin=panel.size[0]<5,shared=sets.filter(other=>other.panel.id===panel.id),min=Math.max(...shared.map(s=>s.min)),max=Math.min(...shared.map(s=>s.max)),inset=Math.min(pattern.rowInset,(max-min-6)/2);
+  const {shelf,panel,side,ys}=set,thin=panel.size[0]<5||cnc(c).throughHoles?.[panel.id]==='adjustment',shared=sets.filter(other=>other.panel.id===panel.id),min=Math.max(...shared.map(s=>s.min)),max=Math.min(...shared.map(s=>s.max)),inset=Math.min(pattern.rowInset,(max-min-6)/2);
   if(inset<2.5)throw Error('The adjustable shelf needs more depth for its two support rows.');
-  for(const z of [min+inset,max-inset])for(const y of ys){
+  const rows=cnc(c).shelfRowInsets,rear=rows?.rear??inset,front=rows?.front??inset;
+  if(max-min-rear-front<6-1e-6)throw Error('The front and rear adjustment rows need at least 6 mm between their centres. Reduce the row insets.');
+  for(const z of [min+rear,max-front])for(const y of ys){
    const point:Vec3=[panel.center[0]-side*panel.size[0]/2,y,z],id=`${panel.id}/adjustment/${+y.toFixed(4)}/${+z.toFixed(4)}/${side}`;
    bores.push({id,group:shelf.id,panelId:panel.id,kind:'shelf-support',point,axis:0,sign:side,diameter:5,depth:thin?panel.size[0]:Math.max(4,Math.min(8,panel.size[0]-2)),...(thin?{through:true}:{})});
   }

@@ -6,14 +6,32 @@ import {setCnc} from './cnc';
 import {setSimpleFeet} from './simple-supports';
 import {safeDoorAngles} from '../rules/door-motion';
 import {editSimpleDoors} from './simple-doors';
+type MachiningIssue=ReturnType<typeof evaluate>['issues'][number];
+function machiningCollisionKeys(issues:MachiningIssue[]){
+ return new Set(issues.filter(i=>i.code==='machining-collision'||i.code==='machining-hole-collision')
+  .map(i=>JSON.stringify([i.code,i.featureId,i.operationIds,i.message])));
+}
+function clearsFaceCheck(before:ReturnType<typeof evaluate>,candidate:Cabinet,id:string):boolean{
+ const after=evaluate(candidate);
+ if(after.issues.some(i=>i.code==='machining-faces'&&i.featureId===id))return false;
+ const existing=machiningCollisionKeys(before.issues);
+ return [...machiningCollisionKeys(after.issues)].every(key=>existing.has(key));
+}
 export function bottomFaceRepairs(c:Cabinet):EditRepair[]{
- const options:EditRepair[]=[],face=cnc(c).bottomFace??'outside',id=`${c.id}/panel/bottom`;
- for(const nextFace of [face==='inside'?'outside':'inside'] as const){
-  const candidate=setCnc(c,{bottomFace:nextFace});
-  try{if(!evaluate(candidate).issues.some(i=>i.code==='machining-faces'&&i.featureId===id))options.push({label:`Machine bottom fasteners from ${nextFace}`,cabinet:candidate});}catch{}
+ const before=evaluate(c),id=`${c.id}/panel/bottom`;
+ if(!before.issues.some(i=>i.code==='machining-faces'&&i.featureId===id))return [];
+ const inside=cnc(c).bottomFace==='inside',nextFace=inside?'outside':'inside',options:EditRepair[]=[];
+ const add=(label:string,candidate:Cabinet)=>{
+  try{if(clearsFaceCheck(before,candidate,id))options.push({label,cabinet:candidate});}
+  catch{/* An invalid layout cannot be offered as a repair. */}
+ };
+ add(`Move bottom fasteners to the ${nextFace} face`,setCnc(c,{bottomFace:nextFace,bottomFastenersThrough:false}));
+ if(!inside&&!cnc(c).bottomFastenersThrough){
+  add('Keep outside fasteners and cut their bottom holes through',setCnc(c,{bottomFastenersThrough:true}));
  }
  return options;
 }
+
 export function hingePlateRepairs(c:Cabinet):EditRepair[]{
  const options:EditRepair[]=[],initial=evaluate(c),bad=initial.issues.filter(i=>i.code==='machining-hinge-plate');if(!bad.length)return options;
  for(const sign of [-1,1]){
@@ -44,6 +62,22 @@ export function footHoleRepairs(c:Cabinet):EditRepair[]{
    const value=c.installation.feet[key]+delta*sign,candidate=setSimpleFeet(c,{[key]:value});
    try{if(!bad(candidate)){options.push({label:`Set ${key==='sideInset'?'side':key==='frontInset'?'front':'rear'} foot inset to ${value} mm`,cabinet:candidate});found=true;break;}}catch{}
   }
+ }
+ return options;
+}
+
+/** Offer only conversions that remove the selected two-face issue without
+ * introducing a new cut collision. Never change a housing cavity's depth. */
+export function oneFaceRepairs(c:Cabinet,panelIds:string[]):EditRepair[]{
+ const before=evaluate(c),targets=[...new Set(panelIds)].filter(id=>before.issues.some(i=>i.code==='machining-faces'&&i.featureId===id));
+ const options:EditRepair[]=[];
+ for(const id of targets)for(const mode of ['fasteners','adjustment'] as const){
+  const bores=mode==='fasteners'?before.cabineo.flatMap(j=>j.bores).filter(b=>b.kind==='receiver'):before.drilling.filter(b=>b.kind==='shelf-support');
+  if(!bores.some(b=>b.panelId===id&&!b.through))continue;
+  const candidate=setCnc(c,{throughHoles:{...cnc(c).throughHoles,[id]:mode}});
+  try{if(!clearsFaceCheck(before,candidate,id))continue;
+   const label=before.panels.find(p=>p.id===id)?.label??'part';options.push({label:`${label}: drill ${mode==='fasteners'?'receiving fastener pilots':'shelf adjustment holes'} through`,cabinet:candidate});
+  }catch{/* Never offer an invalid conversion. */}
  }
  return options;
 }
