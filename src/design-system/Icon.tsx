@@ -8,5 +8,5 @@ export function Icon({name,size=20}:{name:IconName;size?:number}){
   return <svg className={`icon icon--${grid}`} width={grid} height={grid} viewBox={`0 0 ${grid} ${grid}`} fill="none" style={{fill:'none',strokeWidth:2}} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" focusable="false" aria-hidden="true"><path d={path} transform={name==='move-vertical'?`rotate(90 ${grid/2} ${grid/2})`:undefined}/></svg>;
  }
  const base=names[name];const iconSize=base.startsWith('chevron')?size<=14?12:16:['checkmark','split-view'].includes(base)?24:size<=18?16:24;
- return <svg className={`icon icon--${size<=14?12:size<=18?16:size<=22?20:24}`} width={size} height={size} viewBox={`0 0 ${iconSize} ${iconSize}`} focusable="false" aria-hidden="true" style={name==='redo'?{transform:'scaleX(-1)'}:undefined}><use href={`/assets/evo-icons.svg#icon-${base}-${iconSize}`}/></svg>;
+ return <svg className={`icon icon--${size<=14?12:size<=18?16:size<=22?20:24}`} width={size} height={size} viewBox={`0 0 ${iconSize} ${iconSize}`} focusable="false" aria-hidden="true" style={name==='redo'?{transform:'scaleX(-1)'}:undefined}><use href={`${import.meta.env.BASE_URL}assets/evo-icons.svg#icon-${base}-${iconSize}`}/></svg>;
 }

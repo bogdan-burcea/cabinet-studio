@@ -1,6 +1,8 @@
 # Cabinet Studio
 
-A cabinet editor with fixed shelves and dividers, configurable back panels, pinned fastener layouts and CNC joint previews. The interface uses the eBay Evo design system. The advanced Stage 2–4 implementation is preserved in source; it is not part of the default editor. Nothing publishes automatically.
+Online app: **https://bogdan-burcea.github.io/cabinet-studio/**
+
+A cabinet editor with fixed shelves and dividers, configurable back panels, pinned fastener layouts and CNC joint previews. The interface uses the eBay Evo design system. The advanced Stage 2–4 implementation is preserved in source; it is not part of the default editor. GitHub Pages publishes the tested `main` branch automatically.
 
 ## Development
 
@@ -18,7 +20,7 @@ npm test
 npm run build
 ```
 
-`build` checks TypeScript and writes static assets to `dist/`. Building does not publish. This repository has no deployment workflow or production remote.
+`build` checks TypeScript and writes static assets to `dist/`. Building does not publish. The Pages workflow tests and builds each push to `main`, then deploys `dist/`. Pull requests run validation without deploying.
 
 ## Current UX baseline
 
@@ -66,10 +68,16 @@ Inset concepts occupy space inside the front of the carcass. Existing fixed shel
 
 ## Repository
 
-This is a separate Git repository. The tested editor is published to `main` in the private source repository **https://github.com/bogdan-burcea/cabinet-studio** (`origin`). Source synchronization does not deploy the app; local development remains at the loopback address above. No files in `/Users/Bogdan/Projects/cabinet-workshop` are edited or copied into the new controller.
+This is a separate Git repository. The tested editor is published to `main` in the source repository **https://github.com/bogdan-burcea/cabinet-studio** (`origin`). Pushes to `main` now deploy the app through GitHub Pages after tests and the build pass; local development remains at the loopback address above. No files in `/Users/Bogdan/Projects/cabinet-workshop` are edited or copied into the new controller.
 
 See `docs/architecture.md`, `docs/backlog.md` and `docs/reference-review.md` for boundaries and staged follow-up work.
 
 ## Design system
 
 The current interface uses official `@ebay/skin` 19.39.0 components/tokens, self-hosted Market Sans and unmodified Evo icons. The design-system boundary remains replaceable and independent of cabinet geometry. Source references, mappings and verification are in `docs/design-system-evo.md`. Regenerate scoped dark tokens and the icon subset with `node scripts/sync-ebay-design.mjs` after any deliberate Skin upgrade.
+
+## Online deployment
+
+GitHub Pages is configured with GitHub Actions. The workflow can also be run manually from Actions → Test and publish Cabinet Studio. The build uses relative asset paths so fonts and icons work under `/cabinet-studio/`. Dependencies and Node are pinned.
+
+Cabinet drafts stay in each browser/origin. To move an existing local draft online, use Save in the local app and Open in the hosted app. Deployment does not upload saved cabinets or connect a backend.
