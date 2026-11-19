@@ -1,4 +1,4 @@
-export interface CncSettings {revision:'cnc-1';tolerance:number;bitDiameter:number;dogbones:boolean;throughOpposed:boolean;cabineoPerSide:number}
+export interface CncSettings {revision:'cnc-1';tolerance:number;bitDiameter:number;dogbones:boolean;throughOpposed:boolean;cabineoPerSide:number;bottomFace?:'inside'|'outside'}
 export type Axis = 'width' | 'height' | 'depth';
 export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back' | 'shelf' | 'divider' | 'top-front-rail' | 'top-rear-rail' | 'back-upper-rail' | 'back-lower-rail' | 'plinth-front' | 'plinth-left' | 'plinth-right' | 'door';
 export interface Carcass {
@@ -6,7 +6,7 @@ export interface Carcass {
   corner?:{mode:'puzzle';revision:'puzzle-1';pitch:number};
   construction: 'rectangular-butt'; policyRevision: 'construction-1';
   top: { mode: 'full' | 'rails'; frontDepth: number; rearDepth: number };
-  back: { mode: 'full' | 'rails'; upperHeight: number; lowerHeight: number; joint?: {revision:'back-1';mode:'inset'|'applied'|'groove'|'rebate';inset:number;depth:number;clearance:number;fastener?:{id:'hafele-26009765';revision:'rpc-1';perSide:number}} };
+  back: { mode: 'full' | 'rails'; upperHeight: number; lowerHeight: number; joint?: {revision:'back-1';mode:'inset'|'applied'|'groove'|'rebate'|'finger';inset:number;depth:number;clearance:number;fingerPitch?:number;pilots?:{revision:'back-pilot-1';spacing:number;diameter:number};fastener?:{id:'hafele-26009765';revision:'rpc-1';perSide:number; offset?:number}} };
 }
 export function defaultCarcass(): Carcass {
   return { construction: 'rectangular-butt', policyRevision: 'construction-1',
@@ -34,14 +34,15 @@ export function defaultMounting(): Mounting {
 export interface Installation {
   type: 'unassigned' | 'floor' | 'feet-concept'; policyRevision: 'support-1';
   mounting: Mounting;
-  feet: { geometry: ProductPin; height: number; sideInset: number; frontInset: number; rearInset: number };
-  plinth: { enabled: boolean; leftReturn: boolean; rightReturn: boolean; frontSetback: number; topGap: number; bottomGap: number; material: MaterialBinding | null };
+  feet: { layout?:'four'|'front-pair'; drilling?:{revision:'foot-pilot-1';pattern:'single'|'pair'|'triangle'|'rectangle';pitchX:number;pitchZ:number;diameter:number;depth:number;through:boolean}; geometry: ProductPin; height: number; sideInset: number; frontInset: number; rearInset: number };
+  plinth: { footGap?:number; enabled: boolean; leftReturn: boolean; rightReturn: boolean; frontSetback: number; topGap: number; bottomGap: number; material: MaterialBinding | null };
 }
 export function defaultInstallation(): Installation {
   return { type: 'unassigned', policyRevision: 'support-1', mounting: defaultMounting(), feet: { geometry: { id: 'concept-foot-60', revision: '1' }, height: 100, sideInset: 60, frontInset: 120, rearInset: 60 },
     plinth: { enabled: false, leftReturn: false, rightReturn: false, frontSetback: 60, topGap: 5, bottomGap: 0, material: null } };
 }
 export interface AdjustableShelf {
+  drilling?:{revision:'shelf-holes-1';count:number;firstLevel:number;anchor?:'centre'|'height';center?:number};
   id: string; kind: 'adjustable-shelf'; openingId: string; level: number; frontSetback: number;
   policyRevision: 'adjustable-1'; support: ProductPin;
 }
@@ -51,13 +52,16 @@ export interface SlabDoor {
   boundaryLinks?: Partial<Record<'left'|'right'|'bottom'|'top',string>>;
   placement: 'overlay' | 'inset'; handing: 'left' | 'right'; reveal: number; clearance: number;
   material: MaterialBinding | null;
-  handle: { geometry: ProductPin; kind: 'none' | 'knob' | 'pull'; pitch: number; orientation: 'vertical' | 'horizontal'; edgeOffset: number; height: 'top' | 'centre' | 'bottom'; endOffset: number };
+  handle: { geometry: ProductPin; kind: 'none' | 'knob' | 'pull' | 'hole'; pitch: number; orientation: 'vertical' | 'horizontal'; edgeOffset: number; height: 'top' | 'centre' | 'bottom'; endOffset: number; horizontal?: 'latch'|'left'|'centre'|'right'; diameter?: number; projection?: number; drillDiameter?: number };
+  hinge?: {id:'blum-clip-110'; revision:'blum-1'; count:number; endOffset:number; cupDistance:number;offsets?:number[]};
 }
 export interface MetalDrawer {
   id:string; kind:'metal-drawer'; policyRevision:'antaro-external-1'; pack:ProductPin;
   openingId:string; offset:number; frontHeight:number;
 }
 export interface Cabinet {
+  cabinetType?:'open'|'base'|'wall'|'tall';
+  names?:Record<string,string>;
   id: string;
   name: string;
   envelope: { width: number; height: number; depth: number; origin: Vec3 };

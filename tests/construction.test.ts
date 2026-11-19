@@ -121,12 +121,12 @@ test('returning to full panels retains dormant rail settings and restores interi
   assert.deepEqual(evaluate(restored).panels, initial.panels); assert.deepEqual(evaluate(restored).openings, initial.openings);
 });
 
-test('native schema 17 round trips every construction choice including dormant dimensions and interior identities', () => {
+test('native schema 21 round trips every construction choice including dormant dimensions and interior identities', () => {
   const c = furnished();
   for (const top of ['full', 'rails'] as const) for (const back of ['full', 'rails'] as const) {
     const config = modes(c, top, back); config.top.frontDepth = 90; config.back.lowerHeight = 95;
     const next = changeConstruction(c, config), json = serialize(next), doc = JSON.parse(json);
-    assert.equal(doc.schemaVersion, 17); assert.equal(doc.evaluatorRevision, 'cnc-17');
+    assert.equal(doc.schemaVersion, 31); assert.equal(doc.evaluatorRevision, 'protruding-divider-31');
     assert.deepEqual(deserialize(json), next); assert.deepEqual(evaluate(deserialize(json)), evaluate(next));
   }
 });
@@ -158,7 +158,7 @@ test('unknown construction modes, policy revisions, malformed parameters and rai
     (d: any) => delete d.cabinet.carcass.back,
     (d: any) => d.cabinet.compartments.featureId = `${c.id}/panel/top-rear-rail`,
     (d: any) => d.evaluatorRevision = 'construction-99',
-    (d: any) => d.schemaVersion = 18
+    (d: any) => d.schemaVersion = 32
   ];
   for (const mutate of mutations) {
     const doc = JSON.parse(serialize(c)); mutate(doc);

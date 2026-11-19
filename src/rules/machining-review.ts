@@ -1,10 +1,16 @@
+import {holesOverlap,intentionalHoleUnion,footHoleSafetyConflict} from './hole-collisions';
 import type {Issue} from './validate';
 import type {JoineryPanel,CabineoBore,CabineoJoint} from './cabineo';
 import type {BackPocket} from './back-panel';
 /** Read-only review. Unsupported faces and interference remain visible, not erased. */
 export function machiningReview(panels:JoineryPanel[],joints:CabineoJoint[],back:CabineoBore[],pockets:BackPocket[]):Issue[]{
  const issues:Issue[]=[],bores=[...joints.flatMap(j=>j.bores),...back],dedup=new Set<string>();
- const warn=(code:string,id:string,message:string)=>{const key=code+id+message;if(!dedup.has(key)){dedup.add(key);issues.push({code,featureId:id,message,severity:'notice'});}};
+ const warn=(code:string,id:string,message:string,relatedIds:string[]=[],operationIds:string[]=[])=>{const key=code+id+message+(code==='machining-hole-collision'?operationIds.join('|'):'');if(!dedup.has(key)){dedup.add(key);issues.push({code,featureId:id,message,severity:'notice',relatedIds,operationIds});}};
+ for(let i=0;i<bores.length;i++)for(let j=i+1;j<bores.length;j++){
+  const a=bores[i],b=bores[j];if(a.panelId!==b.panelId||intentionalHoleUnion(a,b)||!holesOverlap(a,b)&&!footHoleSafetyConflict(a,b))continue;
+  const label=(hole:CabineoBore)=>hole.kind==='foot-pilot'?'Foot hole':hole.kind==='housing'?'Cabineo housing':hole.kind==='hinge-pilot'?'Hinge screw hole':hole.kind==='hinge-cup'?'Hinge cup':hole.kind==='shelf-support'?'Shelf hole':hole.kind==='back-fixing'?'Back fixing':'Drilled hole';
+  warn('machining-hole-collision',a.panelId,`${label(a)} ${holesOverlap(a,b)?'overlaps':'needs 4 mm clearance from'} ${label(b).toLowerCase()} on ${panels.find(p=>p.id===a.panelId)?.role??'part'}. Change the hole placement or fitting layout.`,[...new Set([a,b].filter(h=>h.kind==='foot-pilot').map(h=>h.group))],[a.id,b.id]);
+ }
  for(const panel of panels){
   const normal=panel.orientation==='yz'?0:panel.orientation==='xz'?1:2,faces=new Set(bores.filter(b=>b.panelId===panel.id&&!b.through).map(b=>-b.sign));
   pockets.filter(p=>p.panelId===panel.id&&p.size[normal]<panel.size[normal]-.001).forEach(p=>faces.add(p.face));
@@ -17,14 +23,14 @@ export function machiningReview(panels:JoineryPanel[],joints:CabineoJoint[],back
    const low=panel.center.map((n,i)=>n-panel.size[i]/2),high=panel.center.map((n,i)=>n+panel.size[i]/2),axis=bore.axis,end=bore.point[axis]+bore.sign*bore.depth;
    if(Math.min(high[axis],Math.max(bore.point[axis],end))-Math.max(low[axis],Math.min(bore.point[axis],end))<.001)continue;
    const distance=Math.sqrt([0,1,2].filter(a=>a!==axis).reduce((sum,a)=>sum+Math.max(low[a]-bore.point[a],0,bore.point[a]-high[a])**2,0));
-   if(distance<bore.diameter/2-.001)warn('machining-collision',bore.panelId,`${bore.kind==='back-fixing'?'Back fixing':'Cabineo'} on ${panels.find(p=>p.id===bore.panelId)?.role??'part'} collides with ${panel.role}. Move the adjoining element or change the fastener layout.`);
+   if(distance<bore.diameter/2-.001)warn('machining-collision',bore.panelId,`${bore.kind==='back-fixing'?'Back fixing':bore.kind==='pilot'?'Pilot hole':bore.kind==='shelf-support'?'Shelf adjustment hole':bore.kind==='hinge-cup'||bore.kind==='hinge-pilot'?'Hinge drilling':bore.kind==='handle'?'Handle drilling':'Cabineo'} on ${panels.find(p=>p.id===bore.panelId)?.role??'part'} collides with ${panel.role}. Move the adjoining element or change the fastener layout.`,[panel.id],[bore.id]);
   }
   for(const pocket of pockets){
    if(pocket.panelId!==bore.panelId||bore.kind==='back-fixing'&&pocket.kind!=='puzzle')continue;
    const low=pocket.origin,high=low.map((n,i)=>n+pocket.size[i]),axis=bore.axis,end=bore.point[axis]+bore.sign*bore.depth;
    if(Math.min(high[axis],Math.max(bore.point[axis],end))-Math.max(low[axis],Math.min(bore.point[axis],end))<.001)continue;
    const distance=Math.sqrt([0,1,2].filter(a=>a!==axis).reduce((sum,a)=>sum+Math.max(low[a]-bore.point[a],0,bore.point[a]-high[a])**2,0));
-   if(distance<bore.diameter/2-.001)warn('machining-collision',bore.panelId,`Fastener on ${panels.find(p=>p.id===bore.panelId)?.role??'part'} crosses a ${pocket.kind==='puzzle'?'puzzle notch':'back seat'}. Adjust the joint or fastener layout.`);
+   if(distance<bore.diameter/2+(bore.kind==='foot-pilot'?4:0)-.001)warn('machining-collision',bore.panelId,`${bore.kind==='foot-pilot'?'Foot hole needs 4 mm clearance from this cut. Fastener':'Fastener'} on ${panels.find(p=>p.id===bore.panelId)?.role??'part'} crosses a ${pocket.kind==='puzzle'?'puzzle notch':'back seat'}. Adjust the joint or fastener layout.`,bore.kind==='foot-pilot'?[bore.group]:[],[bore.id]);
   }
  }
  return issues;

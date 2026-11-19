@@ -1,18 +1,19 @@
-import {panelDisplayGeometry} from './part-mesh';
+import {panelDisplayGeometry,panelDisplayEdges} from './part-mesh';
 import {fitCamera, updateProjection, type CabinetCamera} from './camera-fit';
-import {explodedOffset,type RenderMode} from './display';
+import {explodedLayout,type RenderMode} from './display';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { Axis, Cabinet, Vec3 } from '../domain/cabinet';
 import type { EvaluatedCabinet } from '../geometry/evaluate';
 import { inspectionRotation } from './front-pose';
+import {openingPivot} from '../rules/door-motion';
 import { pickCabinetElement } from './picking';
 import { finishColor, type ViewportTheme } from '../design-system/themes';
 export type ViewName = 'isometric' | 'front' | 'side' | 'top' | 'rear';
 export interface DimensionAnchor { axis: Axis; x: number; y: number; handleX: number; handleY: number }
 interface Callbacks {
   usableHeight?(): number; editDivision?():void;
-  select(id: string): void; dragStart(): void; preview(axis: Axis, value: number): void; commit(): void; cancel(): void;
+  select(id: string,additive?:boolean): void; dragStart(): void; preview(axis: Axis, value: number): void; commit(): void; cancel(): void;
   anchors(anchors: DimensionAnchor[]): void; divisionAnchor(point: { x: number; y: number } | null): void; previewDivision(id: string, value: number): void;
 }
 export class CabinetViewport {
@@ -36,6 +37,9 @@ export class CabinetViewport {
   private down: { x: number; y: number } | null = null;
   private drag: { axis: Axis; x: number; y: number; initial: number; px: number; py: number; featureId?: string; centre?: number } | null = null;
   private disposed = false;
+  private doorGroups=new Map<string,{group:THREE.Group;handing:'left'|'right';target:number}>();
+  private displayedAngles=new Map<string,number>();
+  private frameTime=0;
   constructor(private host: HTMLElement, private callbacks: Callbacks) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -62,7 +66,7 @@ export class CabinetViewport {
     canvas.addEventListener('keydown', this.keyDown);
     this.resizeObserver = new ResizeObserver(() => this.resize()); this.resizeObserver.observe(host);
     this.resize();
-    this.renderer.setAnimationLoop(() => { if (this.disposed) return; this.controls.update(); this.renderer.render(this.scene, this.camera); this.updateAnchors(); });
+    this.renderer.setAnimationLoop((time) => { if (this.disposed) return; const delta=Math.min(.05,Math.max(0,(time-this.frameTime)/1000));this.frameTime=time;for(const [id,entry] of this.doorGroups){const current=this.displayedAngles.get(id)??0,next=current+Math.sign(entry.target-current)*Math.min(Math.abs(entry.target-current),120*delta);this.displayedAngles.set(id,next);entry.group.rotation.y=inspectionRotation(entry.handing,next);} this.controls.update(); this.renderer.render(this.scene, this.camera); this.updateAnchors(); });
   }
   private resize() {
     const { width, height } = this.host.getBoundingClientRect();
@@ -74,7 +78,7 @@ export class CabinetViewport {
       group.remove(child);
     }
   }
-  update(cabinet: Cabinet, geometry: EvaluatedCabinet, selected: string, theme: ViewportTheme, preview: boolean, cutaway: boolean, plinthVisible: boolean, frontsVisible:boolean, doorAngles:Record<string,number>,renderMode:RenderMode='solid',explosion=0) {
+  update(cabinet: Cabinet, geometry: EvaluatedCabinet, selected: string, theme: ViewportTheme, preview: boolean, cutaway: boolean, plinthVisible: boolean, frontsVisible:boolean, doorAngles:Record<string,number>,renderMode:RenderMode='solid',explosion=0,selectedIds:string[]=[selected],hiddenIds:string[]=[]) {
     this.explosion=explosion;
     const first = !this.cabinet; this.cabinet = cabinet; this.geometry = geometry; this.theme = theme; this.selected = selected;
     this.scene.background = new THREE.Color(theme.background);
@@ -82,18 +86,20 @@ export class CabinetViewport {
     (this.grid.material as THREE.Material).transparent = true; (this.grid.material as THREE.Material).opacity = 0.007; // 20% of the previous grid intensity.
     (this.grid.material as THREE.Material).depthWrite = false;
     this.clear(this.model); this.clear(this.handles); this.clear(this.dimensions);
-    const frontGroups=new Map<string,THREE.Group>();
-    if(frontsVisible)for(const door of geometry.fronts.doors){const group=new THREE.Group();group.position.set(...door.pivot);group.rotation.y=inspectionRotation(door.handing,doorAngles[door.id]??0);frontGroups.set(door.id,group);this.model.add(group);}
-    const attach=(mesh:THREE.Object3D,center:Vec3,id:string)=>{const group=frontGroups.get(id);mesh.position.set(...center);const panel=geometry.panels.find(p=>p.id===id);if(panel&&explosion)mesh.position.add(new THREE.Vector3(...explodedOffset(panel.role,panel.center,[cabinet.envelope.origin[0]+cabinet.envelope.width/2,cabinet.envelope.origin[1]+cabinet.envelope.height/2,cabinet.envelope.origin[2]+cabinet.envelope.depth/2],explosion)));if(group){mesh.position.sub(group.position);group.add(mesh);}else this.model.add(mesh);};
+    const frontGroups=new Map<string,THREE.Group>();this.doorGroups.clear();
+    if(frontsVisible)for(const door of geometry.fronts.doors.filter(d=>!hiddenIds.includes(d.id))){const group=new THREE.Group();group.position.set(...openingPivot(door));const target=explosion?0:doorAngles[door.id]??0;if(explosion)this.displayedAngles.set(door.id,0);group.rotation.y=inspectionRotation(door.handing,this.displayedAngles.get(door.id)??0);this.doorGroups.set(door.id,{group,handing:door.handing,target});frontGroups.set(door.id,group);this.model.add(group);}
+    const offsets=explodedLayout(geometry.panels,explosion);
+    const attach=(mesh:THREE.Object3D,center:Vec3,id:string)=>{const group=frontGroups.get(id);mesh.position.set(...center);const panel=geometry.panels.find(p=>p.id===id);if(panel&&explosion)mesh.position.add(new THREE.Vector3(...offsets.get(panel.id)!));if(group){mesh.position.sub(group.position);group.add(mesh);}else this.model.add(mesh);};
     for (const panel of geometry.panels) {
+      if(hiddenIds.includes(panel.id))continue;
       if(panel.role==='door'&&!frontsVisible)continue;
       if (panel.installationPart === 'plinth' && !plinthVisible) continue;
-      const isSelected = selected === panel.id;
+      const isSelected = selectedIds.includes(panel.id);
       const material = new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : isSelected ? theme.selected : finishColor(panel.finish.id, theme),
-        roughness: 0.82, metalness: 0, transparent: (cutaway && panel.constructionPart === 'back') || preview, opacity: cutaway && panel.constructionPart === 'back' ? 0.12 : preview ? 0.68 : 1 });
-      const mesh = new THREE.Mesh(panelDisplayGeometry(panel,geometry.pockets,[...geometry.cabineo.flatMap(j=>j.bores),...geometry.backFasteners]), material);
+        polygonOffset:true, polygonOffsetFactor:1, polygonOffsetUnits:1, roughness: 0.82, metalness: 0, transparent: (cutaway && panel.constructionPart === 'back') || preview, opacity: cutaway && panel.constructionPart === 'back' ? 0.12 : preview ? 0.68 : 1 });
+      const mesh = new THREE.Mesh(panelDisplayGeometry(panel,geometry.pockets,[...geometry.cabineo.flatMap(j=>j.bores),...geometry.backFasteners,...geometry.drilling]), material);
       mesh.position.set(...panel.coreCenter); mesh.userData.id = panel.id; mesh.userData.pickKind = panel.role==='door'?'front':panel.role === 'shelf' || panel.role === 'divider' ? 'interior' : panel.constructionPart === 'back' ? 'back' : 'part'; mesh.userData.pickThrough = cutaway && panel.constructionPart === 'back';
-      const edge = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry,20), new THREE.LineBasicMaterial({ color: isSelected ? theme.selected : renderMode==='wireframe'?theme.wire:theme.edge, transparent: true, opacity: renderMode==='wireframe'?1:(theme.edgeOpacity??.65) }));
+      const edge = new THREE.LineSegments(panelDisplayEdges(panel,mesh.geometry,geometry.pockets,[...geometry.cabineo.flatMap(j=>j.bores),...geometry.backFasteners,...geometry.drilling]), new THREE.LineBasicMaterial({ color: isSelected ? theme.selected : renderMode==='wireframe'?theme.wire:theme.edge, transparent: true, opacity: renderMode==='wireframe'?1:(theme.edgeOpacity??.65) }));
 
       mesh.add(edge); attach(mesh,panel.coreCenter,panel.id);
       for (const band of panel.edges.filter(edge => edge.product)) {
@@ -102,7 +108,7 @@ export class CabinetViewport {
         attach(strip,band.center,panel.id);
       }
     }
-    if(frontsVisible)for(const part of geometry.fronts.handles){
+    if(frontsVisible)for(const part of geometry.fronts.handles.filter(p=>!hiddenIds.includes(p.ownerId))){
       const shape=part.shape==='cylinder'?new THREE.CylinderGeometry(part.size[0]/2,part.size[0]/2,part.size[2],24):new THREE.BoxGeometry(...part.size);
       const mesh=new THREE.Mesh(shape,new THREE.MeshStandardMaterial({color:preview?theme.ghost:theme.frontHandle,metalness:0.65,roughness:0.35,transparent:preview,opacity:preview?0.65:1}));if(part.shape==='cylinder')mesh.rotation.x=Math.PI/2;
       mesh.userData.id=part.ownerId;mesh.userData.pickKind='front';attach(mesh,part.center,part.ownerId);
@@ -115,14 +121,10 @@ export class CabinetViewport {
       mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),new THREE.LineBasicMaterial({color:active?theme.selected:theme.edge,transparent:true,opacity:.5})));this.model.add(mesh);
     }
     if(renderMode!=='solid')this.model.traverse(object=>{
-      if(object instanceof THREE.Mesh){const materials=Array.isArray(object.material)?object.material:[object.material];for(const material of materials){material.transparent=true;material.opacity=object.userData.accessory?(renderMode==='wireframe'?.18:.65):object.userData.bore?.7:renderMode==='wireframe'?0:.23;material.depthWrite=false;material.side=THREE.DoubleSide;}}
+      if(object instanceof THREE.Mesh){const materials=Array.isArray(object.material)?object.material:[object.material];for(const material of materials){material.transparent=true;material.opacity=object.userData.accessory?(renderMode==='wireframe'?.18:.65):object.userData.bore?.7:renderMode==='wireframe'?0:.23;material.depthWrite=false;material.side=THREE.DoubleSide;material.forceSinglePass=true;}}
     });
-    for (const foot of geometry.installation.feet) for (const part of foot.parts) {
-      const shape = part.kind === 'plate' ? new THREE.BoxGeometry(...part.size) : new THREE.CylinderGeometry(part.size[0] / 2, part.size[0] / 2, part.size[1], 24);
-      const mesh = new THREE.Mesh(shape, new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : selected === foot.id ? theme.selected : theme.support, roughness: 0.65, metalness: 0.1, transparent: preview, opacity: preview ? 0.65 : 1 }));
-      mesh.position.set(...part.center); mesh.userData.id = foot.id; this.model.add(mesh);
-    }
     for (const pad of geometry.adjustable.supports) {
+      if(cabinet.contents.find(s=>s.id===pad.ownerId)?.drilling)continue;
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(...pad.size), new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : selected === pad.ownerId ? theme.selected : theme.support, roughness: 0.6, transparent: preview, opacity: preview ? 0.65 : 1 }));
       mesh.position.set(...pad.center); mesh.userData.id = pad.ownerId; mesh.userData.pickKind = 'interior'; this.model.add(mesh);
     }
@@ -135,11 +137,13 @@ export class CabinetViewport {
     const { width: w, height: h, depth: d, origin: [ox, oy, oz] } = cabinet.envelope;
     this.grid.position.set(ox + w / 2, geometry.installation.floorY - 1, oz + d / 2);
     for (const space of geometry.openings) {
-      const opening = new THREE.Mesh(new THREE.PlaneGeometry(space.size[0], space.size[1]), new THREE.MeshBasicMaterial({ visible: selected === space.id, side: THREE.DoubleSide, color: theme.selected, transparent: true, opacity: 0.1, depthWrite: false }));
+      if(explosion)break;
+      if(hiddenIds.includes(space.id))continue;
+      const opening = new THREE.Mesh(new THREE.PlaneGeometry(space.size[0], space.size[1]), new THREE.MeshBasicMaterial({ visible: selectedIds.includes(space.id), side: THREE.DoubleSide, color: theme.selected, transparent: true, opacity: 0.1, depthWrite: false }));
       opening.position.set(space.origin[0] + space.size[0] / 2, space.origin[1] + space.size[1] / 2, space.origin[2] + space.size[2] - 1);
       opening.userData.id = space.id; opening.userData.pickKind = 'opening'; this.model.add(opening);
     }
-    const activeDivision = [...geometry.divisions, ...geometry.adjustable.shelves].find(d => d.id === selected);
+    const activeDivision = [...geometry.divisions, ...geometry.adjustable.shelves].find(d => d.id === selected&&!hiddenIds.includes(d.id));
     if (activeDivision) {
       const axis = activeDivision.axis === 'horizontal' ? 1 : 0, cross = 1 - axis;
       for (const position of ('legalPositions' in activeDivision ? activeDivision.legalPositions as number[] : [activeDivision.min, (activeDivision.min + activeDivision.max) / 2, activeDivision.max])) {
@@ -150,9 +154,9 @@ export class CabinetViewport {
       }
     }
     const specs: [Axis, Vec3, Vec3, Vec3][] = [
-      ['width', [0, -80, d + 45], [w, -80, d + 45], [w, h / 2, d + 12]],
-      ['height', [-85, 0, d + 45], [-85, h, d + 45], [w / 2, h, d + 12]],
-      ['depth', [w + 85, -40, 0], [w + 85, -40, d], [w + 12, h / 2, d / 2]]
+      ['width', [0, -80, d + 45], [w, -80, d + 45], [w, -80, d + 45]],
+      ['height', [-85, 0, d + 45], [-85, h, d + 45], [-85, h, d + 45]],
+      ['depth', [w + 85, -40, 0], [w + 85, -40, d], [w + 85, -40, d]]
     ];
     for (const [axis, from, to, handle] of specs) {
       const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([from, to].map(v => new THREE.Vector3(v[0] + ox, v[1] + oy, v[2] + oz))), new THREE.LineBasicMaterial({ color: theme.handle, transparent: true, opacity: 0.65 })); this.dimensions.add(line);
@@ -229,7 +233,7 @@ export class CabinetViewport {
     if (this.drag) { const tap=this.drag.featureId&&Math.hypot(event.clientX-this.drag.x,event.clientY-this.drag.y)<4; this.drag = null; this.controls.enabled = true; if(tap){this.callbacks.cancel();this.callbacks.editDivision?.();}else this.callbacks.commit(); }
     else if (this.down && Math.hypot(event.clientX - this.down.x, event.clientY - this.down.y) < 5) {
       this.setPointerRay(event);
-      this.callbacks.select(pickCabinetElement(this.raycaster, this.model.children, this.cabinet.id));
+      this.callbacks.select(pickCabinetElement(this.raycaster, this.model.children, this.cabinet.id),event.shiftKey||event.metaKey||event.ctrlKey);
     }
     this.down = null;
     if (this.renderer.domElement.hasPointerCapture(event.pointerId)) this.renderer.domElement.releasePointerCapture(event.pointerId);

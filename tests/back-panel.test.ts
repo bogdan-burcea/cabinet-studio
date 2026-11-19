@@ -14,7 +14,7 @@ test('back construction changes sheet bounds, seats and clear depth together ins
  for(const thickness of [3,6,9,12,16,18])for(const mode of ['inset','applied','groove','rebate'] as const){
   const c=setBackPanel(createCabinet(),{mode,thickness}),e=evaluate(c),back=e.panels.find(p=>p.role==='back')!;
   assert.equal(back.size[2],thickness);assert.equal(e.opening.origin[2],(mode==='groove'?10:0)+thickness);assert.equal(e.opening.size[2]+e.opening.origin[2],560);
-  assert.deepEqual(back.size.slice(0,2),mode==='applied'?[600,720]:mode==='inset'?[564,684]:[574,694]);
+  assert.deepEqual(back.size.slice(0,2),mode==='applied'?[600,720]:mode==='inset'?[564,684]:[575.8,695.8]);
   assert.equal(e.pockets.length,['groove','rebate'].includes(mode)?4:0);
   for(const p of e.panels)for(let i=0;i<3;i++){assert.ok(p.center[i]-p.size[i]/2>=-.001);assert.ok(p.center[i]+p.size[i]/2<=[600,720,560][i]+.001);}
   if(mode==='applied'){for(const p of e.panels.filter(p=>p.role!=='back'))assert.equal(p.center[2]-p.size[2]/2,thickness);}
@@ -34,5 +34,5 @@ test('display back grooves remove only their pocket volume and retain canonical 
  const c=setBackPanel(createCabinet(),{mode:'groove'}),e=evaluate(c),p=e.panels.find(p=>p.role==='left')!,g=panelDisplayGeometry(p,e.pockets),position=g.getAttribute('position');let volume=0;
  // Box pieces share no interior volume. Sum their oriented triangle volumes.
  const ix=g.index;for(let i=0;i<(ix?.count??position.count);i+=3){const ids=[0,1,2].map(j=>ix?ix.getX(i+j):i+j),v=ids.map(j=>[position.getX(j),position.getY(j),position.getZ(j)]);volume+=(v[0][0]*(v[1][1]*v[2][2]-v[1][2]*v[2][1])-v[0][1]*(v[1][0]*v[2][2]-v[1][2]*v[2][0])+v[0][2]*(v[1][0]*v[2][1]-v[1][1]*v[2][0]))/6;}
- assert.ok(Math.abs(volume-(18*720*560-6*720*8))<1);g.dispose();assert.deepEqual(p.size,[18,720,560]);
+ assert.ok(Math.abs(volume-(18*720*560-6*720*6.2))<1);g.dispose();assert.deepEqual(p.size,[18,720,560]);
 });

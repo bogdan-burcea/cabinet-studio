@@ -14,6 +14,6 @@ export function partPreview(panel:Panel,bores:CabineoBore[],pockets:BackPocket[]
  const cuts=pockets.filter(p=>p.panelId===panel.id&&(p.face===sign||p.size[p.axis]>=panel.size[p.axis]-.001)),through=cuts.filter(p=>p.size[p.axis]>=panel.size[p.axis]-.001).flatMap(p=>pocketProfiles(p,u,v).map(local)),base=rectProfile(0,0,face.width,face.height),profile:MultiPolygon=through.length?clipping.difference(base,...through):[base];
  const blind=cuts.filter(p=>p.size[p.axis]<panel.size[p.axis]-.001).flatMap(p=>pocketProfiles(p,u,v).map(local));
  const slots=blind.length?clipping.intersection(profile,clipping.union(blind[0],...blind.slice(1))):[];
- const boresByKind=(['housing','receiver','back-fixing'] as const).map(kind=>{const circles=face.bores.filter(b=>b.kind===kind).map(b=>circleProfile(b.x,b.y,b.diameter/2));return {kind,path:circles.length?svgPath(clipping.intersection(profile,clipping.union(circles[0],...circles.slice(1)))):''};});
+ const boresByKind=(['housing','receiver','back-fixing','pilot','shelf-support','hinge-cup','hinge-pilot','handle','foot-pilot'] as const).map(kind=>{const circles=face.bores.filter(b=>b.kind===kind).map(b=>circleProfile(b.x,b.y,b.diameter/2));return {kind,path:circles.length?svgPath(clipping.intersection(profile,clipping.union(circles[0],...circles.slice(1)))):''};});
  return {face,profile,outline:svgPath(profile),slots:svgPath(slots),bores:boresByKind};
 }

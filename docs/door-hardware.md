@@ -1,0 +1,17 @@
+# Door hardware — local geometric study
+
+The pinned `blum-clip-110` / `blum-1` family selects screw-on CLIP top BLUMOTION 110° articles by application: 71B3550 overlay, 71B3650 dual/shared-divider, 71B3750 inset, with 173H7100 zero-height plate. Hinge count (2–6), end setback, cup distance (3–7 mm) and soft-close intent are editable per selected door or door group. Existing geometry, front links and support requirements remain authoritative. Count is user intent, not a load recommendation.
+
+Sources: [Blum MA-679 assembly/planning drawing](https://d2.blum.com/services/BEC003/clp0016-ma-679-bhk_ma_dok_bau_$sml_$aof_$v2.pdf), [Blum hinge/173H7100 article sheet](https://d2.blum.com/services/BEC003/mem008b-p_fl_dok_bsg_$sen-sg_$aof_$v1.pdf). Cup diameter/depth 35/13 mm and 45/9.5 mm screw pattern are pinned manufacturer geometry. Door/support pilot choices Ø2.5 ×10 / Ø2.5 ×8 are application assumptions for screw-on fixing, not manufacturer screw/stock certification. Plate rows are 32 mm apart on the 37 mm line; inset plate line moves back by door thickness plus the actual front clearance. Overlay/plate adjustment compatibility and load/physical trials remain to be verified. The UI does not claim manufacturing readiness.
+
+`rules/door-hardware.ts` owns matched drilling and article resolution without UI or Three.js dependencies. Each hinge requires a real support at its actual plate positions. Thin door stock, crowded hinge locations, missing supports and plate lines beyond the support are rejected by the normal transaction path. All bore geometry is included in the 3D parts and flat previews; no accessory bodies are invented.
+
+Generic pulls support vertical/horizontal orientation, fixed standard fixing pitches, left/right/centre/latch-side placement, top/centre/bottom anchoring, outline gaps, projection and fixing diameter. Knobs expose diameter/projection; finger holes cut through the slab. Placement is relative to each slab, so paired doors mirror latch-side handles. Edge-envelope validation prevents off-panel cuts. Native 23 preserves optional settings, stable IDs and strict parsing; earlier native revisions migrate without altering explicit intent.
+
+## Opening accuracy boundary
+
+The previous rear-edge pivot is replaced by a front-edge clearance-study transform. Inspection motion is smoothly interpolated, allows 0–110°, and checks the entire requested sweep at intervals no larger than 1° against cabinet parts, other doors and generic handle envelopes using oriented boxes. It stops before an obstruction. This is conservative envelope collision checking, not CNC-profile collision analysis.
+
+**This is not a verified Blum four-bar simulation.** The public planning drawings used here do not supply intermediate linkage coordinates. An articulated manufacturer model or measured linkage fixture is still required to implement and verify that motion. Soft-close is stored as assembly intent; it does not pretend to simulate damping dynamics. Door angles remain presentation state and are not persisted as construction intent.
+
+Exploded display now spreads interior centres radially while preserving lateral order, keeps shelves at the compact forward gap, and retains residual bounding-box collision separation. Opaque board surfaces receive a polygon depth offset so their edge lines do not compete with coplanar faces. Transparent board rendering uses one double-sided pass to avoid competing front/back transparent passes.

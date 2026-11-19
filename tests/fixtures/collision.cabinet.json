@@ -1,0 +1,266 @@
+{
+  "format": "cabinet-studio",
+  "schemaVersion": 26,
+  "evaluatorRevision": "base-supports-26",
+  "cabinet": {
+    "id": "bfc25605-8de6-4869-950c-79d09202f4d2",
+    "name": "collision",
+    "envelope": {
+      "width": 400,
+      "height": 2100,
+      "depth": 560,
+      "origin": [
+        0,
+        0,
+        0
+      ]
+    },
+    "carcass": {
+      "construction": "rectangular-butt",
+      "policyRevision": "construction-1",
+      "top": {
+        "mode": "full",
+        "frontDepth": 80,
+        "rearDepth": 80
+      },
+      "back": {
+        "mode": "full",
+        "upperHeight": 80,
+        "lowerHeight": 80,
+        "joint": {
+          "revision": "back-1",
+          "mode": "rebate",
+          "inset": 10,
+          "depth": 6,
+          "clearance": 0.2
+        }
+      }
+    },
+    "compartments": {
+      "id": "bfc25605-8de6-4869-950c-79d09202f4d2/opening",
+      "kind": "split",
+      "featureId": "f6006680-0792-43f9-9a56-4a9f77c69423",
+      "axis": "vertical",
+      "position": 140,
+      "policyRevision": "fixed-1",
+      "children": [
+        {
+          "id": "d3e4f455-be5c-4db6-95b9-7cd73a3d3b11",
+          "kind": "opening",
+          "children": []
+        },
+        {
+          "id": "1ccfa725-1527-4a71-aafe-11448a0f71d5",
+          "kind": "split",
+          "featureId": "3aab908d-c5d3-4511-9af6-b2c9515f5e31",
+          "axis": "horizontal",
+          "position": 1032,
+          "policyRevision": "fixed-1",
+          "children": [
+            {
+              "id": "6adb6bcd-e88a-4e68-81fe-e8189e59347e",
+              "kind": "opening",
+              "children": []
+            },
+            {
+              "id": "f2804e50-8886-4e11-903e-f0593b8f1b3c",
+              "kind": "opening",
+              "children": []
+            }
+          ],
+          "anchor": "centre"
+        }
+      ]
+    },
+    "contents": [],
+    "fronts": [
+      {
+        "id": "d93e9aa9-19e3-4613-ad5d-d9bc8462541c",
+        "kind": "slab-door",
+        "policyRevision": "slab-1",
+        "region": {
+          "left": 0,
+          "right": 0.5,
+          "bottom": 0,
+          "top": 1
+        },
+        "placement": "inset",
+        "handing": "left",
+        "reveal": 2,
+        "clearance": 2,
+        "material": null,
+        "handle": {
+          "geometry": {
+            "id": "concept-slab-handle",
+            "revision": "1"
+          },
+          "kind": "knob",
+          "pitch": 128,
+          "orientation": "vertical",
+          "edgeOffset": 40,
+          "height": "centre",
+          "endOffset": 60,
+          "diameter": 24
+        },
+        "hinge": {
+          "id": "blum-clip-110",
+          "revision": "blum-1",
+          "count": 3,
+          "endOffset": 100,
+          "cupDistance": 5
+        },
+        "boundaryLinks": {
+          "right": "f6006680-0792-43f9-9a56-4a9f77c69423"
+        }
+      },
+      {
+        "id": "9ede4525-1c8f-4e51-944c-2f641964a1af",
+        "kind": "slab-door",
+        "policyRevision": "slab-1",
+        "region": {
+          "left": 0.5,
+          "right": 1,
+          "bottom": 0,
+          "top": 0.5
+        },
+        "placement": "inset",
+        "handing": "right",
+        "reveal": 2,
+        "clearance": 2,
+        "material": null,
+        "handle": {
+          "geometry": {
+            "id": "concept-slab-handle",
+            "revision": "1"
+          },
+          "kind": "knob",
+          "pitch": 128,
+          "orientation": "vertical",
+          "edgeOffset": 40,
+          "height": "top",
+          "endOffset": 60,
+          "diameter": 24
+        },
+        "hinge": {
+          "id": "blum-clip-110",
+          "revision": "blum-1",
+          "count": 3,
+          "endOffset": 100,
+          "cupDistance": 5
+        },
+        "boundaryLinks": {
+          "left": "f6006680-0792-43f9-9a56-4a9f77c69423",
+          "top": "3aab908d-c5d3-4511-9af6-b2c9515f5e31"
+        }
+      },
+      {
+        "id": "b515e3e0-ab33-4b33-9697-dda8a7208dea",
+        "kind": "slab-door",
+        "policyRevision": "slab-1",
+        "region": {
+          "left": 0.5,
+          "right": 1,
+          "bottom": 0.5,
+          "top": 1
+        },
+        "placement": "inset",
+        "handing": "right",
+        "reveal": 2,
+        "clearance": 2,
+        "material": null,
+        "handle": {
+          "geometry": {
+            "id": "concept-slab-handle",
+            "revision": "1"
+          },
+          "kind": "knob",
+          "pitch": 128,
+          "orientation": "vertical",
+          "edgeOffset": 40,
+          "height": "bottom",
+          "endOffset": 60,
+          "diameter": 24
+        },
+        "hinge": {
+          "id": "blum-clip-110",
+          "revision": "blum-1",
+          "count": 3,
+          "endOffset": 100,
+          "cupDistance": 5
+        },
+        "boundaryLinks": {
+          "left": "f6006680-0792-43f9-9a56-4a9f77c69423",
+          "bottom": "3aab908d-c5d3-4511-9af6-b2c9515f5e31"
+        }
+      }
+    ],
+    "installation": {
+      "type": "feet-concept",
+      "policyRevision": "support-1",
+      "mounting": {
+        "mode": "none",
+        "policyRevision": "mounting-1",
+        "geometry": {
+          "id": "concept-wall-layout",
+          "revision": "1"
+        },
+        "wallGap": 30,
+        "topOffset": 60,
+        "sideInset": 60,
+        "floorClearance": 300
+      },
+      "feet": {
+        "geometry": {
+          "id": "concept-foot-60",
+          "revision": "1"
+        },
+        "height": 70,
+        "sideInset": 60,
+        "frontInset": 110,
+        "rearInset": 57
+      },
+      "plinth": {
+        "enabled": true,
+        "leftReturn": false,
+        "rightReturn": false,
+        "frontSetback": 50,
+        "topGap": 5,
+        "bottomGap": 0,
+        "material": null
+      }
+    },
+    "materials": {
+      "carcass": {
+        "stock": {
+          "id": "generic-panel-18",
+          "revision": "1"
+        },
+        "finish": {
+          "id": "unspecified",
+          "revision": "1"
+        },
+        "grain": "none"
+      },
+      "back": {
+        "stock": {
+          "id": "generic-back-6",
+          "revision": "1"
+        },
+        "finish": {
+          "id": "unspecified",
+          "revision": "1"
+        },
+        "grain": "none"
+      },
+      "interior": null
+    },
+    "banding": {},
+    "hardware": [
+      {
+        "id": "cabineo-12",
+        "revision": "surface-1"
+      }
+    ],
+    "cabinetType": "tall"
+  }
+}

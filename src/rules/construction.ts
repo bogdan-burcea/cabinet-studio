@@ -1,3 +1,4 @@
+import {backFingerCuts} from './back-fingers';
 import {addDogbones} from './dogbones';
 import {puzzleCorners} from './puzzle';
 import {backLayout} from './back-panel';
@@ -46,7 +47,7 @@ export function resolveConstruction(c: Cabinet, thickness: number, backThickness
     add('back-lower-rail', 'Lower rear rail', [innerWidth, back.lowerHeight, thickness], [thickness, thickness, 0], 'xy', 'carcass', 'back');
   }
   let puzzleCuts:ReturnType<typeof puzzleCorners>=[];try{puzzleCuts=puzzleCorners(c,thickness,bodyRear);}catch(e){issue('top','puzzle-corners',(e as Error).message);}
-  let pockets=[...(back.mode==='full'?seating.pockets:[]),...puzzleCuts];try{pockets=addDogbones(c,panels,pockets);}catch(e){issue('back','dogbone-tool',(e as Error).message);}
+  let pockets=[...(back.mode==='full'?seating.pockets:[]),...puzzleCuts];try{pockets.push(...backFingerCuts(c,thickness,backThickness));}catch(e){issue('back','back-fingers',(e as Error).message);} try{pockets=addDogbones(c,panels,pockets);}catch(e){issue('back','dogbone-tool',(e as Error).message);}
   return { panels, pockets, issues, rearSetback, topGap, backGap,
     opening: { origin: [thickness, thickness, rearSetback].map((v, i) => v + origin[i]) as Vec3, size: [innerWidth, innerHeight, d - rearSetback] as Vec3 } };
 }

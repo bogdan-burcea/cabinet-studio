@@ -1,0 +1,184 @@
+{
+  "format": "cabinet-studio",
+  "schemaVersion": 23,
+  "evaluatorRevision": "door-hardware-23",
+  "cabinet": {
+    "id": "c3ab3d09-864f-47c4-80b4-44a5491b3ed6",
+    "name": "with machining error",
+    "envelope": {
+      "width": 400,
+      "height": 720,
+      "depth": 560,
+      "origin": [
+        0,
+        0,
+        0
+      ]
+    },
+    "carcass": {
+      "construction": "rectangular-butt",
+      "policyRevision": "construction-1",
+      "top": {
+        "mode": "full",
+        "frontDepth": 80,
+        "rearDepth": 80
+      },
+      "back": {
+        "mode": "full",
+        "upperHeight": 80,
+        "lowerHeight": 80,
+        "joint": {
+          "revision": "back-1",
+          "mode": "groove",
+          "inset": 11,
+          "depth": 6,
+          "clearance": 0.2
+        }
+      },
+      "machining": {
+        "revision": "cnc-1",
+        "tolerance": 0.2,
+        "bitDiameter": 6,
+        "dogbones": true,
+        "throughOpposed": true,
+        "cabineoPerSide": 2
+      }
+    },
+    "compartments": {
+      "id": "c3ab3d09-864f-47c4-80b4-44a5491b3ed6/opening",
+      "kind": "split",
+      "featureId": "a37005c7-3b6a-4b6c-9e45-286e4e3ee9bc",
+      "axis": "vertical",
+      "position": 182,
+      "policyRevision": "fixed-2",
+      "children": [
+        {
+          "id": "9440e1ee-3e28-4a63-b93f-3491fe179925",
+          "kind": "opening",
+          "children": []
+        },
+        {
+          "id": "09124816-42e7-49e7-ad43-87d0a3b1475e",
+          "kind": "opening",
+          "children": []
+        }
+      ],
+      "anchor": "centre",
+      "frontSetback": 25,
+      "joint": {
+        "mode": "finger",
+        "revision": "finger-1",
+        "pitch": 50
+      }
+    },
+    "contents": [],
+    "fronts": [
+      {
+        "id": "5fb453e6-f318-4a93-a72b-a23fa02776fb",
+        "kind": "slab-door",
+        "policyRevision": "slab-1",
+        "region": {
+          "left": 0,
+          "right": 1,
+          "bottom": 0,
+          "top": 1
+        },
+        "placement": "inset",
+        "handing": "left",
+        "reveal": 2,
+        "clearance": 2,
+        "material": null,
+        "handle": {
+          "geometry": {
+            "id": "concept-slab-handle",
+            "revision": "1"
+          },
+          "kind": "hole",
+          "pitch": 224,
+          "orientation": "horizontal",
+          "edgeOffset": 40,
+          "height": "top",
+          "endOffset": 50,
+          "horizontal": "latch",
+          "projection": 20,
+          "diameter": 30
+        },
+        "hinge": {
+          "id": "blum-clip-110",
+          "revision": "blum-1",
+          "count": 2,
+          "endOffset": 100,
+          "cupDistance": 5,
+          "softClose": true
+        }
+      }
+    ],
+    "installation": {
+      "type": "unassigned",
+      "policyRevision": "support-1",
+      "mounting": {
+        "mode": "none",
+        "policyRevision": "mounting-1",
+        "geometry": {
+          "id": "concept-wall-layout",
+          "revision": "1"
+        },
+        "wallGap": 30,
+        "topOffset": 60,
+        "sideInset": 60,
+        "floorClearance": 300
+      },
+      "feet": {
+        "geometry": {
+          "id": "concept-foot-60",
+          "revision": "1"
+        },
+        "height": 100,
+        "sideInset": 60,
+        "frontInset": 120,
+        "rearInset": 60
+      },
+      "plinth": {
+        "enabled": false,
+        "leftReturn": false,
+        "rightReturn": false,
+        "frontSetback": 60,
+        "topGap": 5,
+        "bottomGap": 0,
+        "material": null
+      }
+    },
+    "materials": {
+      "carcass": {
+        "stock": {
+          "id": "generic-panel-18",
+          "revision": "1"
+        },
+        "finish": {
+          "id": "unspecified",
+          "revision": "1"
+        },
+        "grain": "none"
+      },
+      "back": {
+        "stock": {
+          "id": "generic-back-3",
+          "revision": "1"
+        },
+        "finish": {
+          "id": "unspecified",
+          "revision": "1"
+        },
+        "grain": "none"
+      },
+      "interior": null
+    },
+    "banding": {},
+    "hardware": [
+      {
+        "id": "cabineo-12",
+        "revision": "surface-1"
+      }
+    ]
+  }
+}

@@ -31,3 +31,17 @@ export function panelDisplayGeometry(panel:Panel,pockets:BackPocket[],bores:Cabi
  const result=new THREE.BufferGeometry();result.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));result.computeVertexNormals();
  cache.set(key,result.clone());if(cache.size>48){const oldest=cache.keys().next().value!;cache.get(oldest)!.dispose();cache.delete(oldest);}return result;
 }
+
+/** Edges must belong to an orthogonal cut or a circular profile. Earcut's cap
+ * bridges are triangulation details, not machining edges; nearly collinear cap
+ * triangles can otherwise expose long spurious diagonals after Float32 rounding. */
+export function panelDisplayEdges(panel:Panel,mesh:THREE.BufferGeometry,pockets:BackPocket[],bores:CabineoBore[]){
+ const original=new THREE.EdgesGeometry(mesh,20),vertices=original.getAttribute('position'),positions:number[]=[];
+ const circles=[...bores.filter(b=>b.panelId===panel.id).map(b=>({axis:b.axis,center:b.point,radius:b.diameter/2})),...pockets.filter(p=>p.panelId===panel.id).flatMap(p=>(p.reliefs??[]).map(r=>({axis:p.axis,center:r.center,radius:r.radius})))];
+ for(let i=0;i<vertices.count;i+=2){const a=[vertices.getX(i),vertices.getY(i),vertices.getZ(i)],b=[vertices.getX(i+1),vertices.getY(i+1),vertices.getZ(i+1)],delta=a.map((n,j)=>b[j]-n);
+  const orthogonal=delta.filter(n=>Math.abs(n)>.0001).length<=1;
+  const curved=circles.some(circle=>{const axes=[0,1,2].filter(j=>j!==circle.axis),radius=(point:number[])=>Math.hypot(...axes.map(j=>point[j]+panel.coreCenter[j]-circle.center[j]));return Math.abs(delta[circle.axis])<.0001&&Math.hypot(...delta)<=circle.radius*.132+.001&&[a,b].every(point=>Math.abs(radius(point)-circle.radius)<.001);});
+  if(orthogonal||curved)positions.push(...a,...b);
+ }
+ original.dispose();const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));return geometry;
+}

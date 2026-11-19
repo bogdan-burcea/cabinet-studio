@@ -195,3 +195,28 @@ Implemented reversible stock thickness and interlocking corner intent, matched i
 ## CNC controls and interior finger joints
 
 Added numeric 3–24 mm stock; total clearance defaults to 2 mm for wooden connection cuts; explicit cutter-sized dogbones; opposed receiver-pilot through conversion; per-side Cabineo count with spacing checks; contextual finger end joints for fixed shelves and dividers. Official Evo horizontal number-input controls replace custom split arrows. Shared clipped cut profiles repair preview overdraw and keep 3D dogbones consistent. Native 17 and strict parsing preserve earlier identities and intent; machining defaults apply to regenerated wood cuts. Physical trial, CNC export and load verification remain outside this local preview.
+
+Completed locally: shared joint editing for multiple shelves or multiple dividers; explicit nested-interior Remove all; validated repair choices for common machining, fitting, back-seat and layout conflicts. Automatic repair is bounded to known constraints; no unsafe geometry or malformed input is accepted to force an edit through.
+
+Completed locally: four-edge back finger joints; applied-back through-pilots with editable per-edge count/diameter and visible stock-based limits; adjustable shelves with editable two-row side drilling counts, stable drilled levels, Backspace and bulk hole-count edits. Physical fitting and joint verification remains deferred.
+
+Completed locally: unified shelf type selection/conversion; centred short Cabineo sets; shared-through or staggered opposing shelf rows, configurable front/rear insets; stock-sensitive support-hole depth; linked/centred adjustment-hole sets; single-corner applied-back pilot pattern.
+
+Completed locally: shared-only opposing holes; multi-opening interior creation; front insets; expiring info banners; collision-free exploded part packing; automatic back pilots from minimum 200 mm spacing; union-aware dogbones; distinct Evo-style element icons.
+
+
+Completed locally: compact two-column inspector fields, smaller camera-toolbar radius, reduced shelf explosion distance, and simple slab doors/pairs with supported hinge boundaries, direct edits, linked resizing, reversible removal and native round trips. Exact door fittings, drilling and manufacturing outputs remain deferred.
+
+
+Completed locally: Blum 110° application-specific hinge selection and editable drilling layout; vertical/horizontal pulls, knobs and finger holes with detailed placement; divider order in exploded view; coplanar edge depth separation. Opening has smooth 0–110° clearance motion and swept envelope checks. Exact Blum four-bar kinematics remains outstanding and requires manufacturer linkage data or a measured fixture.
+
+
+Completed locally: maximum-angle opening action; cup/finger-hole range notes; continuous back thickness; explicit invalid-number feedback; unified stacked number inputs; per-item visibility eyes; title delete icons; full-width hole-set centring; automatic dogbones on finger-joint selection; real-file tooling diagnosis with validated repairs; atomic multi-opening adjustable creation; cap-bridge outline filtering. Exact Blum linkage simulation remains outside this clearance study.
+
+
+Completed locally: scoped Evo alert notices with expandable detail; affected-item cues; nearest-position back-fixing collision repairs; two explicit thin-back tooling choices; full-width Resolve; muted hidden rows; stable inline item renaming; fixed hinge soft-close capability; small grey labels; contextual door-operation icons; delayed, viewport-safe tooltips.
+
+
+Completed locally: toolbar-only door control; paired editable/calculated Cabineo fields; native Evo radio choices; transient snackbar feedback; matching rebate seat-depth layout; exterior bottom fastener access; contextual base feet/plinth controls with placement, side returns and evaluated clearance repairs. Exact support articles and verified hinge linkage motion remain pending.
+
+Completed locally: selectable bottom machining face and evaluated two-face repairs; front-pair/four feet with editable pilot drilling; holes-only support display and direct positioning; foot-relative plinth gap; wall support exclusion; 5 mm foot / 40 mm plinth limits; corrected plinth explosion; hinge-zone/shelf repair and part-specific door opening feedback. Exact foot fittings, physical trials, mounting-plate body CAD and proprietary Blum motion remain deferred.

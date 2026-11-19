@@ -1,3 +1,4 @@
+import {clearInsetInteriors} from '../src/commands/corrections.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createCabinet,resize} from '../src/domain/cabinet.ts';
@@ -11,7 +12,7 @@ test('moving an attached divider resizes both door leaves and preserves hinge su
  const {c,id,door}=furnished(),store=new CabinetStore(c),before=evaluate(c),moved=moveDivision(c,id,312);assert.ok(store.commit(moved));const after=evaluate(moved);assert.equal(after.fronts.doors[0].size[0],before.fronts.doors[0].size[0]+30);assert.equal(after.fronts.doors[1].size[0],before.fronts.doors[1].size[0]-30);assert.equal(after.fronts.doors[0].id,door);assert.deepEqual(moved.banding,c.banding);store.undo();assert.deepEqual(store.getSnapshot().committed,c);store.redo();assert.deepEqual(store.getSnapshot().committed,moved);assert.deepEqual(deserialize(serialize(moved)),moved);
 });
 test('editing door width moves its shared divider, changes its neighbor and stays valid for inset leaves',()=>{
- for(const inset of [false,true]){const original=furnished(),c=inset?updateDoor(original.c,original.door,{placement:'inset'}):original.c,before=evaluate(c),width=before.fronts.doors[0].size[0];const next=resizeDoor(c,original.door,'width',width+20),e=evaluate(next);assert.equal(e.divisions[0].position,before.divisions[0].position+20);assert.equal(e.fronts.doors[0].size[0],width+20);assert.equal(e.fronts.doors[1].size[0],before.fronts.doors[1].size[0]-20);assert.deepEqual(next.installation,c.installation);assert.deepEqual(next.materials,c.materials);}
+ for(const inset of [false,true]){const original=furnished(),c=inset?clearInsetInteriors(updateDoor(original.c,original.door,{placement:'inset'})).cabinet:original.c,before=evaluate(c),width=before.fronts.doors[0].size[0];const next=resizeDoor(c,original.door,'width',width+20),e=evaluate(next);assert.equal(e.divisions[0].position,before.divisions[0].position+20);assert.equal(e.fronts.doors[0].size[0],width+20);assert.equal(e.fronts.doors[1].size[0],before.fronts.doors[1].size[0]-20);assert.deepEqual(next.installation,c.installation);assert.deepEqual(next.materials,c.materials);}
 });
 test('centre is a persistent constraint across body and parent resizing and linked door edits can release it',()=>{
  const {c,id,door}=furnished(),centred=centreDivision(c,id),wide=resize(centred,'width',800),e=evaluate(wide);assert.equal(findDivision(wide.compartments,id)!.anchor,'centre');assert.equal(e.divisions[0].before,e.divisions[0].after);assert.equal(e.fronts.doors[0].size[0],e.fronts.doors[1].size[0]);assert.deepEqual(deserialize(serialize(wide)),wide);

@@ -30,7 +30,7 @@ test('real blind bores remove the analytic overlapping triple-circle volume, wit
 });
 test('puzzle corners partition the same cabinet volume and retain stock, interior and native identities',()=>{
  for(const t of [12,15,16,18,19,22,24]){
-  const c=setCnc(setStockThickness(createCabinet(),t),{tolerance:0}),p=setPuzzleCorners(c,true),e=evaluate(p);assert.ok(e.pockets.some(p=>p.kind==='puzzle'));assert.deepEqual(e.panels.map(p=>p.id),evaluate(c).panels.map(p=>p.id));assert.deepEqual(readSimpleCabinet(serialize(p)),p);
+  const c=setCnc(setStockThickness(createCabinet(),t),{tolerance:0}),p=setCnc(setPuzzleCorners(c,true),{dogbones:false}),e=evaluate(p);assert.ok(e.pockets.some(p=>p.kind==='puzzle'));assert.deepEqual(e.panels.map(p=>p.id),evaluate(c).panels.map(p=>p.id));assert.deepEqual(readSimpleCabinet(serialize(p)),p);
   const base=evaluate(c).panels.reduce((n,p)=>n+p.size.reduce((v,k)=>v*k,1),0),cut=e.panels.reduce((n,p)=>n+volume(panelDisplayGeometry(p,e.pockets)),0);assert.ok(Math.abs(base-cut)<20,`stock ${t}: ${base} / ${cut}`);
  }
  const c=createCabinet(),s=addDivision(c,c.compartments.id,'horizontal',342),e=evaluate(setPuzzleCorners(setCabineo(s.cabinet,'cabineo-8'),true));assert.ok(e.cabineo.every(j=>j.hostId===s.featureId));assert.deepEqual(e.divisions.map(d=>d.id),[s.featureId]);

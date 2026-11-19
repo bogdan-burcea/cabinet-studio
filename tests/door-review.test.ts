@@ -5,7 +5,7 @@ import {addDoor,addDoorPair,splitDoor,updateDoor,connectedDoors} from '../src/co
 import {addDivision,moveDivision,setDivisionSetback} from '../src/commands/interiors.ts';
 import {evaluate} from '../src/geometry/evaluate.ts';
 import {supportedHingeSides} from '../src/rules/fronts.ts';
-import {corrections} from '../src/commands/corrections.ts';
+import {clearInsetInteriors,corrections} from '../src/commands/corrections.ts';
 import {CabinetStore} from '../src/commands/store.ts';
 import {deserialize,deserializeWithInfo,serialize} from '../src/persistence/files.ts';
 import {setBanding} from '../src/commands/materials.ts';
@@ -28,8 +28,8 @@ test('nested vertical splits cannot create floating hinge leaves; offered suppor
  const pair=addDoorPair(createCabinet()).cabinet,id=pair.fronts[1].id,bad=splitDoor(pair,id,'vertical').cabinet;assert.throws(()=>evaluate(bad),/hinge edge/);const fix=corrections(bad).find(o=>o.label.startsWith('Add supporting'));assert.ok(fix);evaluate(fix.cabinet);
  const base=createCabinet(),shelf=addDivision(base,base.compartments.id,'horizontal',342).cabinet,doors=addDoorPair(shelf).cabinet,next=updateDoor(doors,doors.fronts[0].id,{placement:'inset'});assert.throws(()=>evaluate(next),/inset slab conflicts/);const correction=corrections(next).find(o=>o.label==='Set back interiors to clear doors');assert.ok(correction);const store=new CabinetStore(doors);assert.ok(store.commit(correction.cabinet));store.undo();assert.deepEqual(store.getSnapshot().committed,doors);
 });
-test('inset leaves on a divider align to its faces and remain disjoint across sizes, origin and stock',()=>{
- for(const width of [400,600,1000]){const c=createCabinet();c.envelope={...c.envelope,width,origin:[15,20,-35]};const split=addDivision(c,c.compartments.id,'vertical',(width-36)/2).cabinet,pair=addDoorPair(split).cabinet,next=updateDoor(pair,pair.fronts[0].id,{placement:'inset'});const e=evaluate(next),[a,b]=e.fronts.doors,divider=e.divisions[0];assert.ok(a.center[0]+a.size[0]/2<=divider.origin[0]);assert.ok(b.center[0]-b.size[0]/2>=divider.origin[0]+divider.size[0]);}
+test('inset leaves surround a protruding divider and remain disjoint across sizes, origin and stock',()=>{
+ for(const width of [400,600,1000]){const c=createCabinet();c.envelope={...c.envelope,width,origin:[15,20,-35]};const split=addDivision(c,c.compartments.id,'vertical',(width-36)/2).cabinet,pair=addDoorPair(split).cabinet,next=updateDoor(pair,pair.fronts[0].id,{placement:'inset'});const e=evaluate(clearInsetInteriors(next).cabinet),[a,b]=e.fronts.doors,divider=e.divisions[0];assert.ok(a.center[0]+a.size[0]/2<divider.origin[0]);assert.ok(b.center[0]-b.size[0]/2>divider.origin[0]+divider.size[0]);assert.ok(a.center[0]+a.size[0]/2<b.center[0]-b.size[0]/2);}
 });
 test('handle and edge removal preserve their owning panel; display offsets never change saved intent',()=>{
  let c=addDoorPair(createCabinet()).cabinet,id=c.fronts[0].id;c=setBanding(c,id,'u-min',{id:'generic-edge-1',revision:'1'});const panel=evaluate(c).panels.find(p=>p.id===id)!,band=panel.edges.find(e=>e.product)!;

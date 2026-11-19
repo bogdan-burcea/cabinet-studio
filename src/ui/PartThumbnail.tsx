@@ -7,8 +7,8 @@ import type {CabineoBore} from '../rules/cabineo';
 import type {CabineoJoint} from '../rules/cabineo';
 import {partFace,preferredFace} from '../geometry/part-face';
 import {Section,IconButton} from './components';
-export function PartThumbnail({panel,joints,pockets=[],backBores=[]}:{panel:Panel;joints:CabineoJoint[];pockets?:BackPocket[];backBores?:CabineoBore[]}){
- const bores=[...joints.flatMap(j=>j.bores),...backBores],preferred=preferredFace(panel,bores),[flipped,setFlipped]=useState(false);
+export function PartThumbnail({panel,joints,pockets=[],backBores=[],drilling=[]}:{panel:Panel;joints:CabineoJoint[];pockets?:BackPocket[];backBores?:CabineoBore[];drilling?:CabineoBore[]}){
+ const bores=[...joints.flatMap(j=>j.bores),...backBores,...drilling],preferred=preferredFace(panel,bores),[flipped,setFlipped]=useState(false);
  const sign=flipped?-preferred as 1|-1:preferred,face=partFace(panel,bores,sign),opposed=bores.some(b=>b.panelId===panel.id&&b.sign===sign);
  const [expanded,setExpanded]=useState(false),dialog=useRef<HTMLDialogElement>(null),title=useId();
  useEffect(()=>{if(expanded)dialog.current?.showModal();else dialog.current?.close();},[expanded]);
@@ -22,6 +22,7 @@ export function PartThumbnail({panel,joints,pockets=[],backBores=[]}:{panel:Pane
  return <Section title="Part preview" aside={<div className="part-preview-actions"><IconButton icon="exploded" label="Expand part preview" onClick={()=>setExpanded(true)}/></div>}>
   {image}
   <dialog ref={dialog} role="dialog" aria-modal="true" aria-labelledby={title} hidden={!expanded} className="lightbox-dialog part-preview-dialog" onCancel={()=>setExpanded(false)} onClose={()=>setExpanded(false)} onClick={e=>{if(e.target===e.currentTarget)setExpanded(false);}}><div className="lightbox-dialog__window"><div className="lightbox-dialog__header"><h2 id={title}>{panel.label}</h2><IconButton icon="close" label="Close part preview" onClick={()=>setExpanded(false)}/></div><div className="lightbox-dialog__main">{image}{opposed&&<button className="btn btn--secondary" onClick={()=>setFlipped(v=>!v)}>Flip part</button>}</div></div></dialog>
+  {drilling.some(b=>b.panelId===panel.id)&&<div className="data-row"><span>Drilled holes</span><strong>{drilling.filter(b=>b.panelId===panel.id).length}</strong></div>}
   {backBores.some(b=>b.panelId===panel.id)&&<div className="data-row"><span>Back connectors</span><strong>{backBores.filter(b=>b.panelId===panel.id).length}</strong></div>}
   {face.bores.some(b=>b.through)&&<div className="data-row"><span>Through bores</span><strong>{face.bores.filter(b=>b.through).length}</strong></div>}
   <div className="data-row"><span>Thickness</span><strong>{face.thickness} mm</strong></div>

@@ -1,3 +1,4 @@
+import {setCnc} from './cnc';
 import type { Cabinet, Compartment, DivisionAxis, SplitNode } from '../domain/cabinet';
 import {attachFrontBoundaries,effectiveDoor,interiorLayout} from '../rules/front-links';
 import { evaluate } from '../geometry/evaluate';
@@ -54,6 +55,23 @@ export function removeDivision(c: Cabinet, featureId: string): Cabinet {
 }
 
 export function setInteriorFinger(c:Cabinet,id:string,enabled:boolean,pitch=50):Cabinet{
+ if(enabled)c=setCnc(c,{dogbones:true});
  function update(node:Compartment):Compartment{if(node.kind==='opening')return node;if(node.featureId===id){const {joint,...rest}=node;return enabled?{...rest,joint:{mode:'finger',revision:'finger-1',pitch}}:rest;}return {...node,children:node.children.map(update) as [Compartment,Compartment]};}
  return {...c,compartments:update(c.compartments)};
+}
+
+/** Explicit subtree removal. Unrelated branches and all surviving IDs are retained. */
+export function removeDivisionTree(c:Cabinet,featureId:string):Cabinet{
+ const division=findDivision(c.compartments,featureId);if(!division)throw Error('This division no longer exists.');
+ let next=c;
+ for(const child of division.children)if(child.kind==='split')next=removeDivisionTree(next,child.featureId);
+ const openings=new Set(division.children.map(n=>n.id));
+ const removed=next.contents.filter(s=>openings.has(s.openingId)),banding={...next.banding};removed.forEach(s=>delete banding[s.id]);
+ next={...next,contents:next.contents.filter(s=>!openings.has(s.openingId)),banding};
+ return removeDivision(next,featureId);
+}
+export function setInteriorFingers(c:Cabinet,ids:string[],enabled:boolean,pitch?:number):Cabinet{
+ const nodes=ids.map(id=>findDivision(c.compartments,id));
+ if(!ids.length||nodes.some(n=>!n)||nodes.some(n=>n!.axis!==nodes[0]!.axis))throw Error('Select shelves together or dividers together.');
+ return ids.reduce((next,id)=>setInteriorFinger(next,id,enabled,pitch??findDivision(c.compartments,id)?.joint?.pitch??50),c);
 }

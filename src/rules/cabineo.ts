@@ -1,3 +1,4 @@
+import {shelfDrilling} from './shelf-drilling';
 import {fingerInteriors,fingerInteriorIds} from './finger-interiors';
 import {cnc} from './cnc';
 import type {Cabinet,Vec3} from '../domain/cabinet';
@@ -6,7 +7,7 @@ import {cabineoVariants,validHardware,type CabineoId} from '../catalogue/cabineo
 import {resolveConstruction} from './construction';
 import {resolveInteriors} from './interiors';
 export interface JoineryPanel {id:string;role:string;size:Vec3;center:Vec3;orientation:'yz'|'xz'|'xy'}
-export interface CabineoBore {id:string;group:string;panelId:string;kind:'housing'|'receiver'|'back-fixing';point:Vec3;axis:0|1;sign:1|-1;diameter:number;depth:number;through?:boolean}
+export interface CabineoBore {id:string;group:string;panelId:string;kind:'housing'|'receiver'|'back-fixing'|'pilot'|'shelf-support'|'hinge-cup'|'hinge-pilot'|'handle'|'foot-pilot';point:Vec3;axis:0|1|2;sign:1|-1;diameter:number;depth:number;through?:boolean}
 export interface CabineoJoint {id:string;hostId:string;receiverId:string;variant:CabineoId;bores:CabineoBore[]}
 export function joineryPanels(c:Cabinet):JoineryPanel[]{
  const t=stock(c,'carcass').thickness,b=stock(c,'back').thickness;
@@ -19,19 +20,20 @@ const normal=(p:JoineryPanel)=>p.orientation==='yz'?0:1;
 export function resolveCabineo(c:Cabinet,panels=joineryPanels(c)):CabineoJoint[]{
  if(!validHardware(c.hardware))throw Error('Unsupported fastener or revision.');
  if(!c.hardware.length)return [];
- if(c.carcass.top.mode!=='full'||c.carcass.back.mode!=='full'||c.fronts.length||c.contents.length||c.drawers?.length||Object.keys(c.banding).length||c.installation.type!=='unassigned'||c.installation.mounting.mode!=='none'||c.installation.plinth.enabled)throw Error('Cabineo currently supports the simple cabinet with full panels and fixed interiors.');
+ if(c.carcass.top.mode!=='full'||c.carcass.back.mode!=='full'||c.contents.some(s=>!s.drilling)||c.drawers?.length||Object.keys(c.banding).length||c.installation.mounting.mode!=='none')throw Error('Cabineo currently supports the simple cabinet with full panels and fixed interiors.');
  const variant=c.hardware[0].id as CabineoId, fitting=cabineoVariants[variant],out:CabineoJoint[]=[];
- const structural=panels.filter(p=>['left','right','top','bottom','shelf','divider'].includes(p.role));
+ const structural=panels.filter(p=>!c.contents.some(s=>s.id===p.id)&&['left','right','top','bottom','shelf','divider'].includes(p.role));
  const fingerIds=fingerInteriorIds(c);
  const hosts=structural.filter(p=>!fingerIds.has(p.id)&&['top','bottom','shelf','divider'].includes(p.role)&&!(c.carcass.corner&&['top','bottom'].includes(p.role)));
  // A receiving bore fixes its physical face. Choose host housing faces to agree
  // with incoming bores and blind seating, rather than arbitrarily using the right face.
  const required=new Map<string,Set<number>>();
  const requireFace=(id:string,face:number)=>{const faces=required.get(id)??new Set<number>();faces.add(face);required.set(id,faces);};
+ for(const bore of shelfDrilling(c,panels,resolveInteriors(c,stock(c,'carcass').thickness,stock(c,'back').thickness,stock(c,'interior').thickness).openings))requireFace(bore.panelId,-bore.sign);
  for(const pocket of resolveConstruction(c,stock(c,'carcass').thickness,stock(c,'back').thickness).pockets){const p=structural.find(p=>p.id===pocket.panelId);if(p&&pocket.size[pocket.axis]<p.size[pocket.axis]-.001)requireFace(p.id,pocket.face);}
  for(const host of hosts){const edgeAxis=1-normal(host);for(const side of [-1,1]){const edge=side===-1?lo(host,edgeAxis):hi(host,edgeAxis);const receiver=structural.find(p=>p.id!==host.id&&normal(p)===edgeAxis&&Math.abs((side===-1?hi(p,edgeAxis):lo(p,edgeAxis))-edge)<.001&&lo(p,normal(host))<=lo(host,normal(host))+.001&&hi(p,normal(host))>=hi(host,normal(host))-.001);if(receiver)requireFace(receiver.id,-side);}}
  for(const host of hosts){
-  const faceAxis=normal(host),edgeAxis=(1-faceAxis) as 0|1,faceSign:1|-1=required.get(host.id)?.size===1?[...required.get(host.id)!][0] as 1|-1:host.role==='bottom'||host.role==='divider'?1:-1;
+  const faceAxis=normal(host),edgeAxis=(1-faceAxis) as 0|1,faceSign:1|-1=host.role==='bottom'?(cnc(c).bottomFace==='inside'?1:-1):required.get(host.id)?.size===1?[...required.get(host.id)!][0] as 1|-1:host.role==='bottom'||host.role==='divider'?1:-1;
   const face=faceSign===1?hi(host,faceAxis):lo(host,faceAxis);
   if(host.size[faceAxis]<12)throw Error('Cabineo housings need panels at least 12 mm thick.');
   for(const side of [-1,1] as const){
@@ -44,8 +46,11 @@ export function resolveCabineo(c:Cabinet,panels=joineryPanels(c)):CabineoJoint[]
    const backClearance=c.carcass.back.joint?resolveConstruction(c,stock(c,'carcass').thickness,stock(c,'back').thickness).rearSetback:-Infinity;
    const front=Math.max(lo(host,2),lo(receiver,2),backClearance),back=Math.min(hi(host,2),hi(receiver,2)),setback=Math.min(50,(back-front)/2),first=front+setback,last=back-setback;
    const steps=Math.max(1,Math.ceil((last-first)/300)),custom=cnc(c).cabineoPerSide;
-   if(custom>1&&((last-first)/(custom-1)>300||(last-first)/(custom-1)<20))throw Error('Cabineo count must keep 20–300 mm between connectors. Adjust the per-side count.');
-   const positions=custom===1?[(front+back)/2]:custom>1?Array.from({length:custom},(_,i)=>first+(last-first)*i/(custom-1)):last-first<.001?[first]:Array.from({length:steps+1},(_,i)=>first+(last-first)*i/steps);
+   const spread=custom>1?Math.min(last-first,300*(custom-1)):0;
+   if(custom>1&&spread/(custom-1)<20-1e-6)throw Error('This joint is too short for that many Cabineos. Keep at least 20 mm between connectors.');
+   // End setback is a minimum. Centre short connector sets rather than forcing
+   // them to span the entire joint and rejecting an otherwise valid count.
+   const positions=custom===1?[(front+back)/2]:custom>1?Array.from({length:custom},(_,i)=>(front+back-spread)/2+spread*i/(custom-1)):last-first<.001?[first]:Array.from({length:steps+1},(_,i)=>first+(last-first)*i/steps);
    for(const [index,z] of positions.entries()){
     const id=`${host.id}/cabineo/${side}/${index}`,bores:CabineoBore[]=[];
     for(const [j,offset] of [3.6,14.8,26].entries()){

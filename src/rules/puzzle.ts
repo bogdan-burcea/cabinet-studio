@@ -9,7 +9,7 @@ export function puzzleCorners(c:Cabinet,t:number,rear:number):BackPocket[]{
  const {width:w,height:h,depth:d,origin:o}=c.envelope,span=d-rear,count=Math.max(3,Math.ceil(span/joint.pitch)),pitch=span/count,out:BackPocket[]=[];
  const tolerance=cnc(c).tolerance;
  if(tolerance>=pitch/2)throw Error('Joint tolerance is too large for the finger spacing.');
- const add=(role:string,origin:Vec3,size:Vec3,axis:0|1,face:1|-1,index:number)=>{const start=Math.max(rear,origin[2]-tolerance/4),end=Math.min(d,origin[2]+size[2]+tolerance/4);origin[2]=start;size[2]=end-start;const edge=axis===0?1:0;if(origin[edge]===0)size[edge]+=tolerance;else{origin[edge]-=tolerance;size[edge]+=tolerance;}out.push({id:`${c.id}/puzzle/${role}/${index}`,panelId:`${c.id}/panel/${role}`,origin:origin.map((n,i)=>n+o[i]) as Vec3,size,axis,face,kind:'puzzle'});};
+ const add=(role:string,origin:Vec3,size:Vec3,axis:0|1,face:1|-1,index:number)=>{const start=Math.max(rear,origin[2]-tolerance/2),end=Math.min(d,origin[2]+size[2]+tolerance/2);origin[2]=start;size[2]=end-start;const edge=axis===0?1:0;if(origin[edge]===0)size[edge]+=tolerance;else{origin[edge]-=tolerance;size[edge]+=tolerance;}out.push({id:`${c.id}/puzzle/${role}/${index}`,panelId:`${c.id}/panel/${role}`,origin:origin.map((n,i)=>n+o[i]) as Vec3,size,axis,face,kind:'puzzle'});};
  for(let i=0;i<count;i++)for(const x of [0,w-t])for(const y of [0,h-t]){
   const z=rear+i*pitch;
   if(i%2===0)add(x===0?'left':'right',[x,y,z],[t,t,pitch],0,x===0?1:-1,i*2+(y===0?0:1));

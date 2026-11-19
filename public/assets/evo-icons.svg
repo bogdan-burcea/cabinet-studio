@@ -1,5 +1,19 @@
 <!-- eBay Evo icons, @ebay/skin 19.39.0, MIT; original paths unchanged. -->
-<svg xmlns="http://www.w3.org/2000/svg"><symbol id="icon-add-12" viewBox="0 0 12 12">
+<svg xmlns="http://www.w3.org/2000/svg"><symbol id="icon-radio-checked-24" viewBox="0 0 24 24">
+  <path
+    fill-rule="evenodd"
+    clip-rule="evenodd"
+    d="M12 0C5.373 0 0 5.372 0 12c0 6.627 5.373 12 12 12s12-5.373 12-12c0-6.628-5.373-12-12-12m0 1c6.066 0 11 4.935 11 11s-4.934 11-11 11S1 18.065 1 12 5.934 1 12 1m0 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z"
+  />
+</symbol>
+<symbol id="icon-radio-unchecked-24" viewBox="0 0 24 24">
+  <path
+    fill-rule="evenodd"
+    clip-rule="evenodd"
+    d="M12 0C5.373 0 0 5.372 0 12c0 6.627 5.373 12 12 12s12-5.373 12-12c0-6.628-5.373-12-12-12m0 1c6.066 0 11 4.935 11 11s-4.934 11-11 11S1 18.065 1 12 5.934 1 12 1"
+  />
+</symbol>
+<symbol id="icon-add-12" viewBox="0 0 12 12">
   <path
     fill-rule="evenodd"
     clip-rule="evenodd"
@@ -28,6 +42,33 @@
 </symbol>
 <symbol id="icon-remove-24" viewBox="0 0 24 24">
   <path d="M21 11H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z" />
+</symbol>
+<symbol id="icon-delete-16" viewBox="0 0 16 16">
+  <path
+    fill-rule="evenodd"
+    clip-rule="evenodd"
+    d="m4.22 4 .526-2.106A2.5 2.5 0 0 1 7.171 0H8.83a2.5 2.5 0 0 1 2.425 1.894L11.781 4H15a1 1 0 1 1 0 2h-1.095l-.775 7.749A2.5 2.5 0 0 1 10.643 16H5.358a2.5 2.5 0 0 1-2.488-2.25L2.095 6H1a1 1 0 0 1 0-2h3.22Zm2.466-1.621A.5.5 0 0 1 7.171 2H8.83a.5.5 0 0 1 .485.379L9.72 4H6.281l.405-1.621ZM4.98 6h6.915l-.755 7.55a.5.5 0 0 1-.497.45H5.358a.5.5 0 0 1-.498-.45L4.105 6h.874Z"
+  />
+</symbol>
+<symbol id="icon-delete-20" viewBox="0 0 20 20">
+  <path
+    d="M9 10a1 1 0 1 0-2 0v4a1 1 0 1 0 2 0v-4Zm3-1a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0v-4a1 1 0 0 1 1-1Z"
+  />
+  <path
+    fill-rule="evenodd"
+    clip-rule="evenodd"
+    d="m5.603 5 .52-1.824A3 3 0 0 1 9.009 1h1.983a3 3 0 0 1 2.885 2.176L14.396 5H18a1 1 0 1 1 0 2h-1.08l-.77 9.25A3 3 0 0 1 13.16 19H6.84a3 3 0 0 1-2.99-2.75L3.08 7H2a1 1 0 0 1 0-2h3.603Zm2.444-1.275A1 1 0 0 1 9.008 3h1.983a1 1 0 0 1 .962.725L12.317 5H7.683l.364-1.275ZM5.087 7h9.826l-.757 9.083a1 1 0 0 1-.996.917H6.84a1 1 0 0 1-.996-.917L5.087 7Z"
+  />
+</symbol>
+<symbol id="icon-delete-24" viewBox="0 0 24 24">
+  <path
+    d="M11 11a1 1 0 1 0-2 0v6a1 1 0 1 0 2 0v-6Zm3-1a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0v-6a1 1 0 0 1 1-1Z"
+  />
+  <path
+    fill-rule="evenodd"
+    clip-rule="evenodd"
+    d="m7.22 5 .431-1.728A3 3 0 0 1 10.561 1h2.878a3 3 0 0 1 2.91 2.272L16.781 5H22a1 1 0 1 1 0 2h-1.59l-1.244 13.28A3 3 0 0 1 16.179 23H7.82a3 3 0 0 1-2.987-2.72L3.59 7H2a1 1 0 0 1 0-2h5.22Zm2.372-1.243a1 1 0 0 1 .97-.757h2.877a1 1 0 0 1 .97.757L14.719 5H9.282l.31-1.243ZM7.979 7h10.422l-1.227 13.093a1 1 0 0 1-.995.907H7.82a1 1 0 0 1-.995-.907L5.598 7H7.98Z"
+  />
 </symbol>
 <symbol id="icon-move-16" viewBox="0 0 16 16">
   <path

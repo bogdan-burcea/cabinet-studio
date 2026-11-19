@@ -17,7 +17,7 @@ export class CabinetStore {
   preview = (candidate: Cabinet) => {
     const errors = validate(candidate).filter(i => i.severity === 'error');
     if (errors.length) { this.emit({ preview: null, error: errors.map(i => i.message).join(' '), issueFeatureId: errors[0].featureId }); return false; }
-    evaluate(candidate); this.emit({ preview: structuredClone(candidate), error: null, issueFeatureId: null }); return true;
+    try { evaluate(candidate); } catch (e) { this.emit({preview:null,error:(e as Error).message,issueFeatureId:null}); return false; } this.emit({ preview: structuredClone(candidate), error: null, issueFeatureId: null }); return true;
   };
   commit = (candidate = this.state.preview) => {
     if (!candidate || !this.preview(candidate)) return false;
