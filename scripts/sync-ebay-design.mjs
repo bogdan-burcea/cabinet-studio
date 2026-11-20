@@ -6,7 +6,7 @@ const dark=readFileSync(new URL('dist/tokens/evo-dark.css',base),'utf8');
 const declarations=dark.match(/--[\w-]+\s*:[\s\S]*?;/g);
 if(!declarations?.length)throw new Error('Missing eBay dark tokens');
 writeFileSync(new URL('../src/design-system/evo-dark.generated.css',import.meta.url),`/* Generated from @ebay/skin ${version}; run node scripts/sync-ebay-design.mjs. */\n:root[data-theme="graphite"] {\n${declarations.map(d=>'  '+d).join('\n')}\n}\n`);
-const names=['radio-checked','radio-unchecked','add','remove','delete','move','information','attention','home','medium-box','full-view','undo','download','folder','file','arrows-3d','arrows-expand','split-view','brightness','moon','checkmark','help','close','arrow-right','eye','grid-view'];
+const names=['radio-checked','radio-unchecked','add','remove','delete','move','information','attention','home','medium-box','full-view','undo','download','folder','file','arrows-3d','arrows-expand','split-view','brightness','moon','checkmark','help','close','arrow-right','eye','grid-view','zoom-in'];
 let symbols='';
 for(const name of names){for(const size of [12,16,20,24]){
  try{const svg=readFileSync(new URL(`dist/svg/icon/icon-${name}-${size}.svg`,base),'utf8');const box=svg.match(/viewBox="([^"]+)"/)[1];const content=svg.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'');symbols+=`<symbol id="icon-${name}-${size}" viewBox="${box}">${content}</symbol>\n`;}catch(error){if(error.code!=='ENOENT')throw error;}

@@ -1,3 +1,5 @@
+import clipping from 'polygon-clipping';
+import {pocketProfiles,circleProfile} from '../geometry/cut-profiles';
 import {rearCornerLeg,backFixingAccess} from './rear-corner-clearance';
 import {holesOverlap,intentionalHoleUnion,footHoleSafetyConflict} from './hole-collisions';
 import type {Issue} from './validate';
@@ -38,6 +40,7 @@ export function machiningReview(panels:JoineryPanel[],joints:CabineoJoint[],back
   }
   for(const pocket of pockets){
    if(pocket.panelId!==bore.panelId||bore.kind==='back-fixing'&&pocket.kind!=='puzzle')continue;
+   if(pocket.outline&&bore.axis===pocket.axis){const axes=[0,1,2].filter(a=>a!==pocket.axis);if(!clipping.intersection(circleProfile(bore.point[axes[0]],bore.point[axes[1]],bore.diameter/2),...pocketProfiles(pocket,axes[0],axes[1])).length)continue;}
    const low=pocket.origin,high=low.map((n,i)=>n+pocket.size[i]),axis=bore.axis,end=bore.point[axis]+bore.sign*bore.depth;
    if(Math.min(high[axis],Math.max(bore.point[axis],end))-Math.max(low[axis],Math.min(bore.point[axis],end))<.001)continue;
    const distance=Math.sqrt([0,1,2].filter(a=>a!==axis).reduce((sum,a)=>sum+Math.max(low[a]-bore.point[a],0,bore.point[a]-high[a])**2,0));

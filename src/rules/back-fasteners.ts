@@ -28,7 +28,6 @@ export function resolveBackFasteners(c:Cabinet):CabineoBore[]{
  for(const p of panels.filter(p=>p.role==='left'||p.role==='right'))heights.forEach((y,i)=>add(p.role,[p.origin[0]+(p.role==='left'?p.size[0]:0),y,z],0,p.role==='left'?-1:1,i));
  add('top',[top.origin[0]+top.size[0]/2+offset,top.origin[1],z],1,1,0);
  const inside=cnc(c).bottomFace==='inside';add('bottom',[bottom.origin[0]+bottom.size[0]/2+offset,bottom.origin[1]+(inside?bottom.size[1]:0),z],1,inside?-1:1,0);
- if(cnc(c).bottomFastenersThrough&&!inside){const bore=out.at(-1)!;bore.depth=bottom.size[1];bore.through=true;}
  for(const bore of out)for(const cut of notches){
   const end=bore.point[bore.axis]+bore.sign*bore.depth;
   const distance=Math.hypot(...bore.point.map((point,axis)=>{

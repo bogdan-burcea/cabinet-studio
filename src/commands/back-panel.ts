@@ -1,3 +1,4 @@
+import {woodPilotDiameter} from '../catalogue/pilots';
 import {setCnc} from './cnc';
 import {backPilotLimits} from '../rules/applied-back';
 import type {Cabinet,Carcass} from '../domain/cabinet';
@@ -7,7 +8,7 @@ export function setBackPanel(c:Cabinet,patch:Partial<BackJoint>&{thickness?:numb
  const {thickness,...joint}=patch;
  if(thickness!==undefined&&(!Number.isFinite(thickness)||thickness<3||thickness>24||Math.abs(thickness*10-Math.round(thickness*10))>1e-6))throw Error('Back thickness must be 3–24 mm in 0.1 mm steps.');
  if(joint.mode==='finger')c=setCnc(c,{dogbones:true});
- if(joint.mode==='applied'&&!joint.pilots&&!c.carcass.back.joint?.pilots)joint.pilots={revision:'back-pilot-1',spacing:200,diameter:Math.min(3,backPilotLimits(c).maxDiameter)};
+ if(joint.mode==='applied'&&!joint.pilots&&!c.carcass.back.joint?.pilots)joint.pilots={revision:'back-pilot-1',spacing:200,diameter:Math.min(woodPilotDiameter,backPilotLimits(c).maxDiameter)};
  if(joint.mode==='finger'&&!c.carcass.back.joint?.fingerPitch&&joint.fingerPitch===undefined)joint.fingerPitch=50;
  return {...c,carcass:{...c.carcass,back:{...c.carcass.back,joint:{...defaultBackJoint,...c.carcass.back.joint,...joint}}},materials:{...c.materials,back:{...c.materials.back,stock:thickness?{id:`generic-back-${thickness}`,revision:'1'}:c.materials.back.stock}}};
 }

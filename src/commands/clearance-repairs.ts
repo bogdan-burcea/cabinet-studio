@@ -5,6 +5,7 @@ import {cnc} from '../rules/cnc';
 import {setCnc} from './cnc';
 import {setSimpleFeet} from './simple-supports';
 import {safeDoorAngles} from '../rules/door-motion';
+import {backFixingRepairs} from './machining-repairs';
 import {editSimpleDoors} from './simple-doors';
 type MachiningIssue=ReturnType<typeof evaluate>['issues'][number];
 function machiningCollisionKeys(issues:MachiningIssue[]){
@@ -25,9 +26,18 @@ export function bottomFaceRepairs(c:Cabinet):EditRepair[]{
   try{if(clearsFaceCheck(before,candidate,id))options.push({label,cabinet:candidate});}
   catch{/* An invalid layout cannot be offered as a repair. */}
  };
- add(`Move bottom fasteners to the ${nextFace} face`,setCnc(c,{bottomFace:nextFace,bottomFastenersThrough:false}));
+ const flipped=setCnc(c,{bottomFace:nextFace,bottomFastenersThrough:false});
+ add(`Move bottom fasteners to the ${nextFace} face`,flipped);
+ if(!inside&&!options.length){
+  try{
+   for(const repair of backFixingRepairs(flipped)) {
+    if(!repair.cabinet.carcass.back.joint?.fastener)continue;
+    add(`Move bottom fasteners inside. ${repair.label}`,repair.cabinet);
+   }
+  }catch{/* An invalid face flip has no combined correction. */}
+ }
  if(!inside&&!cnc(c).bottomFastenersThrough){
-  add('Keep outside fasteners and cut their bottom holes through',setCnc(c,{bottomFastenersThrough:true}));
+  add('Keep outside fasteners and drill the receiving pilots through',setCnc(c,{bottomFastenersThrough:true}));
  }
  return options;
 }

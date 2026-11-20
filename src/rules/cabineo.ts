@@ -22,7 +22,7 @@ export function resolveCabineo(c:Cabinet,panels=joineryPanels(c)):CabineoJoint[]
  if(!validHardware(c.hardware))throw Error('Unsupported fastener or revision.');
  if(!c.hardware.length)return [];
  if(c.carcass.top.mode!=='full'||c.carcass.back.mode!=='full')throw Error('Cabineo needs a full top and back panel.');
- if(c.contents.some(s=>!s.drilling)||c.drawers?.length||Object.keys(c.banding).length)throw Error('Cabineo does not support imported shelf hardware, drawers or edge banding.');
+ if(c.contents.some(s=>!s.drilling)||Object.keys(c.banding).length)throw Error('Cabineo does not support imported shelf hardware, drawers or edge banding.');
  if(c.installation.mounting.mode!=='none'&&!usesBlumWallHanger(c))throw Error('Cabineo does not support this wall-mounting configuration.');
  const variant=c.hardware[0].id as CabineoId, fitting=cabineoVariants[variant],out:CabineoJoint[]=[];
  const structural=panels.filter(p=>!c.contents.some(s=>s.id===p.id)&&['left','right','top','bottom','shelf','divider'].includes(p.role));

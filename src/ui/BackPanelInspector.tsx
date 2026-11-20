@@ -1,3 +1,4 @@
+import {woodPilotDiameter} from '../catalogue/pilots';
 import {backPilotLimits,backPilotCounts} from '../rules/applied-back';
 import type {Cabinet} from '../domain/cabinet';
 import {stock} from '../catalogue/materials';
@@ -7,7 +8,7 @@ import {Icon} from '../design-system/Icon';
 import {DimensionField} from './DimensionField';
 export function BackPanelInspector({cabinet,onCommit,onCancel}:{cabinet:Cabinet;onCommit(c:Cabinet):boolean;onCancel():void}){
  const joint=cabinet.carcass.back.joint??defaultBackJoint;
- const limits=backPilotLimits(cabinet,joint.pilots?.diameter),pilots=joint.pilots??{revision:'back-pilot-1' as const,spacing:200,diameter:Math.min(3,limits.maxDiameter)};
+ const limits=backPilotLimits(cabinet,joint.pilots?.diameter),pilots=joint.pilots??{revision:'back-pilot-1' as const,spacing:200,diameter:Math.min(woodPilotDiameter,limits.maxDiameter)};
  return <Section title="Back panel"><FieldPair><DimensionField plain label="Thickness" accessibleLabel="Back thickness" step={.1} value={stock(cabinet,'back').thickness} cancelValue={stock(cabinet,'back').thickness} limits={{min:3,max:24}} onPreview={()=>{}} onCommit={thickness=>onCommit(setBackPanel(cabinet,{thickness}))} onCancel={onCancel}/></FieldPair>
  <label className="construction-choice back-construction">Construction<span className="select select--fluid"><select aria-label="Back construction" value={joint.mode} onChange={e=>onCommit(setBackPanel(cabinet,{mode:e.target.value as BackJoint['mode']}))}><option value="inset">Inset between panels</option><option value="applied">Applied</option><option value="groove">In grooves / dados</option><option value="rebate">In rebates</option><option value="finger">Finger joints</option></select><Icon name="chevron" size={12}/></span></label>
  {joint.mode==='finger'&&<DimensionField plain stacked label="Back finger width" value={joint.fingerPitch??50} cancelValue={joint.fingerPitch??50} limits={{min:20,max:200}} onPreview={()=>{}} onCommit={fingerPitch=>onCommit(setBackPanel(cabinet,{fingerPitch}))} onCancel={onCancel}/>}

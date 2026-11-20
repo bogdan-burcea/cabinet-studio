@@ -13,6 +13,7 @@ export function addSimpleDoors(c:Cabinet,layout:'single'|'pair',openingIds?:stri
   if(layout==='pair'){const split=splitDoor(next,door.id,'vertical');next=split.cabinet;ids.push(door.id,...next.fronts.filter(d=>!c.fronts.some(old=>old.id===d.id)&&!ids.includes(d.id)&&d.id!==door.id).map(d=>d.id));}
   else ids.push(door.id);
  }
+ if(c.frontDefaults)next={...next,fronts:next.fronts.map(d=>ids.includes(d.id)?{...d,reveal:c.frontDefaults!.edgeGap,clearance:c.frontDefaults!.frontGap,cornerRadius:c.frontDefaults!.cornerRadius}:d)};
  next=attachFrontBoundaries(next);
  next={...next,fronts:next.fronts.map(d=>{if(!ids.includes(d.id))return d;const sides=supportedHingeSides(next,d);return sides.includes(d.handing)||!sides.length?d:{...d,handing:sides[0]};})};
  return {cabinet:next,featureIds:[...new Set(ids)]};

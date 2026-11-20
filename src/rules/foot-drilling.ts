@@ -1,8 +1,9 @@
+import {woodPilotDiameter} from '../catalogue/pilots';
 import type {Cabinet} from '../domain/cabinet';
 import {resolveInstallation} from './installation';
 import {stock} from '../catalogue/materials';
 import type {CabineoBore} from './cabineo';
-export function defaultFootDrilling(c:Cabinet){return {revision:'foot-pilot-1' as const,pattern:'rectangle' as const,pitchX:32,pitchZ:32,diameter:3,depth:Math.min(8,stock(c,'carcass').thickness-1),through:true};}
+export function defaultFootDrilling(c:Cabinet){return {revision:'foot-pilot-1' as const,pattern:'rectangle' as const,pitchX:32,pitchZ:32,diameter:woodPilotDiameter,depth:Math.min(8,stock(c,'carcass').thickness-1),through:true};}
 export function footDrilling(c:Cabinet):CabineoBore[]{
  if(c.installation.type!=='feet-concept')return [];
  const d=c.installation.feet.drilling??defaultFootDrilling(c),t=stock(c,'carcass').thickness;

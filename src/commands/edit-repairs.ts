@@ -1,3 +1,4 @@
+import {drawerRepairs} from './drawer-repairs';
 import {cupSetbackMax} from '../catalogue/hinges';
 import {resizeCabinet} from './dimensions';
 import {resolveFronts} from '../rules/fronts';
@@ -23,7 +24,15 @@ export function editError(c:Cabinet):string|null {try{evaluate(c);return null;}c
  * smallest readable adjustment in that direction. Keep the user's edited field. */
 export function editRepairs(candidate:Cabinet,previous:Cabinet):EditRepair[]{
  const message=editError(candidate);if(!message)return [];
- const options:EditRepair[]=[],settings=cnc(candidate),old=cnc(previous);
+ const options:EditRepair[]=/Drawer|drawer/.test(message)?drawerRepairs(candidate,previous):[],settings=cnc(candidate),old=cnc(previous);
+ if(/Notch interior corner/.test(message)){
+  const bit=cnc(candidate).bitDiameter;
+  const patch=(h:import('../domain/cabinet').SlabDoor['handle']|undefined)=>h?.kind==='notch'?{...h,cornerDiameter:Math.max(h.cornerDiameter??8,bit)}:h;
+  const wider={...candidate,fronts:candidate.fronts.map(d=>({...d,handle:patch(d.handle)!})),drawers:candidate.drawers?.map(d=>({...d,...d.handle?{handle:patch(d.handle)}:{}}))};
+  if(!editError(wider))options.push({label:`Use Ø${bit} mm interior corners`,cabinet:wider});
+  const diameters=[...candidate.fronts.map(d=>d.handle),...(candidate.drawers??[]).map(d=>d.handle)].filter(h=>h?.kind==='notch').map(h=>h!.cornerDiameter??8);
+  const smaller=Math.floor(Math.min(...diameters));if(smaller>=1&&smaller<bit){const fitted=setCnc(candidate,{bitDiameter:smaller});if(!editError(fitted))options.push({label:`Use a Ø${smaller} mm cutter`,cabinet:fitted});}
+ }
  function add(label:string,c:Cabinet){if(!editError(c)&&!options.some(o=>JSON.stringify(o.cabinet)===JSON.stringify(c)))options.push({label,cabinet:c});}
  function search(from:number,to:number,step:number,make:(n:number)=>Cabinet,label:(n:number)=>string){for(let n=from;step>0?n<=to:n>=to;n+=step){try{const c=make(n);if(!editError(c)){add(label(n),c);break;}}catch{/* Invalid alternatives are never offered. */}}}
  if(/Plinth height/.test(message)){

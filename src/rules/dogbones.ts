@@ -28,5 +28,5 @@ export function addDogbones(c:Cabinet,panels:(Pick<ConstructionPanel,'role'|'ori
 /** Tool feasibility is a notice, independent of the designed mating clearance. */
 export function narrowToolCuts(c:Cabinet,cuts:BackPocket[]):BackPocket[]{
  const settings=cnc(c);if(!settings.dogbones)return [];
- return cuts.filter(cut=>Math.min(...cut.size.filter((_,axis)=>axis!==cut.axis))+1e-6<settings.bitDiameter);
+ return cuts.filter(cut=>!cut.outline&&Math.min(...cut.size.filter((_,axis)=>axis!==cut.axis))+1e-6<settings.bitDiameter);
 }

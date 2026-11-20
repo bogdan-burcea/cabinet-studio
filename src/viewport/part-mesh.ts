@@ -49,7 +49,11 @@ export function panelDisplayEdges(panel:Panel,mesh:THREE.BufferGeometry,pockets:
     return t>=-.001&&t<=1.001&&Math.abs(point[2]+panel.coreCenter[2]-(start[2]+t*(end[2]-start[2])))<.001;
    });
   });
-  if(orthogonal||curved||diagonal)positions.push(...a,...b);
+  const profileEdge=pockets.some(p=>p.panelId===panel.id&&p.outline?.some((start,i)=>{
+   const end=p.outline![(i+1)%p.outline!.length],axes=[0,1,2].filter(j=>j!==p.axis),[u,v]=axes,dx=end[u]-start[u],dy=end[v]-start[v],length=Math.hypot(dx,dy);if(length<1e-6)return false;
+   return [a,b].every(q=>{const x=q[u]+panel.coreCenter[u]-start[u],y=q[v]+panel.coreCenter[v]-start[v],dot=x*dx+y*dy;return Math.abs(x*dy-y*dx)/length<.001&&dot>=-.001&&dot<=length*length+.001;});
+  }));
+  if(orthogonal||curved||diagonal||profileEdge)positions.push(...a,...b);
  }
  original.dispose();const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));return geometry;
 }

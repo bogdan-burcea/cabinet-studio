@@ -1,3 +1,4 @@
+import {resolveHandle} from './handles';
 import type {Cabinet,SlabDoor,Vec3} from '../domain/cabinet';
 import type {FrontBody} from './fronts';
 import {frontStructure} from './fronts';
@@ -55,10 +56,7 @@ export function doorHardware(c:Cabinet,doors:FrontBody[]){
     for(const sign of [-1,1]){add(`${key}/cup-screw/${sign}`,body.id,'hinge-pilot',[cupX+side*profile.screwOffset,y+sign*profile.screwPitch/2,rear],2,1,2.5,10);add(`${key}/plate-screw/${sign}`,supportId,'hinge-pilot',[face,y+sign*profile.platePitch/2,plateZ],0,side,2.5,8);}
    }
   }
-  if(front.handle.kind!=='none'){
-   const {x,y,diameter}=handlePosition(front,body),handle=front.handle,count=handle.kind==='pull'?2:1;
-   for(let i=0;i<count;i++){const delta=count===2?(i-.5)*handle.pitch:0;add(`${body.id}/handle-drill/${i}`,body.id,'handle',[x+(handle.orientation==='horizontal'?delta:0),y+(handle.orientation==='vertical'?delta:0),rear],2,1,handle.kind==='hole'?diameter:handle.drillDiameter??5,body.size[2],true);}
-  }
+  bores.push(...resolveHandle(front.handle,body).bores);
  }
  return {bores,hinges};
 }

@@ -1,3 +1,4 @@
+import {resolveHandle} from './handles';
 import type { Cabinet, SlabDoor, Vec3 } from '../domain/cabinet';
 import { stock } from '../catalogue/materials';
 import { handleGeometry } from '../catalogue/fronts';
@@ -50,7 +51,7 @@ export function resolveFronts(c: Cabinet, obstacles?: Bounds[]) {
     if(!Object.values(r).every(n=>Number.isFinite(n)&&n>=0&&n<=1)||r.left>=r.right||r.bottom>=r.top) {fail('its independent coverage region must be inside the cabinet and have positive width/height.');continue;}
     if(!precise(front.reveal,1,10)||!precise(front.clearance,1,10)) {fail('reveal and front clearance must be 1–10 mm in 0.1 mm steps.');continue;}
     let profile; try {profile=handleGeometry(handle.geometry);}catch(error){fail((error as Error).message);continue;}
-    if(!['none','knob','pull','hole'].includes(handle.kind)||!['vertical','horizontal'].includes(handle.orientation)||!['top','centre','bottom'].includes(handle.height)||!(profile.pitches as readonly number[]).includes(handle.pitch)||!precise(handle.edgeOffset,10,200)||!precise(handle.endOffset,10,300)) {fail('unsupported handle style, pitch, placement or offset.');continue;}
+    if(!['none','knob','pull','hole','notch'].includes(handle.kind)||!['vertical','horizontal'].includes(handle.orientation)||!['top','centre','bottom'].includes(handle.height)||!(profile.pitches as readonly number[]).includes(handle.pitch)||!precise(handle.edgeOffset,10,200)||!precise(handle.endOffset,10,300)) {fail('unsupported handle style, pitch, placement or offset.');continue;}
     if(handle.horizontal!==undefined&&!['latch','left','centre','right'].includes(handle.horizontal)||handle.diameter!==undefined&&!precise(handle.diameter,10,80)||handle.projection!==undefined&&!precise(handle.projection,12,80)||handle.drillDiameter!==undefined&&!precise(handle.drillDiameter,2,8)){fail('unsupported handle dimensions or position.');continue;}
     const thickness=stock(c,'front',front.id).thickness;
     const rear=oz+d+(front.placement==='overlay'?front.clearance:-front.clearance-thickness);
@@ -70,23 +71,7 @@ export function resolveFronts(c: Cabinet, obstacles?: Bounds[]) {
     if(front.placement==='inset'&&(obstacles??=frontObstacles(c)).some(body=>overlaps(door,body))) {fail('inset slab conflicts with existing construction or interiors. Set back the affected interiors or keep overlay placement.');continue;}
     const conflict=resolved.find((other,j)=>j<index&&r.left<other.region.right-1e-8&&r.right>other.region.left+1e-8&&r.bottom<other.region.top-1e-8&&r.top>other.region.bottom+1e-8);
     if(conflict) {fail('coverage overlaps another door. Remove or split the existing front first; fronts are independent of interior divisions.');continue;}
-    const parts:FrontHandlePart[]=[];
-    if(handle.kind!=='none') {
-      const length=handle.kind==='knob'?(handle.diameter??profile.knobDiameter):handle.kind==='hole'?(handle.diameter??30):handle.pitch+2*profile.pullOverhang;
-      const sx=handle.kind==='pull'&&handle.orientation==='vertical'?profile.pullThickness:length, sy=handle.kind==='pull'&&handle.orientation==='horizontal'?profile.pullThickness:length;
-      const horizontal=handle.horizontal??'latch',right=horizontal==='right'||horizontal==='latch'&&front.handing==='left';
-      const x=horizontal==='centre'?(x1+x2)/2:right?x2-handle.edgeOffset-sx/2:x1+handle.edgeOffset+sx/2;
-      const y=handle.height==='centre'?(y1+y2)/2:handle.height==='top'?y2-handle.endOffset-sy/2:y1+handle.endOffset+sy/2;
-      if(x-sx/2<x1+5-1e-6||x+sx/2>x2-5+1e-6||y-sy/2<y1+5-1e-6||y+sy/2>y2-5+1e-6) {fail('handle envelope needs 5 mm clearance from the slab edges. Reduce pitch/offsets or enlarge the front.');continue;}
-      const face=rear+thickness;
-      const add=(key:string,shape:FrontHandlePart['shape'],size:Vec3,center:Vec3)=>parts.push({id:`${front.id}/handle/${key}`,ownerId:front.id,shape,size,center});
-      if(handle.kind==='knob') {const projection=handle.projection??profile.knobProjection;add('knob','cylinder',[length,length,projection],[x,y,face+projection/2]);}
-      else if(handle.kind==='pull') {
-        const b=profile.pullThickness, projection=handle.projection??profile.pullProjection, postDepth=projection-b;
-        add('bar','box',[sx,sy,b],[x,y,face+projection-b/2]);
-        for(const sign of [-1,1]) add(sign<0?'post-1':'post-2','box',[b,b,postDepth],[x+(handle.orientation==='horizontal'?sign*handle.pitch/2:0),y+(handle.orientation==='vertical'?sign*handle.pitch/2:0),face+postDepth/2]);
-      }
-    }
+    let parts:FrontHandlePart[];try{parts=resolveHandle(handle,door).parts;}catch(error){fail((error as Error).message);continue;}
     doors.push(door);handles.push(...parts);
   }
   const overallDepth=d+Math.max(0,...doors.map(door=>door.center[2]+door.size[2]/2-(oz+d)),...handles.map(part=>part.center[2]+part.size[2]/2-(oz+d)));

@@ -23,6 +23,7 @@ export const dimensionLimits: Record<Axis, { min: number; max: number }> = {
 };
 export function validate(c: Cabinet): Issue[] {
   const issues: Issue[] = [];
+  if(c.frontDefaults&&(![c.frontDefaults.edgeGap,c.frontDefaults.frontGap].every(n=>Number.isFinite(n)&&n>=1&&n<=10)||!Number.isFinite(c.frontDefaults.cornerRadius)||c.frontDefaults.cornerRadius<0||c.frontDefaults.cornerRadius>500))issues.push({code:'front-defaults',featureId:c.id,severity:'error',message:'Front defaults need 1–10 mm clearances and a 0–500 mm corner radius.'});
   if(c.cabinetType!==undefined&&!['open','base','wall','tall'].includes(c.cabinetType))issues.push({code:'cabinet-type',featureId:c.id,severity:'error',message:'Choose a supported cabinet type.'});
   if(Object.hasOwn(c,'names')&&(!c.names||Array.isArray(c.names)||typeof c.names!=='object'||Object.keys(c.names).length>256||Object.entries(c.names).some(([id,name])=>!id||['__proto__','constructor','prototype'].includes(id)||id.length>128||typeof name!=='string'||!name.trim()||name.length>60)))issues.push({code:'item-names',featureId:c.id,severity:'error',message:'Use item names of 1–60 characters.'});
   try{validateCnc(c);}catch(e){issues.push({code:'cnc-settings',featureId:c.id,severity:'error',message:(e as Error).message});}

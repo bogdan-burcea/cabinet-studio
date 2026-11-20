@@ -2,16 +2,16 @@ import type {Cabinet} from '../domain/cabinet';
 import type {JoineryPanel,CabineoJoint,CabineoBore} from './cabineo';
 import type {BackPocket} from './back-panel';
 import {cnc} from './cnc';
-/** Only receiving pilot bores can become through holes. Connector housing and
- * back-connector cavities retain their depths except for an explicit bottom-face repair. */
+/** Receiving pilots may be drilled through to simplify broad-face machining.
+ * Housings retain their specified blind depths. */
 export function oneFaceBores(c:Cabinet,panels:JoineryPanel[],joints:CabineoJoint[],back:CabineoBore[],pockets:BackPocket[]):CabineoJoint[]{
  const settings=cnc(c);
  const panelById=new Map(panels.map(p=>[p.id,p]));
- // An explicit underside repair lets the inside setup cut through to the outside.
+ // A bottom repair can take inside receiver pilots through to the outside setup.
  joints=joints.map(j=>({...j,bores:j.bores.map(b=>{
   const p=panelById.get(b.panelId);
   const receivingRepair=settings.throughHoles?.[b.panelId]==='fasteners'&&b.kind==='receiver';
-  const bottomRepair=settings.bottomFastenersThrough&&p?.role==='bottom'&&b.kind==='housing'&&b.axis===1&&b.sign===1;
+  const bottomRepair=settings.bottomFastenersThrough&&p?.role==='bottom'&&b.kind==='receiver'&&b.axis===1&&b.sign===-1;
   return p&&(receivingRepair||bottomRepair)?{...b,depth:p.size[b.axis],through:true}:b;
  })}));
  if(!settings.throughOpposed)return joints;

@@ -1,6 +1,6 @@
 import {cnc} from './cnc';
 import type {Cabinet,Vec3} from '../domain/cabinet';
-export interface BackPocket {reliefs?:{center:Vec3;radius:number}[];triangle?:[Vec3,Vec3,Vec3];kind?:'puzzle'|'corner-clearance'|'hanger-access';id:string;panelId:string;origin:Vec3;size:Vec3;axis:0|1|2;face:1|-1}
+export interface BackPocket {outline?:Vec3[];reliefs?:{center:Vec3;radius:number}[];triangle?:[Vec3,Vec3,Vec3];kind?:'puzzle'|'corner-clearance'|'hanger-access'|'front-profile';id:string;panelId:string;origin:Vec3;size:Vec3;axis:0|1|2;face:1|-1}
 /** Back seating intent is independent of UI, stock catalogue and rendering. */
 export function backLayout(c:Cabinet,t:number,b:number){
  const {width:w,height:h,depth:d,origin:o}=c.envelope;
@@ -23,8 +23,11 @@ export function backLayout(c:Cabinet,t:number,b:number){
   const add=(role:string,local:Vec3,size:Vec3,axis:0|1,face:1|-1)=>pockets.push({id:`${c.id}/back-seat/${role}`,panelId:`${c.id}/panel/${role}`,origin:local.map((n,i)=>n+o[i]) as Vec3,size,axis,face});
   add('left',[t-depth,0,z],[depth,h,cutWidth],0,1);
   add('right',[w-t,0,z],[depth,h,cutWidth],0,-1);
-  add('bottom',[t,t-depth,z],[w-2*t,depth,cutWidth],1,1);
-  add('top',[t,h-t,z],[w-2*t,depth,cutWidth],1,-1);
+  // A finger-jointed horizontal spans under the sides. Its seat must
+  // clear the back over the full engaged width, including both corners.
+  const x=c.carcass.corner?t-depth:t;
+  add('bottom',[x,t-depth,z],[w-2*x,depth,cutWidth],1,1);
+  add('top',[x,h-t,z],[w-2*x,depth,cutWidth],1,-1);
  }
  return {mode,bodyRear,rearSetback,origin:lower,size,pockets,errors};
 }

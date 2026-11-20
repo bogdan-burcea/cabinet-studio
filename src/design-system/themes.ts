@@ -1,5 +1,5 @@
 export type ThemeName = 'graphite' | 'linen';
-export interface ViewportTheme { edgeOpacity?:number; background: string; grid: string; panel: string; edge: string; wire: string; selected: string; ghost: string; handle: string; support: string; mounting: string; frontHandle:string }
+export interface ViewportTheme { edgeOpacity?:number; selectedEdge?:string; stockEdge?:string; background: string; grid: string; panel: string; edge: string; wire: string; selected: string; ghost: string; handle: string; support: string; mounting: string; frontHandle:string }
 // Display colours belong to presentation. These never modify material identity.
 export const viewportThemes: Record<ThemeName, ViewportTheme> = {
   graphite: { background: '#242b2e', grid: '#536065', panel: '#d9cdb9', edge: '#766c5e', wire:'#d3dedf', selected: '#ddb979', ghost: '#90b8ab', handle: '#eec389', support: '#59646b', mounting: '#9eacb6', frontHandle:'#51595e' },
