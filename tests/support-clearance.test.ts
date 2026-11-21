@@ -48,5 +48,27 @@ test('shelf mounting-zone collision offers validated hinge repositioning and rou
  let c=addSimpleDoors(createCabinet(),'single').cabinet;c={...c,fronts:c.fronts.map(d=>({...d,hinge:defaultHinge()}))};const h=evaluate(c).doorHardware.hinges[0];c=addDivision(c,c.compartments.id,'horizontal',h.y-18).cabinet;assert.ok(evaluate(c).issues.some(i=>i.code==='machining-hinge-plate'));const options=hingePlateRepairs(c);assert.equal(options.length,2);for(const o of options){assert.ok(!evaluate(o.cabinet).issues.some(i=>i.code==='machining-hinge-plate'));assert.deepEqual(deserialize(serialize(o.cabinet)),o.cabinet);assert.deepEqual(o.cabinet.compartments,c.compartments);}
 });
 test('native 26 migrates while malformed new settings fail without replacing the cabinet',()=>{
- const saved=readFileSync(new URL('fixtures/collision.cabinet.json',import.meta.url),'utf8');assert.ok(deserializeWithInfo(saved).migrated);const c=setSimpleFeet(setSimpleSupport(createCabinet(),'feet-concept'),{layout:'front-pair'}),doc=JSON.parse(serialize(c));assert.equal(doc.schemaVersion,41);for(const change of [(v:any)=>v.cabinet.installation.feet.layout='unknown',(v:any)=>v.cabinet.installation.feet.drilling.pitchX='32',(v:any)=>v.cabinet.installation.feet.drilling.extra=true,(v:any)=>v.cabinet.installation.plinth.footGap='5',(v:any)=>v.cabinet.carcass.machining={revision:'cnc-1',tolerance:.2,bitDiameter:6,dogbones:false,throughOpposed:true,cabineoPerSide:2,bottomFace:'edge'}]){const bad=structuredClone(doc);change(bad);assert.throws(()=>deserialize(JSON.stringify(bad)));}
+ const saved=readFileSync(new URL('fixtures/collision.cabinet.json',import.meta.url),'utf8');assert.ok(deserializeWithInfo(saved).migrated);const c=setSimpleFeet(setSimpleSupport(createCabinet(),'feet-concept'),{layout:'front-pair'}),doc=JSON.parse(serialize(c));assert.equal(doc.schemaVersion,48);for(const change of [(v:any)=>v.cabinet.installation.feet.layout='unknown',(v:any)=>v.cabinet.installation.feet.drilling.pitchX='32',(v:any)=>v.cabinet.installation.feet.drilling.extra=true,(v:any)=>v.cabinet.installation.plinth.footGap='5',(v:any)=>v.cabinet.carcass.machining={revision:'cnc-1',tolerance:.2,bitDiameter:6,dogbones:false,throughOpposed:true,cabineoPerSide:2,bottomFace:'edge'}]){const bad=structuredClone(doc);change(bad);assert.throws(()=>deserialize(JSON.stringify(bad)));}
+});
+
+test('front reinforcement obstructs hinge installation even when the plate body clears; repair moves only hinges',()=>{
+ let c=addSimpleDoors(createCabinet(),'single').cabinet;
+ c={...c,carcass:{...c.carcass,frontRails:{revision:'front-rail-1',top:{enabled:true,width:120},bottom:{enabled:false,width:80}}},fronts:c.fronts.map(d=>({...d,hinge:defaultHinge()}))};
+ const before=evaluate(c),rail=before.panels.find(p=>p.role==='front-upper-rail')!,hinge=before.doorHardware.hinges.at(-1)!;
+ assert.ok(hinge.mountingZone.center[2]+hinge.mountingZone.size[2]/2<rail.center[2]-rail.size[2]/2,'plate body does not touch rail');
+ assert.ok(before.issues.some(i=>i.code==='machining-hinge-plate'&&i.relatedIds?.includes(rail.id)));
+ const repairs=hingePlateRepairs(c);assert.ok(repairs.length);
+ const fixed=repairs[0].cabinet,model=evaluate(fixed);
+ assert.deepEqual(fixed.carcass,c.carcass);assert.deepEqual(fixed.compartments,c.compartments);
+ assert.ok(!model.issues.some(i=>i.code==='machining-hinge-plate'));
+ const offset=fixed.fronts[0].hinge!.offsets![1];assert.ok(offset<0&&Number.isInteger(offset));assert.equal(fixed.fronts[0].hinge!.offsets![0],0);
+ const closer=structuredClone(fixed);closer.fronts[0].hinge!.offsets![1]++;
+ assert.ok(evaluate(closer).issues.some(i=>i.code==='machining-hinge-plate'),'one millimetre closer remains blocked');
+});
+
+test('top and bottom reinforcement can be cleared with independent hinge offsets in one repair',()=>{
+ let c=addSimpleDoors(createCabinet(),'pair').cabinet;
+ c={...c,carcass:{...c.carcass,frontRails:{revision:'front-rail-1',top:{enabled:true,width:120},bottom:{enabled:true,width:120}}},fronts:c.fronts.map(d=>({...d,hinge:defaultHinge()}))};
+ const repairs=hingePlateRepairs(c);assert.ok(repairs.length);
+ for(const option of repairs){assert.deepEqual(option.cabinet.carcass,c.carcass);assert.ok(!evaluate(option.cabinet).issues.some(i=>i.code==='machining-hinge-plate'));}
 });

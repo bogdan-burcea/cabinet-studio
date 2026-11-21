@@ -1,12 +1,13 @@
 export interface CncSettings {revision:'cnc-1';pilotDiameter?:number;tolerance:number;bitDiameter:number;dogbones:boolean;throughOpposed:boolean;cabineoPerSide:number;shelfRowInsets?:{front:number;rear:number};rearChamfers?:Record<string,{low?:number;high?:number}>;bottomFace?:'inside'|'outside';bottomFastenersThrough?:boolean;throughHoles?:Record<string,'fasteners'|'adjustment'>}
 export type Axis = 'width' | 'height' | 'depth';
-export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back' | 'shelf' | 'divider' | 'top-front-rail' | 'top-rear-rail' | 'back-upper-rail' | 'back-lower-rail' | 'plinth-front' | 'plinth-left' | 'plinth-right' | 'door';
+export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back' | 'shelf' | 'divider' | 'top-front-rail' | 'top-rear-rail' | 'back-upper-rail' | 'back-lower-rail' | 'front-upper-rail' | 'front-lower-rail' | 'plinth-front' | 'plinth-left' | 'plinth-right' | 'door';
 export interface Carcass {
   machining?:CncSettings;
   corner?:{mode:'puzzle';revision:'puzzle-1';pitch:number};
+  frontRails?:{revision:'front-rail-1';top:{enabled:boolean;width:number};bottom:{enabled:boolean;width:number}};
   construction: 'rectangular-butt'; policyRevision: 'construction-1';
-  top: { mode: 'full' | 'rails'; frontDepth: number; rearDepth: number };
-  back: { mode: 'full' | 'rails'; upperHeight: number; lowerHeight: number; joint?: {revision:'back-1';mode:'inset'|'applied'|'groove'|'rebate'|'finger';inset:number;depth:number;clearance:number;fingerPitch?:number;pilots?:{revision:'back-pilot-1';spacing:number;diameter:number};fastener?:{id:'hafele-26009765';revision:'rpc-1';perSide:number; offset?:number}} };
+  top: { mode: 'full' | 'rails' | 'open'; frontDepth: number; rearDepth: number };
+  back: { mode: 'full' | 'rails' | 'open'; upperHeight: number; lowerHeight: number; joint?: {revision:'back-1';mode:'inset'|'applied'|'groove'|'rebate'|'finger';inset:number;depth:number;clearance:number;fingerPitch?:number;pilots?:{revision:'back-pilot-1';spacing:number;diameter:number};fastener?:{id:'hafele-26009765';revision:'rpc-1';perSide:number; offset?:number}} };
 }
 export function defaultCarcass(): Carcass {
   return { construction: 'rectangular-butt', policyRevision: 'construction-1',

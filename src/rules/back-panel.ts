@@ -4,11 +4,12 @@ export interface BackPocket {outline?:Vec3[];reliefs?:{center:Vec3;radius:number
 /** Back seating intent is independent of UI, stock catalogue and rendering. */
 export function backLayout(c:Cabinet,t:number,b:number){
  const {width:w,height:h,depth:d,origin:o}=c.envelope;
+ if(c.carcass.back.mode!=='full')return {mode:'inset' as const,bodyRear:0,rearSetback:c.carcass.back.mode==='rails'&&(c.carcass.back.upperHeight>0||c.carcass.back.lowerHeight>0)?t:0,origin:[t,t,0] as Vec3,size:[w-2*t,h-2*t,b] as Vec3,pockets:[] as BackPocket[],errors:[] as string[]};
  const joint=c.carcass.back.joint,mode=joint?.mode??'inset',depth=joint?.depth??6,inset=mode==='groove'?(joint?.inset??10):0,clearance=cnc(c).tolerance/2;
  const errors:string[]=[];
  if(joint&&(joint.revision!=='back-1'||!['inset','applied','groove','rebate','finger'].includes(mode)||![depth,inset,joint.clearance,joint.inset].every(n=>Number.isFinite(n)&&Math.abs(n*10-Math.round(n*10))<1e-6)||depth<1||(['groove','rebate'].includes(mode)&&depth>t-3)||joint.inset<3||joint.inset>100||(joint.clearance<0||joint.clearance>1)))errors.push('Use a back seat depth from 1 mm to panel thickness minus 3 mm, rear inset 3–100 mm and clearance 0–1 mm.');
  if(joint&&c.carcass.back.mode!=='full')errors.push('Back-panel seating requires a full back panel.');
- if(joint&&mode!=='inset'&&c.carcass.top.mode!=='full')errors.push('Back seating options require a full top panel.');
+
  if(mode==='groove'&&inset-clearance<3)errors.push('The back groove must leave at least 3 mm behind it.');
  if(mode==='finger'&&(!Number.isFinite(joint?.fingerPitch??50)||(joint?.fingerPitch??50)<20||(joint?.fingerPitch??50)>200||Math.abs((joint?.fingerPitch??50)*10-Math.round((joint?.fingerPitch??50)*10))>1e-6))errors.push('Back finger width must be 20–200 mm in 0.1 mm steps.');
  const seated=mode==='groove'||mode==='rebate',applied=mode==='applied';
@@ -27,7 +28,7 @@ export function backLayout(c:Cabinet,t:number,b:number){
   // clear the back over the full engaged width, including both corners.
   const x=c.carcass.corner?t-depth:t;
   add('bottom',[x,t-depth,z],[w-2*x,depth,cutWidth],1,1);
-  add('top',[x,h-t,z],[w-2*x,depth,cutWidth],1,-1);
+  if((c.carcass.top.mode==='full'||(c.carcass.top.mode==='rails'&&c.carcass.top.rearDepth>0)))add(c.carcass.top.mode==='rails'?'top-rear-rail':'top',[x,h-t,z],[w-2*x,depth,cutWidth],1,-1);
  }
  return {mode,bodyRear,rearSetback,origin:lower,size,pockets,errors};
 }

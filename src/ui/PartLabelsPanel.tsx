@@ -21,7 +21,7 @@ export function PartLabelsPanel({cabinet,parts,map,onNotice}:{cabinet:Cabinet;pa
  </div>{error?<p className="field__description field__description--attention" role="alert">{error}</p>:<p className="field-note">{grid!.columns} columns × {grid!.rows} rows · Label pages: {Math.ceil((parts.length+(stock.start??0))/(grid!.columns*grid!.rows))}</p>}</Section>
  <Section title="Parts"><p className="field-note">All {map.assembly.length} cut parts and {parts.length-map.assembly.length} reusable offcuts are included, followed by numbered sheet maps.</p></Section>
  <Section title="QR links">
- <label className="label-app-address">App address<span className="textbox"><input className="textbox__control" type="url" value={app} onChange={e=>setApp(e.target.value)}/></span></label><p className="field-note">Use an address your phone can reach. Open the matching cabinet file to select the linked part. Print in black and white at 100%.</p></Section>
+ <label className="label-app-address">App address<span className="textbox"><input className="textbox__control" type="url" value={app} onChange={e=>setApp(e.target.value)}/></span></label><p className="field-note">Use an address your phone can reach. Each QR opens a snapshot of this cabinet with its part selected. Print in black and white at 100%.</p></Section>
  <div className="label-actions"><Button disabled={busy||!!error} onClick={()=>void generate(true)}>Calibration sheet</Button><Button disabled={busy||!!error||!parts.length} onClick={()=>void generate()}>{busy?'Exporting…':'Export labels'}</Button></div>
  </div>;
 }

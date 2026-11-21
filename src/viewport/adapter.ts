@@ -1,3 +1,4 @@
+import {constructionOwner} from '../domain/construction-selection';
 import {viewDirection,perspectiveView,type ViewName} from './camera-presets';
 export type {ViewName} from './camera-presets';
 import {drawerPack} from '../catalogue/drawers';
@@ -108,7 +109,7 @@ export class CabinetViewport {
      this.model.traverse(object=>{
       if(!(object instanceof THREE.Mesh))return;
       if(object.userData.pickKind==='hinge'){(object.material as THREE.MeshBasicMaterial).opacity=selectedIds.includes(object.userData.id)?.3:0;return;}
-      if(object.userData.pickKind==='opening'){(object.material as THREE.MeshBasicMaterial).visible=selectedIds.includes(object.userData.id);return;}
+      if((object.userData.pickKind==='opening'||object.userData.pickKind==='construction')){(object.material as THREE.MeshBasicMaterial).visible=selectedIds.includes(object.userData.id);return;}
       if(!object.userData.selectBase)return;
       const active=selectedIds.includes(object.userData.id)||selectedIds.includes(object.userData.ownerId);
       const material=object.material as THREE.MeshStandardMaterial;
@@ -133,19 +134,19 @@ export class CabinetViewport {
     const attach=(mesh:THREE.Object3D,center:Vec3,id:string)=>{const group=frontGroups.get(id);mesh.position.set(...center);const panel=geometry.panels.find(p=>p.id===id);if(panel&&explosion)mesh.position.add(new THREE.Vector3(...offsets.get(panel.id)!));if(group){mesh.position.sub(group.position);group.add(mesh);}else this.model.add(mesh);};
     const bores=[...geometry.cabineo.flatMap(j=>j.bores),...geometry.backFasteners,...geometry.drilling];
     for (const panel of geometry.panels) {
-      if(hiddenIds.includes(panel.id))continue;
+      if(hiddenIds.includes(panel.id)||hiddenIds.includes(constructionOwner(cabinet,panel.id)))continue;
       if(panel.role==='door'&&!frontsVisible)continue;
       if (panel.installationPart === 'plinth' && !plinthVisible) continue;
-      const isSelected = selectedIds.includes(panel.id);
+      const isSelected = selectedIds.includes(panel.id)||selectedIds.includes(constructionOwner(cabinet,panel.id));
       const material = new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : isSelected ? theme.selected : finishColor(panel.finish.id, theme),
         polygonOffset:true, polygonOffsetFactor:1, polygonOffsetUnits:1, roughness: 0.82, metalness: 0, transparent: (cutaway && panel.constructionPart === 'back') || preview, opacity: cutaway && panel.constructionPart === 'back' ? 0.12 : preview ? 0.68 : 1 });
       const mesh = new THREE.Mesh(panelDisplayGeometry(panel,geometry.pockets,bores), material);
-      mesh.position.set(...panel.coreCenter); mesh.userData.id = panel.id; mesh.userData.pickKind = panel.role==='door'?'front':panel.role === 'shelf' || panel.role === 'divider' ? 'interior' : panel.constructionPart === 'back' ? 'back' : 'part'; mesh.userData.selectBase=finishColor(panel.finish.id,theme); mesh.userData.pickThrough = cutaway && panel.constructionPart === 'back';
+      mesh.position.set(...panel.coreCenter); mesh.userData.id = constructionOwner(cabinet,panel.id); mesh.userData.pickKind = panel.role==='door'?'front':panel.role === 'shelf' || panel.role === 'divider' ? 'interior' : panel.constructionPart === 'back' ? 'back' : 'part'; mesh.userData.selectBase=finishColor(panel.finish.id,theme); mesh.userData.pickThrough = cutaway && panel.constructionPart === 'back';
       const edge = new THREE.LineSegments(panelDisplayEdges(panel,mesh.geometry,geometry.pockets,bores), new THREE.LineBasicMaterial({ color: renderMode==='wireframe'?theme.wire:isSelected?(theme.selectedEdge??theme.selected):theme.edge, toneMapped:false, transparent: true, opacity: renderMode==='wireframe'?1:(theme.edgeOpacity??.65) }));
 
       mesh.add(edge); attach(mesh,panel.coreCenter,panel.id);
       for (const band of panel.edges.filter(edge => edge.product)) {
-        const strip = new THREE.Mesh(new THREE.BoxGeometry(...band.size), material.clone()); strip.position.set(...band.center); strip.userData.id = panel.id; strip.userData.selectBase=finishColor(panel.finish.id,theme); strip.userData.pickKind = mesh.userData.pickKind; strip.userData.pickThrough = mesh.userData.pickThrough;
+        const strip = new THREE.Mesh(new THREE.BoxGeometry(...band.size), material.clone()); strip.position.set(...band.center); strip.userData.id = constructionOwner(cabinet,panel.id); strip.userData.selectBase=finishColor(panel.finish.id,theme); strip.userData.pickKind = mesh.userData.pickKind; strip.userData.pickThrough = mesh.userData.pickThrough;
         if (isSelected) strip.add(new THREE.LineSegments(new THREE.EdgesGeometry(strip.geometry), new THREE.LineBasicMaterial({ color: theme.handle, transparent: true, opacity: 0.9 })));
         attach(strip,band.center,panel.id);
       }
@@ -200,6 +201,14 @@ export class CabinetViewport {
       const opening = new THREE.Mesh(new THREE.PlaneGeometry(space.size[0], space.size[1]), new THREE.MeshBasicMaterial({ visible: selectedIds.includes(space.id), side: THREE.DoubleSide, color: theme.selected, transparent: true, opacity: 0.1, depthWrite: false }));
       opening.position.set(space.origin[0] + space.size[0] / 2, space.origin[1] + space.size[1] / 2, space.origin[2] + space.size[2] - 1);
       opening.userData.id = space.id; opening.userData.pickKind = 'opening'; this.model.add(opening);
+    }
+    if(!explosion)for(const part of ['top','back'] as const){
+     if(cabinet.carcass[part].mode==='full')continue;
+     const id=`${cabinet.id}/panel/${part}`;if(hiddenIds.includes(id))continue;
+     const t=geometry.panels.find(p=>p.role==='left')!.size[0];
+     const proxy=new THREE.Mesh(new THREE.PlaneGeometry(w-2*t,part==='top'?d:h-2*t),new THREE.MeshBasicMaterial({visible:selectedIds.includes(id),side:THREE.DoubleSide,color:theme.selected,transparent:true,opacity:.1,depthWrite:false}));
+     if(part==='top'){proxy.rotation.x=-Math.PI/2;proxy.position.set(ox+w/2,oy+h-.05,oz+d/2);}else proxy.position.set(ox+w/2,oy+h/2,oz+.05);
+     proxy.userData.id=id;proxy.userData.pickKind='construction';this.model.add(proxy);
     }
     const activeDivision = [...geometry.divisions, ...geometry.adjustable.shelves].find(d => d.id === selected&&!hiddenIds.includes(d.id));
     if (activeDivision) {

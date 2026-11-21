@@ -1,3 +1,4 @@
+import {resolveConstruction} from '../rules/construction';
 import {drawerRepairs} from './drawer-repairs';
 import {cupSetbackMax} from '../catalogue/hinges';
 import {resizeCabinet} from './dimensions';
@@ -35,6 +36,18 @@ export function editRepairs(candidate:Cabinet,previous:Cabinet):EditRepair[]{
  }
  function add(label:string,c:Cabinet){if(!editError(c)&&!options.some(o=>JSON.stringify(o.cabinet)===JSON.stringify(c)))options.push({label,cabinet:c});}
  function search(from:number,to:number,step:number,make:(n:number)=>Cabinet,label:(n:number)=>string){for(let n=from;step>0?n<=to:n>=to;n+=step){try{const c=make(n);if(!editError(c)){add(label(n),c);break;}}catch{/* Invalid alternatives are never offered. */}}}
+ if(message.includes('continuous supporting panels')){
+  const c=structuredClone(candidate),t=stock(c,'carcass').thickness,b=stock(c,'back').thickness,interior=resolveInteriors(c,t,b,stock(c,'interior').thickness);
+  const supports=[...resolveConstruction(c,t,b).panels.filter(p=>p.orientation==='xz'),...interior.divisions.filter(d=>d.axis==='horizontal')];
+  function clear(n:Cabinet['compartments']){if(n.kind==='split'){if(n.axis==='vertical'&&n.joint){const d=interior.divisions.find(d=>d.id===n.featureId);if(d&&[d.origin[1],d.origin[1]+d.size[1]].some((edge,i)=>!supports.some(p=>Math.abs(p.origin[1]+(i===0?p.size[1]:0)-edge)<.001&&p.origin[0]<=d.origin[0]+.001&&p.origin[0]+p.size[0]>=d.origin[0]+d.size[0]-.001&&p.origin[2]<=d.origin[2]+.001&&p.origin[2]+p.size[2]>=d.origin[2]+d.size[2]-.001)))delete n.joint;}n.children.forEach(clear);}}clear(c.compartments);add('Use butt joints on dividers without full top support',c);
+ }
+ if(message.includes('Front reinforcement must leave')){
+  for(const side of ['top','bottom'] as const){const c=structuredClone(candidate),r=c.carcass.frontRails!;
+   const other=side==='top'?'bottom':'top',available=Math.floor(c.envelope.height-2*stock(c,'carcass').thickness-60-(r[other].enabled?r[other].width:0));
+   if(r[side].enabled&&available>=20&&available<r[side].width){r[side].width=available;add(`Use a ${available} mm ${side} front rail`,c);}
+  }
+ }
+ if(message.includes('Blum wall hanging')&&candidate.carcass.back.mode!=='full')add('Keep the open back and remove wall hanging',{...candidate,installation:{...candidate.installation,mounting:{...candidate.installation.mounting,mode:'none'}}});
  if(/Plinth height/.test(message)){
   const height=40+candidate.installation.plinth.topGap+candidate.installation.plinth.bottomGap;
   add(`Raise feet to ${height} mm for a 40 mm plinth`,{...candidate,installation:{...candidate.installation,feet:{...candidate.installation.feet,height}}});

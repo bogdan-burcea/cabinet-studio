@@ -8,6 +8,7 @@ export function explodedOffset(role:string,center:Vec3,bodyCenter:Vec3,amount:nu
  if(role==='back'||role.startsWith('back-')||role==='mounting')return [0,0,-amount];
  if(role.startsWith('plinth'))return [0,-amount,amount];
  if(role==='door')return [0,0,amount];
+ if(role.startsWith('front-'))return [0,role==='front-upper-rail'?amount*.35:-amount*.35,amount];
  if(role==='divider')return [(center[0]>=bodyCenter[0]?1:-1)*amount*.6,0,amount*.3];
  return [0,(center[1]>=bodyCenter[1]?1:-1)*amount*.35,amount*.5];
 }

@@ -5,6 +5,7 @@ import type {FlatPart} from '../cnc/parts';
 import type {LabelMap} from './label-job';
 import {partDiagram,type Diagram} from './diagrams';
 import {partLink} from './project';
+import {encodeQrCabinet} from './qr-cabinet';
 
 function draw(pdf:jsPDF,view:Diagram,x:number,y:number,w:number,h:number){
  const scale=Math.min(w/view.width,h/view.height);
@@ -33,6 +34,7 @@ export function partLabels(cabinet:Cabinet,parts:FlatPart[],stock:LabelStock,app
  const {rows,columns}=labelGrid(stock),perPage=rows*columns;
  const pdf=new jsPDF({unit:'mm',format:[stock.pageWidth,stock.pageHeight],orientation:stock.pageWidth>stock.pageHeight?'landscape':'portrait'});
  pdf.setProperties({title:`${cabinet.name} - part labels`});
+ const snapshot=calibration?undefined:encodeQrCabinet(cabinet);
  const entries=calibration?Array.from({length:perPage},()=>parts[0]):parts;
  for(const [i,part] of entries.entries()){
   const index=i+(calibration?0:stock.start??0),slot=index%perPage;
@@ -40,8 +42,8 @@ export function partLabels(cabinet:Cabinet,parts:FlatPart[],stock:LabelStock,app
   const x=stock.margin+(slot%columns)*(stock.width+(stock.gapX??stock.gap)),y=(stock.top??stock.margin)+Math.floor(slot/columns)*(stock.height+(stock.gapY??stock.gap));
   pdf.setLineWidth(.18).setDrawColor(165).rect(x,y,stock.width,stock.height);
   if(calibration){pdf.setTextColor(0).setFont('helvetica','normal').setFontSize(8).text(`Label ${i+1} - ${stock.width} x ${stock.height} mm`,x+3,y+6).setFontSize(7).text('Print at actual size / 100%',x+3,y+12);continue;}
-  const url=partLink(app,cabinet.id,part.id),qr=QRCode.create(url,{errorCorrectionLevel:'M'}).modules;
-  const size=Math.min(stock.height-13,stock.width*.30),cell=size/(qr.size+8),qx=x+stock.width-size-2,qy=y+stock.height-size-2;
+  const url=partLink(app,cabinet.id,part.id,snapshot),qr=QRCode.create(url,{errorCorrectionLevel:'M'}).modules;
+  const size=Math.min(stock.height-13,stock.width*.40),cell=size/(qr.size+8),qx=x+stock.width-size-2,qy=y+stock.height-size-2;
   if(cell<.20)throw Error('Increase the label size or shorten the app address for a printable QR code.');
   pdf.setFillColor('0');
   for(let r=0;r<qr.size;r++)for(let c=0;c<qr.size;c++)if(qr.get(r,c))pdf.rect(qx+(c+4)*cell,qy+(r+4)*cell,cell+.008,cell+.008,'F');

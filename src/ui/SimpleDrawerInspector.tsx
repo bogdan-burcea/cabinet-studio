@@ -91,17 +91,17 @@ export function SimpleDrawerInspector({cabinet,model,id,ids,partId,onSelectMany,
   <Section title="Duplicate">   <div className="interior-actions"><Button onClick={()=>{try{const next=duplicateDrawers(cabinet,ids);if(commit(next.cabinet))onSelectMany(next.featureIds);}catch(error){notice((error as Error).message);}}}>Duplicate {ids.length>1?'group':'drawer'}</Button>
 </div></Section>
 
-  <Section title="Cut parts">
-   {board&&<PartDrawing label={board.label} preview={partPreview(board.panel,board.holes,board.cuts,board.face)}/>}
-   <p className="field-note">Blum specifies 16 mm bottom and back stock for this configuration.</p>
-   <div className="data-row"><span>Bottom · 16 mm</span><strong>{drawer.bottom[0]} × {drawer.bottom[2]} mm</strong></div>
-   <div className="data-row"><span>Back · 16 mm</span><strong>{drawer.back[0]} × {drawer.back[1]} mm</strong></div>
-  </Section>
   <Section title="Drawer fittings">
    <div className="table table--density-compact machining-table"><table aria-label="Drawer fittings"><thead><tr><th>Article</th><th>Quantity</th></tr></thead><tbody>
     {pack.components.map(item=><tr key={item.article}><th scope="row">{item.article}</th><td>{item.quantity} {item.unit}</td></tr>)}
    </tbody></table></div>
    <p className="field-note">K · 550 mm uses supplied CAD. Other sizes adapt the profiles; 650 mm uses the 65 kg runner family. Front/back pilots follow Blum’s drawing. Bottom pilots use the reference side slots; verify these against the bought side profile before manufacture.</p>
+  </Section>
+  <Section title="Cut parts">
+   {board&&<PartDrawing label={board.label} preview={partPreview(board.panel,board.holes,board.cuts,board.face)}/>}
+   <p className="field-note">Blum specifies 16 mm bottom and back stock for this configuration.</p>
+   <div className="data-row"><span>Bottom · 16 mm</span><strong>{drawer.bottom[0]} × {drawer.bottom[2]} mm</strong></div>
+   <div className="data-row"><span>Back · 16 mm</span><strong>{drawer.back[0]} × {drawer.back[1]} mm</strong></div>
   </Section>
  </>;
 }

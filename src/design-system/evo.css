@@ -72,7 +72,7 @@ input::-webkit-inner-spin-button{appearance:none}
 .interior-actions{display:flex;flex-wrap:wrap;gap:var(--spacing-100);margin-top:var(--spacing-200)}
 .interior-actions>.btn{flex:1;white-space:nowrap}
 .interior-action-divider{border:0;border-top:1px solid var(--color-border-subtle);margin:var(--spacing-200) 0 0}
-.field-note{font-size:var(--font-size-body);line-height:var(--font-line-height-250);color:var(--color-foreground-secondary);margin-top:var(--spacing-200)}
+.field-note{font-size:var(--font-size-small);line-height:var(--font-line-height-200);color:var(--color-foreground-secondary);margin-top:var(--spacing-200)}
 .camera-toolbar{position:absolute;left:50%;bottom:48px;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:var(--spacing-100);width:max-content;max-width:calc(100% - 32px);padding:var(--spacing-100);background:var(--color-background-elevated);border:1px solid var(--color-border-subtle);border-radius:calc(var(--border-radius-150) * .75);box-shadow:var(--shadow-subtle)}
 .camera-presets{border:0;min-width:0;padding:var(--spacing-50);background:var(--color-background-primary)}
 .camera-presets .segmented-buttons__button{white-space:nowrap;padding-inline:var(--spacing-100)}
@@ -227,7 +227,7 @@ button.app-icon-button[aria-pressed='true']>svg{fill:currentColor}
 /* Main accordions and flat item sections share one content/title inset. */
 .inspector-accordion>li{list-style:none}
 ul.inspector-accordion summary.details__summary{padding:12px 24px}
-ul.inspector-accordion .details__content.inspector-section{margin:0;padding:4px 24px 24px;border:0}
+ul.inspector-accordion .details__content.inspector-section{margin:0;padding:8px 24px 24px;border:0}
 .inspector-accordion>li>section.inspector-section,.inspector-static>.inspector-section{padding:24px}
 .accordion-heading-aside{display:flex;align-items:center;color:var(--color-foreground-secondary)}
 .accordion-heading-aside:empty{display:none}
@@ -406,7 +406,7 @@ button.btn,.btn .btn__cell,.segmented-buttons__button{font-weight:400}
 .cost-dialog .estimate-table th:first-child{padding-left:0;text-align:left}.cost-dialog .estimate-table .table-cell--numeric{padding-right:0;text-align:right}
 
 .edit-conflict-dialog .education-notice{margin-block:var(--spacing-200)}
-.edit-conflict-dialog .education-notice__main>p{margin:0}
+.edit-conflict-dialog .education-notice__main,.edit-conflict-dialog .education-notice__main>p,.edit-conflict-dialog .education-notice .repair-radio-options{margin:0}
 /* Selected camera presets persist after hover/focus leaves. Evo neutral variant. */
 .camera-presets .segmented-buttons__button[aria-current]{background-color:var(--color-foreground-primary);color:var(--color-foreground-on-inverse)}
 .camera-presets .segmented-buttons__button[aria-current]:active{background-color:var(--color-foreground-primary);color:var(--color-foreground-on-inverse)}
@@ -416,3 +416,10 @@ button:not(.btn,.icon-btn,.icon-button,.segmented-buttons__button,.link-button,.
 
 /* Press feedback applies to actions; persistent state belongs only to toggles. */
 button:not(:disabled):not([aria-disabled=true]):active{background-color:var(--color-foreground-primary);color:var(--color-foreground-on-inverse)}
+
+/* Education-notice surface only; preserve machining-check layout and controls. */
+.machining-checks-notice{margin:var(--spacing-200) var(--spacing-300);background-color:var(--education-notice-education-background-color,var(--color-background-education));border-radius:var(--education-notice-border-radius,var(--border-radius-100))}
+
+.machining-checks-notice .btn:not(.btn--destructive){background-color:var(--color-background-strong);color:var(--color-foreground-on-strong)}
+
+.inspector .machining-checks-notice,.inspector .inspector-accordion>.machining-checks-notice{border:0;box-shadow:none}

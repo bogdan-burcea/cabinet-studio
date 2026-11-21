@@ -19,12 +19,12 @@ export function IconButton({icon,label,className='',onFocus,onBlur,onPointerEnte
 }
 const AccordionContext=createContext(false);
 export function InspectorSections({children,accordion=true}:{children:ReactNode;accordion?:boolean}){if(!accordion)return <div className="inspector-static">{children}</div>;return <AccordionContext.Provider value={true}><ul className="accordion inspector-accordion" aria-roledescription="accordion">{children}</ul></AccordionContext.Provider>;}
-export function Section({title,aside,children}:{title:string;aside?:ReactNode;children:ReactNode}){
+export function Section({title,aside,children,className=''}:{title:string;aside?:ReactNode;children:ReactNode;className?:string}){
  const accordion=useContext(AccordionContext),[open,setOpen]=useState(title==='Dimensions');
  const heading=<div className="section-heading"><h3 className="medium-text">{title}</h3>{aside}</div>;
- if(!accordion)return <section className="inspector-section">{heading}{children}</section>;
+ if(!accordion)return <section className={`inspector-section ${className}`}>{heading}{children}</section>;
  if(title==='Cabinet type')return <li><section className="inspector-section">{heading}{children}</section></li>;
- return <li><details className="details inspector-details" open={open} onToggle={e=>setOpen(e.currentTarget.open)}><summary className="details__summary"><h3 className="details__label">{title}</h3><span className="accordion-heading-aside">{aside}</span><span className="details__icon" hidden><Icon name="chevron" size={16}/></span></summary><div className="details__content inspector-section">{children}</div></details></li>;
+ return <li className={className}><details className="details inspector-details" open={open} onToggle={e=>setOpen(e.currentTarget.open)}><summary className="details__summary"><h3 className="details__label">{title}</h3><span className="accordion-heading-aside">{aside}</span><span className="details__icon" hidden><Icon name="chevron" size={16}/></span></summary><div className="details__content inspector-section">{children}</div></details></li>;
 }
 
 export function Notice({message,error=false,onDismiss,onAction}:{message:string;error?:boolean;onDismiss():void;onAction?():void}){

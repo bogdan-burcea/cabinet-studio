@@ -126,7 +126,7 @@ test('native schema 21 round trips every construction choice including dormant d
   for (const top of ['full', 'rails'] as const) for (const back of ['full', 'rails'] as const) {
     const config = modes(c, top, back); config.top.frontDepth = 90; config.back.lowerHeight = 95;
     const next = changeConstruction(c, config), json = serialize(next), doc = JSON.parse(json);
-    assert.equal(doc.schemaVersion, 41); assert.equal(doc.evaluatorRevision, 't-bone-seats-41');
+    assert.equal(doc.schemaVersion, 48); assert.equal(doc.evaluatorRevision, 'rail-count-fit-48');
     assert.deepEqual(deserialize(json), next); assert.deepEqual(evaluate(deserialize(json)), evaluate(next));
   }
 });

@@ -44,17 +44,23 @@ export function bottomFaceRepairs(c:Cabinet):EditRepair[]{
 
 export function hingePlateRepairs(c:Cabinet):EditRepair[]{
  const options:EditRepair[]=[],initial=evaluate(c),bad=initial.issues.filter(i=>i.code==='machining-hinge-plate');if(!bad.length)return options;
- for(const sign of [-1,1]){
+ const existing=machiningCollisionKeys(initial.issues);
+ const safe=(next:Cabinet,hingeId?:string)=>{const model=evaluate(next);return !model.issues.some(i=>i.code==='machining-hinge-plate'&&(!hingeId||i.operationIds?.includes(hingeId)))&&[...machiningCollisionKeys(model.issues)].every(key=>existing.has(key));};
+ for(const directions of [[-1],[1],[-1,1]]){
   let candidate=c;
   for(const issue of bad.filter((v,i,a)=>a.findIndex(q=>q.operationIds?.[0]===v.operationIds?.[0])===i)){const hinge=initial.doorHardware.hinges.find(h=>issue.operationIds?.includes(h.id));if(!hinge)continue;const index=+hinge.id.split('/').at(-1)!;
-   for(let delta=1;delta<=300;delta++){
+   const body=initial.fronts.doors.find(d=>d.id===hinge.ownerId);if(!body)continue;
+   const limits=new Map(directions.map(sign=>[sign,Math.floor(sign<0?hinge.y-(body.center[1]-body.size[1]/2+35):body.center[1]+body.size[1]/2-35-hinge.y)]));
+   search:for(let delta=1;delta<=Math.max(...limits.values());delta++)for(const sign of directions){
+    if(delta>limits.get(sign)!)continue;
     const next={...candidate,fronts:candidate.fronts.map(d=>d.id!==hinge.ownerId||!d.hinge?d:{...d,hinge:{...d.hinge,offsets:Array.from({length:d.hinge.count},(_,i)=>(d.hinge!.offsets?.[i]??0)+(i===index?sign*delta:0))}})};
-    try{if(!evaluate(next).issues.some(i=>i.code==='machining-hinge-plate'&&i.operationIds?.includes(hinge.id))){candidate=next;break;}}catch{}
+    try{if(safe(next,hinge.id)){candidate=next;break search;}}catch{}
    }
   }
-  try{if(!evaluate(candidate).issues.some(i=>i.code==='machining-hinge-plate'))options.push({label:`Move obstructed hinges ${sign<0?'down':'up'} to the nearest clear whole-mm position`,cabinet:candidate});}catch{}
+  try{if(safe(candidate)&&!options.some(o=>JSON.stringify(o.cabinet.fronts)===JSON.stringify(candidate.fronts)))options.push({label:directions.length===2?'Set obstructed hinges to their nearest safe offsets; keep the rails unchanged':`Move obstructed hinges ${directions[0]<0?'down':'up'} to the nearest clear whole-mm position`,cabinet:candidate});}catch{}
  }
- return options;
+ const movement=(candidate:Cabinet)=>candidate.fronts.reduce((total,d)=>total+(d.hinge?.offsets??[]).reduce((sum,n,i)=>sum+Math.abs(n-(c.fronts.find(f=>f.id===d.id)?.hinge?.offsets?.[i]??0)),0),0);
+ return options.sort((a,b)=>movement(a.cabinet)-movement(b.cabinet));
 }
 export function doorOpeningRepairs(c:Cabinet,ids:string[],target:number):EditRepair[]{
  for(let reveal=Math.floor(Math.max(...c.fronts.filter(d=>ids.includes(d.id)).map(d=>d.reveal)))+1;reveal<=10;reveal++){

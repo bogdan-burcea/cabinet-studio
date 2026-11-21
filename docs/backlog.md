@@ -228,3 +228,5 @@ Local costs completion:
 - [x] Six-hour open-modal refresh, manual override, stale-response protection and last-price retention.
 - [ ] Hosted price service/closed-app scheduling (not requested for publication).
 - [ ] Additional store-specific adapters as real shop links reveal unsupported search/metadata formats.
+
+Completed locally: full/open/rail-pair top and back controls; independent rail widths; optional upper/lower front reinforcement; rail-aware joinery, usable openings, native 42 and downstream cut/label/export integration. Rail strength and load capacity are not manufacturer-verified.

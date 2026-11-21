@@ -13,7 +13,7 @@ test('wall rail side notches are matched through profiles with cutter-radius cor
  const c=setWallHanging(applySimplePreset(createCabinet(),'wall'),true);
  const notched={...c,installation:{...c.installation,mounting:{...c.installation.mounting,sideNotch:60}}};
  const m=evaluate(notched),cuts=m.pockets.filter(p=>p.id.endsWith('/side-notch'));
- assert.equal(cuts.length,2);for(const cut of cuts){assert.equal(cut.size[2],8);assert.equal(cut.size[1],60);assert.equal(cut.origin[1],c.envelope.origin[1]+c.envelope.height-60);assert.ok(cut.outline!.length>16);assert.equal(cut.size[0],18);}
+ assert.equal(cuts.length,2);for(const cut of cuts){assert.equal(cut.size[2],8);assert.equal(cut.size[1],60);assert.equal(cut.origin[1],c.envelope.origin[1]+c.envelope.height-18-60);assert.ok(cut.outline!.length>32);assert.equal(Math.max(...cut.outline!.map(p=>p[1])),c.envelope.origin[1]+c.envelope.height-18);assert.equal(cut.size[0],18);}
  assert.deepEqual(deserializeWithInfo(serialize(notched)),{cabinet:notched,migrated:false});
  assert.equal(evaluate(c).pockets.filter(p=>p.id.endsWith('/side-notch')).length,0);
  for(const value of [-1,101,NaN,1])assert.throws(()=>evaluate({...notched,installation:{...notched.installation,mounting:{...notched.installation.mounting,sideNotch:value}}}));
@@ -41,7 +41,7 @@ test('back-seat T-bones run along the slot walls, stay tangent to the ends and r
    assert.ok(Math.abs(relief.center[1]-cut.origin[1]-relief.radius)<1e-6||Math.abs(relief.center[1]-(cut.origin[1]+cut.size[1]-relief.radius))<1e-6);
    assert.ok(Math.abs(relief.center[2]-cut.origin[2])<1e-6||Math.abs(relief.center[2]-cut.origin[2]-cut.size[2])<1e-6);
   }
-  const doc=JSON.parse(serialize(c));assert.equal(doc.schemaVersion,41);doc.schemaVersion=40;doc.evaluatorRevision='wall-rail-notch-40';assert.equal(deserializeWithInfo(JSON.stringify(doc)).migrated,true);
+  const doc=JSON.parse(serialize(c));assert.equal(doc.schemaVersion,48);doc.schemaVersion=40;doc.evaluatorRevision='wall-rail-notch-40';assert.equal(deserializeWithInfo(JSON.stringify(doc)).migrated,true);
  }
  const thin=setBackPanel(createCabinet(),{mode:'groove',thickness:3});assert.ok(evaluate(thin).issues.some(i=>i.code==='machining-tool-width'));
 });

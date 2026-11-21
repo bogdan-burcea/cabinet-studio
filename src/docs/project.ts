@@ -28,14 +28,15 @@ export function billOfMaterials(cabinet:Cabinet,model:EvaluatedCabinet,plan:Retu
  return {stock:[...stock.values()],hardware:[...hardware].map(([label,count])=>({id:label,label,count}))};
 }
 
-export function partLink(base:string,cabinetId:string,partId:string){
+export function partLink(base:string,cabinetId:string,partId:string,snapshot?:string){
  const url=new URL(base);
  if(!['http:','https:'].includes(url.protocol))throw Error('Enter an HTTP or HTTPS app address.');
- url.hash=new URLSearchParams({cabinet:cabinetId,part:partId}).toString();
+ url.hash=new URLSearchParams({cabinet:cabinetId,part:partId,...snapshot?{model:snapshot}:{}}).toString();
  return url.toString();
 }
 export function linkedPart(hash:string){
  const values=new URLSearchParams(hash.replace(/^#/,''));
  const cabinet=values.get('cabinet'),part=values.get('part');
- return cabinet&&part?{cabinet,part}:null;
+ const model=values.get('model');
+ return cabinet&&part?{cabinet,part,...model?{model}:{}}:null;
 }

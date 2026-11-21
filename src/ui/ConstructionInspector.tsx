@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Cabinet, Carcass } from '../domain/cabinet';
 import { changeConstruction } from '../commands/construction';
 import type { EvaluatedCabinet } from '../geometry/evaluate';
-import { MIN_RAIL_GAP, RAIL_LIMITS } from '../rules/construction';
+import { MIN_RAIL_GAP, OPTIONAL_RAIL_LIMITS } from '../rules/construction';
 import { Button, Section } from './components';
 import { DimensionField } from './DimensionField';
 interface Props {
@@ -30,13 +30,13 @@ export function ConstructionInspector(p: Props) {
     <Section title="Carcass construction" aside={<span className="unit-badge">PREVIEW → APPLY</span>}>
       <label className="construction-choice">Top<select aria-label="Top construction" value={draft.top.mode} onChange={e => update({ ...draft, top: { ...draft.top, mode: e.target.value as 'full' | 'rails' } })}><option value="full">Full top</option><option value="rails">Front & rear rails</option></select></label>
       {draft.top.mode === 'rails' && <div className="rail-fields">
-        {(['frontDepth', 'rearDepth'] as const).map(key => <DimensionField key={key} retainInvalid label={key === 'frontDepth' ? 'Front rail depth' : 'Rear rail depth'} value={draft.top[key]} cancelValue={p.committed.carcass.top[key]} limits={RAIL_LIMITS}
+        {(['frontDepth', 'rearDepth'] as const).map(key => <DimensionField key={key} retainInvalid label={key === 'frontDepth' ? 'Front rail depth' : 'Rear rail depth'} value={draft.top[key]} cancelValue={p.committed.carcass.top[key]} limits={OPTIONAL_RAIL_LIMITS}
           onPreview={value => topSize(key, value)} onCommit={value => topSize(key, value)} onCancel={cancel}/>)}
         {(!pending || valid) && <p className="field-note">Clear top gap: {Number(p.evaluated.construction.topGap.toFixed(1))} mm.</p>}
       </div>}
       <label className="construction-choice">Back<select aria-label="Back construction" value={draft.back.mode} onChange={e => update({ ...draft, back: { ...draft.back, mode: e.target.value as 'full' | 'rails' } })}><option value="full">Full inset back</option><option value="rails">Upper & lower rear rails</option></select></label>
       {draft.back.mode === 'rails' && <div className="rail-fields">
-        {(['upperHeight', 'lowerHeight'] as const).map(key => <DimensionField key={key} retainInvalid label={key === 'upperHeight' ? 'Upper rail height' : 'Lower rail height'} value={draft.back[key]} cancelValue={p.committed.carcass.back[key]} limits={RAIL_LIMITS}
+        {(['upperHeight', 'lowerHeight'] as const).map(key => <DimensionField key={key} retainInvalid label={key === 'upperHeight' ? 'Upper rail height' : 'Lower rail height'} value={draft.back[key]} cancelValue={p.committed.carcass.back[key]} limits={OPTIONAL_RAIL_LIMITS}
           onPreview={value => backSize(key, value)} onCommit={value => backSize(key, value)} onCancel={cancel}/>)}
         {(!pending || valid) && <p className="field-note">Clear rear gap: {Number(p.evaluated.construction.backGap.toFixed(1))} mm.</p>}
       </div>}

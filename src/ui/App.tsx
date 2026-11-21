@@ -1,3 +1,5 @@
+import {constructionOwner,isConstructionSelection} from '../domain/construction-selection';
+import {SimpleConstructionInspector} from './SimpleConstructionInspector';
 import {CostPanel} from './CostPanel';
 import type {PlacementHistory} from '../cnc/placement-history';
 import {removalPlan} from '../commands/removal';
@@ -9,6 +11,7 @@ import {SimpleDrawerInspector} from './SimpleDrawerInspector';
 import {removeMetalDrawer} from '../commands/drawers';
 import {flattenParts} from '../cnc/parts';
 import {linkedPart} from '../docs/project';
+import {decodeQrCabinet} from '../docs/qr-cabinet';
 import type {SheetSettings} from '../cnc/layout';
 import {cabinetForExport} from '../cnc/sheet-export';
 import {downloadSheetStep,requestSheetStep} from '../cnc/step-download';
@@ -38,6 +41,7 @@ import {setStockThickness,setPuzzleCorners} from '../commands/stock';
 import {stock} from '../catalogue/materials';
 import {BackPanelInspector} from './BackPanelInspector';
 import {PartThumbnail} from './PartThumbnail';
+import {ConstructionThumbnail} from './ConstructionThumbnail';
 import {setCabineo} from '../commands/cabineo';
 import {cabineoVariants,type CabineoId} from '../catalogue/cabineo';
 import {presets,type PresetId} from '../catalogue/presets';
@@ -83,7 +87,7 @@ export function App(){
  const failedCandidate=useRef<Cabinet|null>(null);
  const [hiddenIds,setHiddenIds]=useState<string[]>([]);
  const [doorAngles,setDoorAngles]=useState<Record<string,number>>({});
- function setSelection(id:string){setSelectedIds([id]);}
+ function setSelection(id:string){setSelectedIds([constructionOwner(cabinet,id)]);}
  function select(id:string,additive=false){
   if(!additive){setSelection(id);return;}
   const kindOf=(id:string)=>frontTargets(cabinet,[id]).length?'front':evaluated.doorHardware.hinges.some(h=>h.id===id)?'hinge':evaluated.drawers.drawers.some(d=>d.parts.some(p=>p.id===id))?'drawer-part':evaluated.openings.some(o=>o.id===id)?'opening':cabinet.drawers?.some(d=>d.id===id)?'drawer':cabinet.fronts.some(d=>d.id===id)?'door':cabinet.contents.some(s=>s.id===id)?'adjustable':evaluated.divisions.find(d=>d.id===id)?.axis;
@@ -105,8 +109,8 @@ export function App(){
   if(connected.length){setPendingEdit({title:'Delete connected items?',message:`Deleting this selection also removes ${connected.length} connected item${connected.length===1?'':'s'} (interiors, doors or drawers). Undo restores all removed items.`,options:[{label:`Delete selection and ${connected.length} connected item${connected.length===1?'':'s'}`,cabinet:next}],base});}
   else if(commit(next))setSelection(cabinet.id);
  }
- const [notice,setNoticeText]=useState(startup.recovery?'Your earlier simple draft could not be opened. It is preserved; use Save to keep this cabinet.':'');
- const [noticeError,setNoticeError]=useState(!!startup.recovery);
+ const [notice,setNoticeText]=useState('');
+ const [noticeError,setNoticeError]=useState(false);
  function setNotice(message:string,error=false){setNoticeText(message);setNoticeError(error);}
  const file=useRef<HTMLInputElement>(null),fields=useRef<Partial<Record<Axis,HTMLInputElement|null>>>({}),drag=useRef<Cabinet|null>(null),shelfPosition=useRef<HTMLInputElement|null>(null),pendingDimension=useRef<Axis|null>(null);
  useLayoutEffect(()=>{document.documentElement.dataset.theme=theme;},[theme]);
@@ -115,12 +119,20 @@ export function App(){
   function selectLinkedPart(){
    const link=linkedPart(location.hash);
    if(!link)return;
-   const current=store.getSnapshot().committed;
-   if(current.id!==link.cabinet){setNotice('Open the cabinet file matching this part label.',true);return;}
-   if(link.part.includes('/offcut/')){setWorkspace('cnc');return;}
-   if(!flattenParts(evaluate(current)).some(panel=>panel.id===link.part)){setNotice('This part is missing from the open cabinet.',true);return;}
-   setWorkspace('box');setSelection(link.part);setHiddenIds(ids=>ids.filter(id=>id!==link.part));
-   history.replaceState(null,'',location.pathname+location.search);
+   try{
+    const current=store.getSnapshot().committed,next=link.model?decodeQrCabinet(link.model):current;
+    if(next.id!==link.cabinet){setNotice('Open the cabinet file matching this part label.',true);return;}
+    const offcut=link.part.includes('/offcut/');
+    if(!offcut&&!flattenParts(evaluate(next)).some(panel=>panel.id===link.part)){setNotice('This part is missing from the linked cabinet.',true);return;}
+    if(link.model&&JSON.stringify(next)!==JSON.stringify(current)){
+     if(!store.commit(next))return;
+     // Let the cabinet-change reset run before selecting the linked part.
+     if(next.id!==current.id)return;
+    }
+    setCostsOpen(false);setNotice('');setDoorAngles({});setHiddenIds([]);
+    setWorkspace(offcut?'cnc':'box');setSelection(offcut?next.id:link.part);
+    history.replaceState(null,'',location.pathname+location.search);
+   }catch(error){setNotice((error as Error).message,true);}
   }
   selectLinkedPart();
   window.addEventListener('hashchange',selectLinkedPart);
@@ -145,10 +157,11 @@ export function App(){
  },[selectedIds,workspace]);
  useEffect(()=>{const feedback=(e:Event)=>{const d=(e as CustomEvent<{message:string;error:boolean}>).detail;setNotice(d.message,d.error);};window.addEventListener('cabinet-input-feedback',feedback);return()=>window.removeEventListener('cabinet-input-feedback',feedback);},[]);
  const review=evaluated.issues.filter(i=>i.code.startsWith('machining-'));
- const panel=evaluated.panels.find(p=>p.id===selection),opening=evaluated.openings.find(o=>o.id===selection),foot=evaluated.installation.feet.find(f=>f.id===selection);
- useEffect(()=>{const valid=selectedIds.filter(id=>id===cabinet.id||evaluated.drawers.drawers.some(d=>d.id===id||d.parts.some(p=>p.id===id))||evaluated.doorHardware.hinges.some(h=>h.id===id)||evaluated.panels.some(p=>p.id===id)||evaluated.openings.some(o=>o.id===id)||evaluated.installation.feet.some(f=>f.id===id));if(valid.length!==selectedIds.length)setSelectedIds(valid.length?valid:[cabinet.id]);},[cabinet,selectedIds,evaluated]);
+ const constructionPart=selection===`${cabinet.id}/panel/top`?'top':selection===`${cabinet.id}/panel/back`?'back':undefined;
+ const panel=evaluated.panels.find(p=>p.id===selection),opening=evaluated.openings.find(o=>o.id===selection)??(selection===cabinet.compartments.id?evaluated.opening:undefined),foot=evaluated.installation.feet.find(f=>f.id===selection);
+ useEffect(()=>{setSelectedIds(ids=>{const valid=ids.filter(id=>id===cabinet.id||id===cabinet.compartments.id||isConstructionSelection(cabinet,id)||evaluated.drawers.drawers.some(d=>d.id===id||d.parts.some(p=>p.id===id))||evaluated.doorHardware.hinges.some(h=>h.id===id)||evaluated.panels.some(p=>p.id===id)||evaluated.openings.some(o=>o.id===id)||evaluated.installation.feet.some(f=>f.id===id));return valid.length===ids.length?ids:valid.length?valid:[cabinet.id];});},[cabinet,selectedIds,evaluated]);
  useEffect(()=>{if(selection===cabinet.id&&pendingDimension.current){const input=fields.current[pendingDimension.current];revealField(input);pendingDimension.current=null;}},[selection,cabinet.id]);
- const selectedReview=review.filter(i=>selection===cabinet.id||selectedIds.some(id=>affectedItems(i).includes(id)));
+ const selectedReview=review.filter(i=>selection===cabinet.id||selectedIds.some(id=>affectedItems(i).some(part=>constructionOwner(cabinet,part)===id)));
  function resolveMachining(issues=selectedReview){
   const faceIssues=issues.filter(i=>i.code==='machining-faces'),faceIds=faceIssues.map(i=>i.featureId);
   const hole=issues.some(i=>i.code==='machining-hole-collision'||i.code==='machining-collision'&&i.operationIds?.some(id=>id.includes('/installation/foot/'))),collision=issues.some(i=>i.code==='machining-collision'),plate=issues.some(i=>i.code==='machining-hinge-plate'),faces=issues.some(i=>i.code==='machining-faces'&&i.featureId===`${cabinet.id}/panel/bottom`),tool=issues.some(i=>i.code==='machining-tool-width');
@@ -207,23 +220,24 @@ export function App(){
     onCancel={()=>{store.cancel();drag.current=null;failedCandidate.current=null;}}/>
     {workspace==='box'&&notification}
    </div>
-   <aside className="inspector" aria-label="Cabinet inspector"><div className="inspector-title"><h2><Icon name={opening?'element-opening':panel?elementIcon(panel.role,cabinet.contents.some(s=>s.id===selection)):foot?'element-foot':'cube'} size={24}/><span>{selectedIds.length>1?`${selectedIds.length} ${mixedFronts?'fronts':evaluated.doorHardware.hinges.some(h=>h.id===selection)?'hinges':opening?'openings':panel?.role==='door'?'doors':panel?.role==='shelf'?'shelves':cabinet.drawers?.some(d=>d.id===selection)?'drawers':'dividers'}`:selection===cabinet.id?'Size & shape':panel?.label??selectedDrawerPart?.label??evaluated.drawers.drawers.find(d=>d.id===selection)?.label??opening?.label??foot?.label??(evaluated.doorHardware.hinges.some(h=>h.id===selection)?`Hinge ${Number(selection.split('/').at(-1))+1}`:'Selection')}</span></h2><div className="inspector-title-actions">{selectedIds.every(id=>cabinet.drawers?.some(d=>d.id===id)||evaluated.drawers.drawers.some(d=>d.parts.some(p=>p.id===id))||cabinet.fronts.some(d=>d.id===id)||cabinet.contents.some(s=>s.id===id)||evaluated.divisions.some(d=>d.id===id))&&<IconButton icon="delete" label={selectedDrawerPart?"Remove drawer":selectedIds.length>1?"Remove selected items":"Remove selected item"} onClick={()=>requestRemoval(selectedIds)}/>}</div></div>
+   <aside className="inspector" aria-label="Cabinet inspector"><div className="inspector-title"><h2><Icon name={opening?'element-opening':constructionPart?elementIcon(constructionPart):panel?elementIcon(panel.role,cabinet.contents.some(s=>s.id===selection)):foot?'element-foot':selectedDrawerPart||cabinet.drawers?.some(d=>d.id===selection)?'element-drawer':'cube'} size={24}/><span>{selectedIds.length>1?`${selectedIds.length} ${mixedFronts?'fronts':evaluated.doorHardware.hinges.some(h=>h.id===selection)?'hinges':opening?'openings':panel?.role==='door'?'doors':panel?.role==='shelf'?'shelves':cabinet.drawers?.some(d=>d.id===selection)?'drawers':'dividers'}`:selection===cabinet.id?'Size & shape':(constructionPart?(cabinet.names?.[selection]??(constructionPart==='top'?'Top':'Back')):undefined)??panel?.label??selectedDrawerPart?.label??evaluated.drawers.drawers.find(d=>d.id===selection)?.label??opening?.label??(foot?'Feet':undefined)??(evaluated.doorHardware.hinges.some(h=>h.id===selection)?`Hinge ${Number(selection.split('/').at(-1))+1}`:'Selection')}</span></h2><div className="inspector-title-actions">{selectedIds.every(id=>cabinet.drawers?.some(d=>d.id===id)||evaluated.drawers.drawers.some(d=>d.parts.some(p=>p.id===id))||cabinet.fronts.some(d=>d.id===id)||cabinet.contents.some(s=>s.id===id)||evaluated.divisions.some(d=>d.id===id))&&<IconButton icon="delete" label={selectedDrawerPart?"Remove drawer":selectedIds.length>1?"Remove selected items":"Remove selected item"} onClick={()=>requestRemoval(selectedIds)}/>}</div></div>
 
     <HingeInspector cabinet={snapshot.committed} model={evaluated} ids={selectedIds} commit={commit}/>
     {mixedFronts?<FrontFeaturesInspector cabinet={snapshot.committed} ids={commonFrontIds} commit={commit}/>:<SimpleDrawerInspector cabinet={snapshot.committed} model={evaluated} id={selectedDrawerPart?.ownerId??selection} ids={[...new Set(selectedIds.map(id=>evaluated.drawers.drawers.find(d=>d.parts.some(p=>p.id===id))?.id??id))]} partId={selectedDrawerPart?.id} onSelectMany={setSelectedIds} commit={commit} select={setSelection} notice={message=>setNotice(message,true)}/>}
     <InspectorSections key={selection} accordion={selection===cabinet.id}>
     {selection===cabinet.id&&<><Section title="Cabinet type"><label className="construction-choice">Size preset<span className="select select--fluid"><select aria-label="Cabinet type" value={presets.find(p=>p.width===cabinet.envelope.width&&p.height===cabinet.envelope.height&&p.depth===cabinet.envelope.depth)?.id??''} onChange={e=>{if(!e.target.value)return;try{commit(applySimplePreset(snapshot.committed,e.target.value as PresetId));}catch(error){setNotice((error as Error).message,true);}}}><option value="">Custom size</option>{presets.map(p=><option key={p.id} value={p.id}>{p.name} · {p.width} × {p.height} × {p.depth}</option>)}</select><Icon name="chevron" size={12}/></span></label></Section>
     <Section title="Dimensions" aside={<span className="unit-badge">mm</span>}><FieldPair>{(['width','height','depth'] as const).map(axis=><DimensionField plain key={axis} axis={axis} label={axis[0].toUpperCase()+axis.slice(1)} value={cabinet.envelope[axis]} cancelValue={snapshot.committed.envelope[axis]} onPreview={v=>{store.preview(resizeCabinet(snapshot.committed,axis,v));}} onCommit={v=>commit(resizeCabinet(snapshot.committed,axis,v))} onCancel={store.cancel} register={el=>{fields.current[axis]=el;}}/>)}<DimensionField plain label="Stock" accessibleLabel="Stock thickness" value={stock(cabinet,'carcass').thickness} cancelValue={stock(snapshot.committed,'carcass').thickness} limits={{min:3,max:24}} onPreview={()=>{}} onCommit={n=>{try{return commit(setStockThickness(snapshot.committed,n));}catch(e){setNotice((e as Error).message,true);return false;}}} onCancel={store.cancel}/></FieldPair></Section><Section title="Corner joints"><span className="select select--fluid"><select aria-label="Corner joints" value={cabinet.carcass.corner?'puzzle':'butt'} onChange={e=>commit(setPuzzleCorners(snapshot.committed,e.target.value==='puzzle'))}><option value="butt">Butt joints</option><option value="puzzle">Puzzle / finger joints</option></select><Icon name="chevron" size={12}/></span>{cabinet.carcass.corner&&<DimensionField plain stacked label="Target finger width" value={cabinet.carcass.corner.pitch} cancelValue={snapshot.committed.carcass.corner?.pitch??50} limits={{min:20,max:200}} onPreview={()=>{}} onCommit={pitch=>commit({...snapshot.committed,carcass:{...snapshot.committed.carcass,corner:{mode:'puzzle',revision:'puzzle-1',pitch}}})} onCancel={store.cancel}/>}</Section></>}
-    {(selection===cabinet.id||panel?.role==='bottom')&&<BaseSupportInspector cabinet={snapshot.committed} onCommit={commit} onCancel={store.cancel}/>}
+    {constructionPart==='top'&&<SimpleConstructionInspector cabinet={snapshot.committed} scope="top" commit={commit}/>}
+    {opening&&<SimpleConstructionInspector cabinet={snapshot.committed} scope="front" commit={commit}/>}
+    {(selection===cabinet.id||panel?.role==='bottom'||!!foot)&&<BaseSupportInspector cabinet={snapshot.committed} onCommit={commit} onCancel={store.cancel}/>}
     {selection===cabinet.id&&<FrontFeaturesInspector scope cabinet={snapshot.committed} ids={[...cabinet.fronts.map(d=>d.id),...(cabinet.drawers??[]).map(d=>d.id)]} commit={commit}/>}
     {selection===cabinet.id&&<CncInspector cabinet={snapshot.committed} onCommit={commit} onCancel={store.cancel}/>}
-    {selection===cabinet.id&&<Section title="Fasteners"><label className="construction-choice">Assembly connectors<span className="select select--fluid"><select aria-label="Assembly connectors" value={cabinet.hardware[0]?.id??''} onChange={e=>commit(setCabineo(snapshot.committed,e.target.value as CabineoId|''))}><option value="">None</option>{Object.entries(cabineoVariants).map(([id,v])=><option key={id} value={id}>{v.name}</option>)}</select><Icon name="chevron" size={12}/></span></label>{cabinet.hardware.length>0&&<><FieldPair><DimensionField plain label="Cabineo per side" value={cnc(cabinet).cabineoPerSide||defaultCabineoCount} cancelValue={cnc(cabinet).cabineoPerSide||defaultCabineoCount} limits={{min:1,max:20}} onPreview={()=>{}} onCommit={cabineoPerSide=>commit(setCnc(snapshot.committed,{cabineoPerSide}))} onCancel={store.cancel}/><DimensionField plain disabled label="Connectors" accessibleLabel="Calculated connector count" value={evaluated.cabineo.length} cancelValue={evaluated.cabineo.length} limits={{min:0,max:9999}} onPreview={()=>{}} onCommit={()=>true} onCancel={()=>{}}/></FieldPair><p className="field-note">{cabinet.carcass.corner?'Fixed interiors only · puzzle corners interlock':'Surface mounted · 50 mm end setback · spacing ≤300 mm'}</p></>}</Section>}
+    {selection===cabinet.id&&<Section title="Fasteners"><label className="construction-choice">Assembly connectors<span className="select select--fluid"><select aria-label="Assembly connectors" value={cabinet.hardware[0]?.id??''} onChange={e=>commit(setCabineo(snapshot.committed,e.target.value as CabineoId|''))}><option value="">None</option>{Object.entries(cabineoVariants).map(([id,v])=><option key={id} value={id}>{v.name}</option>)}</select><Icon name="chevron" size={12}/></span></label>{cabinet.hardware.length>0&&<><FieldPair><DimensionField plain label="Cabineo per side" value={cnc(cabinet).cabineoPerSide||defaultCabineoCount} cancelValue={cnc(cabinet).cabineoPerSide||defaultCabineoCount} limits={{min:1,max:20}} onPreview={()=>{}} onCommit={cabineoPerSide=>commit(setCnc(snapshot.committed,{cabineoPerSide}))} onCancel={store.cancel}/><DimensionField plain disabled label="Connectors" accessibleLabel="Calculated connector count" value={evaluated.cabineo.length} cancelValue={evaluated.cabineo.length} limits={{min:0,max:9999}} onPreview={()=>{}} onCommit={()=>true} onCancel={()=>{}}/></FieldPair><p className="field-note">{cabinet.carcass.corner?'Fixed interiors only · puzzle corners interlock':'Surface mounted · 50 mm panel setback, adaptive on rails · spacing ≤300 mm'}</p></>}</Section>}
     {selection===cabinet.id&&cabinet.cabinetType==='wall'&&<WallHangingInspector cabinet={snapshot.committed} onCommit={commit} onCancel={store.cancel}/>}
     <MachiningChecks issues={selectedReview} onResolve={()=>resolveMachining()}/>
     {!mixedFronts&&cabinet.fronts.some(d=>selectedIds.includes(d.id))&&<SimpleDoorInspector cabinet={snapshot.committed} evaluated={evaluated} ids={selectedIds} onCommit={commit} onCancel={store.cancel} onSelect={setSelectedIds} onRemove={requestRemoval} onNotice={message=>setNotice(message,true)}/>}
     {panel?.role==='bottom'&&<Section title="Bottom fasteners"><label className="construction-choice">Machining face<span className="select select--fluid"><select aria-label="Bottom fastener face" value={cnc(cabinet).bottomFastenersThrough?'outside-through':cnc(cabinet).bottomFace??'outside'} onChange={e=>{const value=e.target.value;commit(setCnc(snapshot.committed,{bottomFace:value==='inside'?'inside':'outside',bottomFastenersThrough:value==='outside-through'}));}}><option value="inside">Inside</option><option value="outside">Outside</option>{cnc(cabinet).bottomFastenersThrough&&<option value="outside-through">Outside · through pilots</option>}</select><Icon name="chevron" size={12}/></span></label>{cnc(cabinet).bottomFastenersThrough&&<p className="field-note">Connector pockets stay blind. Only receiving pilots can drill through.</p>}</Section>}
-    {panel?.role==='back'&&<BackPanelInspector cabinet={snapshot.committed} onCommit={commit} onCancel={store.cancel}/>}
-    {selectedIds.length===1&&panel&&<PartThumbnail key={panel.id} panel={panel} joints={evaluated.cabineo} pockets={evaluated.pockets} backBores={evaluated.backFasteners} drilling={evaluated.drilling}/>}
+    {constructionPart==='back'&&<BackPanelInspector cabinet={snapshot.committed} onCommit={commit} onCancel={store.cancel}/>}
     {cabinet.contents.some(s=>s.id===selection)?<SimpleAdjustableInspector onSelect={setSelection} committed={snapshot.committed} evaluated={evaluated} ids={selectedIds} onCommit={commit} onCancel={store.cancel} onRemove={requestRemoval} onNotice={message=>setNotice(message,true)} positionRef={el=>{shelfPosition.current=el;}}/>:<SimpleInteriorInspector cabinet={cabinet} committed={snapshot.committed} evaluated={evaluated} selection={selection} selectedIds={selectedIds} onRemove={requestRemoval} onCommit={commit} onCancel={store.cancel} onSelect={setSelection} onSelectMany={setSelectedIds} onNotice={message=>setNotice(message,true)} positionRef={el=>{shelfPosition.current=el;}}/>}
     {selectedIds.length===1&&opening&&!evaluated.divisions.some(d=>d.id===selection)&&<Section title={panel?.label??'Interior opening'}><div className="data-row"><span>Size</span><strong>{(panel?.size??opening!.size).map(n=>+n.toFixed(1)).join(' × ')} mm</strong></div><p className="field-note">{panel?'Panel size follows the cabinet dimensions.':'Clear space inside the cabinet.'}</p></Section>}
 
@@ -232,6 +246,9 @@ export function App(){
       {cabinetStepProgress&&<p className="field-note" role="status">{cabinetStepProgress}</p>}
     </Section>}
 
+    {selectedIds.length===1&&opening&&evaluated.panels.some(p=>p.role==='front-upper-rail'||p.role==='front-lower-rail')&&<ConstructionThumbnail panels={evaluated.panels.filter(p=>p.role==='front-upper-rail'||p.role==='front-lower-rail')} joints={evaluated.cabineo} pockets={evaluated.pockets} backBores={evaluated.backFasteners} drilling={evaluated.drilling}/>}
+    {selectedIds.length===1&&constructionPart&&cabinet.carcass[constructionPart].mode==='rails'&&<ConstructionThumbnail panels={evaluated.panels.filter(p=>p.role.startsWith(constructionPart==='top'?'top-':'back-'))} joints={evaluated.cabineo} pockets={evaluated.pockets} backBores={evaluated.backFasteners} drilling={evaluated.drilling}/>}
+    {selectedIds.length===1&&panel&&<PartThumbnail key={panel.id} panel={panel} joints={evaluated.cabineo} pockets={evaluated.pockets} backBores={evaluated.backFasteners} drilling={evaluated.drilling}/>}
     </InspectorSections>
    </aside>
   </main>

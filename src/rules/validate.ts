@@ -39,7 +39,7 @@ export function validate(c: Cabinet): Issue[] {
       if (record.kind !== (role === 'back' ? 'back' : 'panel')) throw new Error(`Select ${role === 'back' ? 'back-panel' : 'carcass-panel'} stock for the ${role} role.`);
     }
     for (const door of c.fronts) { const selected=binding(c,'front',door.id); if(stock(c,'front',door.id).kind!=='panel') throw new Error('Slab doors require panel stock.'); finish(selected.finish); if(!['none','u','v'].includes(selected.grain))throw new Error('Unknown front grain direction.'); }
-    const ids = new Set(['left', 'right', 'bottom', 'top', 'back', 'top-front-rail', 'top-rear-rail', 'back-upper-rail', 'back-lower-rail', 'plinth-front', 'plinth-left', 'plinth-right'].map(role => `${c.id}/panel/${role}`));
+    const ids = new Set(['left', 'right', 'bottom', 'top', 'back', 'top-front-rail', 'top-rear-rail', 'back-upper-rail', 'back-lower-rail', 'front-upper-rail', 'front-lower-rail', 'plinth-front', 'plinth-left', 'plinth-right'].map(role => `${c.id}/panel/${role}`));
     c.fronts.forEach(door => ids.add(door.id));
     c.contents.forEach(shelf => ids.add(shelf.id));
     const collect = (node: Cabinet['compartments']) => { if (node.kind === 'split') { ids.add(node.featureId); node.children.forEach(collect); } }; collect(c.compartments);

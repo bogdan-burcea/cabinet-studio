@@ -27,11 +27,13 @@ export function wallHangingCuts(c:Cabinet){
   const left=side==='left',group=`${c.id}/installation/mounting/${side}`;
   if(notch>0){
    const radius=cnc(c).bitDiameter/2;
-   if(radius>8||notch<radius)throw Error('The side notch needs at least one cutter radius of height and a cutter no wider than 16 mm for its 8 mm depth.');
-   const bottom=y+height-notch,front=z+8,px=left?x:x+width-t;
+   if(radius>8||notch<2*radius)throw Error('The side notch needs at least one cutter diameter of height and a cutter no wider than 16 mm for its 8 mm depth.');
+   const top=y+height-t,bottom=top-notch,front=z+8,px=left?x:x+width-t;
    const outline:import('../domain/cabinet').Vec3[]=[[px,bottom,z],[px,bottom,front-radius]];
    for(let i=1;i<=16;i++){const angle=-Math.PI/2+i*Math.PI/32;outline.push([px,bottom+radius+Math.sin(angle)*radius,front-radius+Math.cos(angle)*radius]);}
-   outline.push([px,y+height,front],[px,y+height,z]);
+   outline.push([px,top-radius,front]);
+   for(let i=1;i<=16;i++){const angle=i*Math.PI/32;outline.push([px,top-radius+Math.sin(angle)*radius,front-radius+Math.cos(angle)*radius]);}
+   outline.push([px,top,z]);
    pockets.push({id:`${group}/side-notch`,panelId:`${c.id}/panel/${side}`,kind:'hanger-access',axis:0,face:left?1:-1,origin:[px,bottom,z],size:[t,notch,8],outline});
   }
 

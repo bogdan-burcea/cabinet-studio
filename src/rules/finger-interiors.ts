@@ -17,7 +17,7 @@ export function fingerInteriors<P extends JoineryPanel>(c:Cabinet,input:P[],cons
    const target=input.find(p=>p.id!==id&&(p.orientation==='xz'?1:p.orientation==='yz'?0:2)===edge&&
     Math.abs((side===-1?high(p,edge):low(p,edge))-boundary)<.001&&
     low(p,normal)<=low(original,normal)+.001&&high(p,normal)>=high(original,normal)-.001);
-   if(!target)throw Error('An interior finger joint needs a supporting panel at each end.');
+   if(!target||low(target,2)>rear+.001||high(target,2)<front-.001)throw Error('Interior finger joints need continuous supporting panels at both ends. Use butt joints for the divider or restore a full top.');
    return {side,boundary,target};
   });
   // Both ends use the same schedule. Leave solid stock between the new

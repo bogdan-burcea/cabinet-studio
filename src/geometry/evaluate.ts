@@ -27,7 +27,7 @@ import { resolveMounting } from '../rules/mounting';
 import { resolveInstallation } from '../rules/installation';
 import { resolveConstruction } from '../rules/construction';
 import { resolveInteriors, type Division, type Opening } from '../rules/interiors';
-export const EVALUATOR_REVISION = 't-bone-seats-41';
+export const EVALUATOR_REVISION = 'rail-count-fit-48';
 export interface Panel extends ReturnType<typeof panelMaterials> {
   id: string; role: PanelRole; label: string; size: Vec3; center: Vec3; materialRole: MaterialRole;
   provenance: string; orientation: 'yz' | 'xz' | 'xy'; constructionPart?: 'top' | 'back'; installationPart?: 'plinth';

@@ -132,7 +132,7 @@ test('schema 21 preserves stock/finish/grain pins, inheritance, dormant settings
   c = changeMaterial(c, 'interior', { ...binding('generic-panel-16'), finish: pin('white-concept'), grain: 'v' });
   c = setBanding(c, panel.id, 'v-max', pin('generic-edge-2'));
   c = setBanding(c, `${c.id}/panel/back`, 'u-min', pin('generic-edge-1'));
-  const text = serialize(c); assert.equal(JSON.parse(text).schemaVersion, 41);
+  const text = serialize(c); assert.equal(JSON.parse(text).schemaVersion, 48);
   const reopened = deserialize(text); assert.deepEqual(reopened, c); assert.deepEqual(evaluate(reopened), evaluate(c));
 });
 

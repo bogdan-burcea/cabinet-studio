@@ -139,6 +139,14 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
         <Icon name={elementIcon(p.panel.role)} size={20}/><span>{p.label}</span>
        </button>)}
       </StructureGroup>}
+    {offcutIndex<0&&part&&preview&&<Section title="Machining face">
+     <PartDrawing preview={preview} label={part.label}/>
+     <div className="data-row"><span>Cabinet orientation</span><strong>{orientation}</strong></div>
+     <div className="data-row"><span>Placement</span><strong>{sheetPosition}</strong></div>
+     <div className="data-row"><span>Blank</span><strong>{dimensions} mm</strong></div>
+     {part.twoSided&&<Button className="full-width-button" onClick={()=>setReverse(!reverse)}>{other?'Show sheet face':'Show other face'}</Button>}
+     {!sheetOfPart&&<Button onClick={()=>choose(`group/${part.stockKey}`)}>Edit matching stock size</Button>}
+    </Section>}
    </aside>
    <div className="canvas-area">
     <CncViewport onRotatePart={part&&placement?rotatePart:undefined} selectedIds={selectedIds.length?selectedIds:[entry?.id??'']} scene={scene} selection={part?.id??(offcutIndex>=0?selected:entry?.id)??''} reverse={other} theme={theme} onSelect={choose}/>
@@ -151,14 +159,7 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
     {offcutIndex>=0&&entry?<Section title="Offcut">
      <div className="data-row"><span>Size</span><strong>{offcuts.get(entry.id)?.[offcutIndex]?.width} × {offcuts.get(entry.id)?.[offcutIndex]?.height} × {entry.thickness} mm</strong></div>
      <Button onClick={()=>choose(entry.id)}>Sheet settings</Button>
-    </Section>:part&&preview?<Section title="Machining face">
-     <PartDrawing preview={preview} label={part.label}/>
-     <div className="data-row"><span>Cabinet orientation</span><strong>{orientation}</strong></div>
-     <div className="data-row"><span>Placement</span><strong>{sheetPosition}</strong></div>
-     <div className="data-row"><span>Blank</span><strong>{dimensions} mm</strong></div>
-     {part.twoSided&&<Button className="full-width-button" onClick={()=>setReverse(!reverse)}>{other?'Show sheet face':'Show other face'}</Button>}
-     {!sheetOfPart&&<Button onClick={()=>choose(`group/${part.stockKey}`)}>Edit matching stock size</Button>}
-    </Section>:options&&<><Section title={shared?'Shared stock settings':'Stock sheet'} aside={<span className="unit-badge">mm</span>}>
+    </Section>:part&&preview?null:options&&<><Section title={shared?'Shared stock settings':'Stock sheet'} aside={<span className="unit-badge">mm</span>}>
      {shared&&<p className="field-note">Changes apply to every selected stock type. Sheets of the same stock share settings.{sharedMixed?' Values differ; each edited field updates the selection.':''}</p>}
      <div className="data-row"><span>Material</span><strong>{activeGroup?.entries[0].material}</strong></div>
      <label className="construction-choice">Sheet size<span className="select select--fluid"><select aria-label="Sheet size"
@@ -196,6 +197,14 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
       {toolParts.some(p=>p.twoSided||p.edgeOperations)&&<p className="field-note">Some cuts require a reverse-face or edge setup.</p>}
       {!!review.length&&<Button onClick={()=>onReview(part?.id)}>Review machining checks in Box</Button>}
      </Section>}
+    {offcutIndex<0&&part&&preview&&<Section title="Machining face">
+     <PartDrawing preview={preview} label={part.label}/>
+     <div className="data-row"><span>Cabinet orientation</span><strong>{orientation}</strong></div>
+     <div className="data-row"><span>Placement</span><strong>{sheetPosition}</strong></div>
+     <div className="data-row"><span>Blank</span><strong>{dimensions} mm</strong></div>
+     {part.twoSided&&<Button className="full-width-button" onClick={()=>setReverse(!reverse)}>{other?'Show sheet face':'Show other face'}</Button>}
+     {!sheetOfPart&&<Button onClick={()=>choose(`group/${part.stockKey}`)}>Edit matching stock size</Button>}
+    </Section>}
    </aside>
   </>}
  </div>;
