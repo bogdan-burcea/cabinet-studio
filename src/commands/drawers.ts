@@ -18,7 +18,7 @@ export function addMetalDrawer(c:Cabinet,openingId:string,packPin=antaroPin){
  const id=crypto.randomUUID(),drawer:MetalDrawer={id,kind:'metal-drawer',policyRevision:'antaro-external-1',pack:{...packPin},openingId,offset,frontHeight:height};
  const cabinet={...c,drawers:[...(c.drawers??[]),drawer]};evaluate(cabinet);return {cabinet,featureId:id};
 }
-export function updateMetalDrawer(c:Cabinet,id:string,patch:Partial<Pick<MetalDrawer,'offset'|'frontHeight'|'front'|'pack'>>){if(!c.drawers?.some(d=>d.id===id))throw new Error('Select an existing drawer.');const next={...c,drawers:c.drawers.map(d=>d.id===id?{...d,...patch}:d)};evaluate(next);return next;}
+export function updateMetalDrawer(c:Cabinet,id:string,patch:Partial<Pick<MetalDrawer,'offset'|'frontHeight'|'front'|'pack'|'manualRail'>>){if(!c.drawers?.some(d=>d.id===id))throw new Error('Select an existing drawer.');const next={...c,drawers:c.drawers.map(d=>d.id===id?{...d,...patch}:d)};evaluate(next);return next;}
 export function removeMetalDrawer(c:Cabinet,id:string){
  const removed=c.drawers?.find(d=>d.id===id),drawers=(c.drawers??[]).filter(d=>d.id!==id).map(d=>structuredClone(d));
  for(const groupId of new Set(drawers.flatMap(d=>d.stack?[d.stack.groupId]:[]))){
@@ -31,7 +31,7 @@ export function removeMetalDrawer(c:Cabinet,id:string){
  const next={...c,drawers:layoutDrawerIntents({...c,drawers})};evaluate(next);return next;
 }
 
-type DrawerPatch=Partial<Pick<MetalDrawer,'offset'|'frontHeight'|'front'|'pack'>>;
+type DrawerPatch=Partial<Pick<MetalDrawer,'offset'|'frontHeight'|'front'|'pack'|'manualRail'>>;
 export function editDrawerGroup(c:Cabinet,ids:string[],patch:DrawerPatch){
  const chosen=new Set(ids);
  if(!ids.length||ids.some(id=>!c.drawers?.some(d=>d.id===id)))throw Error('Select existing drawers.');
@@ -97,12 +97,12 @@ export function duplicateDrawers(c:Cabinet,ids:string[]){
 }
 
 /** Fill one opening in a single transaction; front height zero means automatic. */
-export function addDrawerStack(c:Cabinet,openingId:string,count:number,packPin=antaroPin){
+export function addDrawerStack(c:Cabinet,openingId:string,count:number,packPin=antaroPin,manualRail=false){
  if(!Number.isInteger(count)||count<1||count>16)throw Error('Choose 1–16 drawers.');
  const opening=drawerOpenings(c).find(o=>o.id===openingId);if(!opening)throw Error('Choose an opening.');
  if(c.drawers?.some(d=>d.openingId===openingId))throw Error('This opening already has drawers. Duplicate an existing drawer to add to its stack.');
  const groupId=crypto.randomUUID(),featureIds:string[]=Array.from({length:count},()=>crypto.randomUUID());
- let cabinet:Cabinet={...c,drawers:[...(c.drawers??[]),...featureIds.map((id,order)=>({id,kind:'metal-drawer' as const,policyRevision:'antaro-external-1' as const,pack:{...packPin},openingId,offset:0,frontHeight:0,stack:{groupId,order,height:0}}))]};
+ let cabinet:Cabinet={...c,drawers:[...(c.drawers??[]),...featureIds.map((id,order)=>({id,kind:'metal-drawer' as const,policyRevision:'antaro-external-1' as const,pack:{...packPin},...manualRail?{manualRail:true}:{},openingId,offset:0,frontHeight:0,stack:{groupId,order,height:0}}))]};
  cabinet={...cabinet,drawers:layoutDrawerIntents(cabinet)};
  cabinet={...cabinet,drawers:cabinet.drawers!.map(d=>featureIds.includes(d.id)?{...d,...c.frontDefaults?{cornerRadius:c.frontDefaults.cornerRadius}:{},front:{...recommendedDrawerFront(cabinet,d,'overlay'),gap:c.frontDefaults?.edgeGap??2,clearance:c.frontDefaults?.frontGap??2}}:d)};
  return {cabinet:fitDrawerRails({...cabinet,drawers:layoutDrawerIntents(cabinet)}),featureIds};

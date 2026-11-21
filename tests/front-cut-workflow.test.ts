@@ -15,14 +15,14 @@ import {cabinetForExport} from '../src/cnc/sheet-export.ts';
 import {editRepairs} from '../src/commands/edit-repairs.ts';
 import {serialize,deserialize} from '../src/persistence/files.ts';
 const stack=()=>{const c=createCabinet();return addDrawerStack(c,c.compartments.id,3);};
-test('moving a blank constrains its sheet, repacks neighbours and preserves requested quarter turns without overlap',()=>{
+test('quarter-turn choices retain automatic sheet placement without overlap',()=>{
  const parts=Array.from({length:5},(_,i)=>({id:'p'+i,label:'P'+i,width:300,height:200,grain:'none' as const})),stock={...defaultSheet,width:800,height:600,gap:10};
- const result=nestAssignedStock(parts,stock,{p0:{sheet:1,rotated:true}});
- const placed=result.sheets[1].placements.find(p=>p.part.id==='p0')!;assert.ok(placed.rotated);assert.equal(placed.width,200);
+ const result=nestAssignedStock(parts,stock,{p0:{rotated:true}});
+ const placed=result.sheets.flatMap(s=>s.placements).find(p=>p.part.id==='p0')!;assert.ok(placed.rotated);assert.equal(placed.width,200);
  assert.equal(result.sheets.flatMap(s=>s.placements).length,5);
  for(const sheet of result.sheets)for(const [i,a] of sheet.placements.entries())for(const b of sheet.placements.slice(i+1))assert.ok(a.x+a.width+stock.gap<=b.x+.001||b.x+b.width+stock.gap<=a.x+.001||a.y+a.height+stock.gap<=b.y+.001||b.y+b.height+stock.gap<=a.y+.001);
- assert.throws(()=>nestAssignedStock([{...parts[0],width:1000}],stock,{p0:{sheet:0}}),/cannot fit/);
- assert.throws(()=>nestAssignedStock([{...parts[0],grain:'u'}],stock,{p0:{sheet:0,rotated:true}}),/cannot fit/);
+ assert.throws(()=>nestAssignedStock([{...parts[0],width:1000}],stock,{p0:{rotated:true}}),/cannot fit/);
+ assert.throws(()=>nestAssignedStock([{...parts[0],grain:'u'}],stock,{p0:{rotated:true}}),/cannot fit/);
 });
 test('batch fixed shelves and dividers create equal clear openings in a single candidate and preserve unrelated intent',()=>{
  for(const kind of ['fixed','divider'] as const){const c=createCabinet(),next=addInteriorBatch(c,[c.compartments.id],kind,10,3);const model=evaluate(next.cabinet),axis=kind==='fixed'?1:0;assert.equal(next.featureIds.length,3);assert.equal(model.openings.length,4);assert.ok(Math.max(...model.openings.map(o=>o.size[axis]))-Math.min(...model.openings.map(o=>o.size[axis]))<.3);assert.deepEqual(next.cabinet.installation,c.installation);assert.equal(model.divisions.every(d=>Math.abs(d.origin[2]+d.size[2]-(c.envelope.depth-10))<.001),true);assert.deepEqual(deserialize(serialize(next.cabinet)),next.cabinet);}

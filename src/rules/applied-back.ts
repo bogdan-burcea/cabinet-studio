@@ -1,8 +1,8 @@
-import {woodPilotDiameter} from '../catalogue/pilots';
+import {pilotDiameter} from '../catalogue/pilots';
 import type {Cabinet} from '../domain/cabinet';
 import {stock} from '../catalogue/materials';
 import type {CabineoBore} from './cabineo';
-export function backPilotLimits(c:Cabinet,diameter=woodPilotDiameter){
+export function backPilotLimits(c:Cabinet,diameter=pilotDiameter(c)){
  const t=stock(c,'carcass').thickness;return {maxDiameter:Math.floor(t/3*10)/10,minPitch:Math.max(t,diameter*3)};
 }
 export function backPilotCounts(c:Cabinet){
@@ -11,7 +11,7 @@ export function backPilotCounts(c:Cabinet){
 }
 export function backPilots(c:Cabinet):CabineoBore[]{
  const j=c.carcass.back.joint;if(j?.mode!=='applied')return [];
- const b=stock(c,'back').thickness,t=stock(c,'carcass').thickness,limits=backPilotLimits(c,j.pilots?.diameter),p=j.pilots??{revision:'back-pilot-1',spacing:200,diameter:Math.min(woodPilotDiameter,limits.maxDiameter)};
+ const b=stock(c,'back').thickness,t=stock(c,'carcass').thickness,limits=backPilotLimits(c,j.pilots?.diameter),p=j.pilots??{revision:'back-pilot-1',spacing:200,diameter:Math.min(pilotDiameter(c),limits.maxDiameter)};
  if(p.revision!=='back-pilot-1'||!Number.isFinite(p.spacing)||p.spacing<20||p.spacing>2000||Math.abs(p.spacing*10-Math.round(p.spacing*10))>1e-6||!Number.isFinite(p.diameter)||p.diameter<.5||p.diameter>limits.maxDiameter||Math.abs(p.diameter*10-Math.round(p.diameter*10))>1e-6)throw Error(`Applied-back pilots need minimum spacing 20–2000 mm and diameter 0.5–${limits.maxDiameter} mm (carcass thickness / 3).`);
  const {width:w,height:h,origin:[ox,oy,oz]}=c.envelope,counts=backPilotCounts(c),bores:CabineoBore[]=[];
  for(const [edge,span] of [['left',h],['right',h],['bottom',w],['top',w]] as const){

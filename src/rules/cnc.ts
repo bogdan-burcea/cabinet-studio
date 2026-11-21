@@ -3,6 +3,7 @@ export type {CncSettings} from '../domain/cabinet';
 export const defaultCnc:CncSettings={revision:'cnc-1',tolerance:.2,bitDiameter:6,dogbones:false,throughOpposed:true,cabineoPerSide:0};
 export function cnc(c:Cabinet):CncSettings{return c.carcass.machining??defaultCnc;}
 export function validateCnc(c:Cabinet){const v=cnc(c);
+ if(v.pilotDiameter!==undefined&&(!Number.isFinite(v.pilotDiameter)||v.pilotDiameter<.5||v.pilotDiameter>6||Math.abs(v.pilotDiameter*10-Math.round(v.pilotDiameter*10))>1e-6))throw Error('Use a wood pilot diameter of 0.5–6 mm in 0.1 mm steps.');
  const rows=v.shelfRowInsets;
  if(rows!==undefined&&(!rows||Object.keys(rows).length!==2||![rows.front,rows.rear].every(n=>Number.isFinite(n)&&n>=3&&n<=600&&Math.abs(n*10-Math.round(n*10))<1e-6)))throw Error('Use front and rear shelf row insets of 3–600 mm.');
  if(v.bottomFastenersThrough!==undefined&&(typeof v.bottomFastenersThrough!=='boolean'||v.bottomFastenersThrough&&v.bottomFace==='inside'))throw Error('Through fastener cuts require the outside bottom face.');

@@ -18,7 +18,7 @@ export function joineryPanels(c:Cabinet):JoineryPanel[]{
 const lo=(p:JoineryPanel,a:number)=>p.center[a]-p.size[a]/2;
 const hi=(p:JoineryPanel,a:number)=>p.center[a]+p.size[a]/2;
 const normal=(p:JoineryPanel)=>p.orientation==='yz'?0:1;
-export function resolveCabineo(c:Cabinet,panels=joineryPanels(c)):CabineoJoint[]{
+export function resolveCabineo(c:Cabinet,panels=joineryPanels(c),fixedBores:CabineoBore[]=[]):CabineoJoint[]{
  if(!validHardware(c.hardware))throw Error('Unsupported fastener or revision.');
  if(!c.hardware.length)return [];
  if(c.carcass.top.mode!=='full'||c.carcass.back.mode!=='full')throw Error('Cabineo needs a full top and back panel.');
@@ -32,7 +32,12 @@ export function resolveCabineo(c:Cabinet,panels=joineryPanels(c)):CabineoJoint[]
  // with incoming bores and blind seating, rather than arbitrarily using the right face.
  const required=new Map<string,Set<number>>();
  const requireFace=(id:string,face:number)=>{const faces=required.get(id)??new Set<number>();faces.add(face);required.set(id,faces);};
- for(const bore of shelfDrilling(c,panels,resolveInteriors(c,stock(c,'carcass').thickness,stock(c,'back').thickness,stock(c,'interior').thickness).openings))requireFace(bore.panelId,-bore.sign);
+ // Only blind broad-face cuts constrain the setup. Through adjustment rows
+ // can be machined from either side; drawer/hinge pilots cannot.
+ for(const bore of [...fixedBores,...shelfDrilling(c,panels,resolveInteriors(c,stock(c,'carcass').thickness,stock(c,'back').thickness,stock(c,'interior').thickness).openings)]){
+  const panel=structural.find(p=>p.id===bore.panelId);
+  if(panel&&!bore.through&&bore.axis===normal(panel)&&bore.depth<panel.size[bore.axis]-.001)requireFace(panel.id,-bore.sign);
+ }
  for(const pocket of resolveConstruction(c,stock(c,'carcass').thickness,stock(c,'back').thickness).pockets){const p=structural.find(p=>p.id===pocket.panelId);if(p&&pocket.size[pocket.axis]<p.size[pocket.axis]-.001)requireFace(p.id,pocket.face);}
  for(const host of hosts){const edgeAxis=1-normal(host);for(const side of [-1,1]){const edge=side===-1?lo(host,edgeAxis):hi(host,edgeAxis);const receiver=structural.find(p=>p.id!==host.id&&normal(p)===edgeAxis&&Math.abs((side===-1?hi(p,edgeAxis):lo(p,edgeAxis))-edge)<.001&&lo(p,normal(host))<=lo(host,normal(host))+.001&&hi(p,normal(host))>=hi(host,normal(host))-.001);if(receiver)requireFace(receiver.id,-side);}}
  for(const host of hosts){

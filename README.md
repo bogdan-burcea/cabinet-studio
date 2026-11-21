@@ -81,3 +81,11 @@ The current interface uses official `@ebay/skin` 19.39.0 components/tokens, self
 GitHub Pages is configured with GitHub Actions. The workflow can also be run manually from Actions → Test and publish Cabinet Studio. The build uses relative asset paths so fonts and icons work under `/cabinet-studio/`. Dependencies and Node are pinned.
 
 Cabinet drafts stay in each browser/origin. To move an existing local draft online, use Save in the local app and Open in the hosted app. Deployment does not upload saved cabinets or connect a backend.
+
+### Local costs
+
+Open the settings icon beside Undo/Redo for **Utilities**. The **Costs** tab uses manual unit prices and full sheet quantities from Cut. Estimate includes reusable offcut value (rectangles at least 150 × 150 mm); opt in to deduct it before profit. Hardware quantities follow the cabinet; labour and profit (% of costs) are editable. RON is fixed. Empty prices display a dash and mark the estimate partial. CSV includes category totals and profit.
+
+Draft estimates save in this browser per cabinet ID. **Save defaults** reuses rates, pricing basis and profit for new estimates on this device. Existing prices survive removal of store integration; product links and fetching are removed. Cabinet JSON does not contain the price book. Delivery and separate tax/discount rules are not added.
+
+The **Part labels** tab provides label/page sizes, margins, horizontal/vertical gaps and skipping used labels. Export every cut part and reusable offcut as grayscale thumbnail/QR labels, followed by numbered sheet maps. Details appear directly on the sheets; no separate part lists or cabinet arrangement pages. A calibration-sheet PDF remains available. Print at actual size (100%). Set an app address reachable from your phone; QR links select the part after opening its matching cabinet file. Label stock settings remain in this browser.

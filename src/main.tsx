@@ -18,6 +18,7 @@ import '@ebay/skin/radio.css';
 import '@ebay/skin/segmented-buttons.css';
 import '@ebay/skin/tabs.css';
 import '@ebay/skin/section-notice.css';
+import '@ebay/skin/education-notice.css';
 import '@ebay/skin/snackbar-dialog.css';
 import '@ebay/skin/lightbox-dialog.css';
 import '@ebay/skin/table.css';

@@ -1,4 +1,4 @@
-export interface CncSettings {revision:'cnc-1';tolerance:number;bitDiameter:number;dogbones:boolean;throughOpposed:boolean;cabineoPerSide:number;shelfRowInsets?:{front:number;rear:number};rearChamfers?:Record<string,{low?:number;high?:number}>;bottomFace?:'inside'|'outside';bottomFastenersThrough?:boolean;throughHoles?:Record<string,'fasteners'|'adjustment'>}
+export interface CncSettings {revision:'cnc-1';pilotDiameter?:number;tolerance:number;bitDiameter:number;dogbones:boolean;throughOpposed:boolean;cabineoPerSide:number;shelfRowInsets?:{front:number;rear:number};rearChamfers?:Record<string,{low?:number;high?:number}>;bottomFace?:'inside'|'outside';bottomFastenersThrough?:boolean;throughHoles?:Record<string,'fasteners'|'adjustment'>}
 export type Axis = 'width' | 'height' | 'depth';
 export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back' | 'shelf' | 'divider' | 'top-front-rail' | 'top-rear-rail' | 'back-upper-rail' | 'back-lower-rail' | 'plinth-front' | 'plinth-left' | 'plinth-right' | 'door';
 export interface Carcass {
@@ -26,7 +26,7 @@ export type EdgeBanding = Record<string, Partial<Record<EdgeKey, ProductPin>>>;
 export function defaultBinding(stock: ProductPin): MaterialBinding { return { stock, finish: { id: 'unspecified', revision: '1' }, grain: 'none' }; }
 export interface Mounting {
   mode: 'none' | 'restraint-concept' | 'suspended-concept'; policyRevision: 'mounting-1'; geometry: ProductPin;
-  wallGap: number; topOffset: number; sideInset: number; floorClearance: number;
+  sideNotch?:number;wallGap: number; topOffset: number; sideInset: number; floorClearance: number;
 }
 export function defaultMounting(): Mounting {
   return { mode: 'none', policyRevision: 'mounting-1', geometry: { id: 'concept-wall-layout', revision: '1' }, wallGap: 30, topOffset: 60, sideInset: 60, floorClearance: 300 };
@@ -60,6 +60,7 @@ export interface MetalDrawer {
   id:string; kind:'metal-drawer'; policyRevision:'antaro-external-1'; pack:ProductPin;
   openingId:string; offset:number; frontHeight:number;
   cornerRadius?:number;
+  manualRail?:boolean;
   handle?:SlabDoor['handle'];
   stack?:{groupId:string;order:number;height:number};
   front?:{placement:'inset'|'overlay';gap:number;clearance:number;left:number;right:number;top:number;bottom:number};

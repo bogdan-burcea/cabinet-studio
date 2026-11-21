@@ -28,7 +28,7 @@ export function fingerInteriors<P extends JoineryPanel>(c:Cabinet,input:P[],cons
    if(cut.panelId!==target.id||(!cut.id.includes('/back-seat/')&&!cut.id.includes('/back-finger/')))continue;
    if(cut.origin[normal]>high(original,normal)+tol/2+relief||
     cut.origin[normal]+cut.size[normal]<low(original,normal)-tol/2-relief)continue;
-   const end=cut.origin[2]+cut.size[2];
+   const end=Math.max(cut.origin[2]+cut.size[2],...(cut.reliefs??[]).map(r=>r.center[2]+r.radius));
    const safeStart=end+rearFingerClearance+2*relief+tol/2;
    if(safeStart>rear)start=Math.max(start,safeStart,rear+(tool.dogbones?tool.bitDiameter:0));
   }

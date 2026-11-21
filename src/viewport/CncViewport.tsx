@@ -9,7 +9,7 @@ import type {CncScene} from './cnc-scene';
 
 interface Props {
   scene: CncScene;
-  onMovePart?(partId:string,sheetId:string):void;onRotatePart?():void;
+  onRotatePart?():void;
   selection: string;
   selectedIds?:string[];
   reverse: boolean;
@@ -17,8 +17,8 @@ interface Props {
   onSelect(id: string,additive?:boolean): void;
 }
 
-export function CncViewport({scene, selection, selectedIds, reverse, theme, onSelect,onMovePart,onRotatePart}: Props) {
-  const rotateButton=useRef<HTMLButtonElement>(null),move=useRef(onMovePart);move.current=onMovePart;
+export function CncViewport({scene, selection, selectedIds, reverse, theme, onSelect,onRotatePart}: Props) {
+  const rotateButton=useRef<HTMLButtonElement>(null);
  const host = useRef<HTMLDivElement>(null), toolbar = useRef<HTMLDivElement>(null);
   const sheetLabels=useRef(new Map<string,HTMLButtonElement>());
   const viewport = useRef<CabinetViewport | null>(null);
@@ -33,7 +33,7 @@ export function CncViewport({scene, selection, selectedIds, reverse, theme, onSe
     try {
       const instance = new CabinetViewport(host.current!, {
         usableHeight: () => Math.max(80, (toolbar.current?.offsetTop ?? host.current!.clientHeight) - 16),
-        cncMovePart:(part,sheet)=>move.current?.(part,sheet),cncPartAnchor:point=>{const button=rotateButton.current;if(button){button.style.visibility=point?'visible':'hidden';if(point){button.style.left=point.x+'px';button.style.top=(point.y-24)+'px';}}},
+        cncPartAnchor:point=>{const button=rotateButton.current;if(button){button.style.visibility=point?'visible':'hidden';if(point){button.style.left=point.x+'px';button.style.top=(point.y-24)+'px';}}},
         select: (id,additive) => select.current(id,additive), dragStart: ignore, preview: ignore, commit: ignore, cancel: ignore,
         cncAnchors: anchors=>{for(const {id,x,y} of anchors){const label=sheetLabels.current.get(id);if(label){label.style.left=x+'px';label.style.top=y+'px';label.style.visibility='visible';}}},
         anchors: ignore, divisionAnchor: ignore, previewDivision: ignore,

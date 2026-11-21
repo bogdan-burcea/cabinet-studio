@@ -29,9 +29,10 @@ export function SimpleDrawerInspector({cabinet,model,id,ids,partId,onSelectMany,
  const board=flatParts.find(p=>p.id===partId)??flatParts.find(p=>p.id===`${anchor}/front`);
  const opening=model.openings.find(o=>o.id===intent.openingId)!;
  const front=intent.front??{placement:'overlay',gap:2,clearance:2,left:0,right:0,top:0,bottom:0};
- function edit(patch:Partial<Pick<MetalDrawer,'offset'|'frontHeight'|'front'|'pack'>>){
+ function edit(patch:Partial<Pick<MetalDrawer,'offset'|'frontHeight'|'front'|'pack'|'manualRail'>>){
   try{return commit(editDrawerGroup(cabinet,ids,patch));}catch(e){notice((e as Error).message);return false;}
  }
+ const editableHeights=ids.some(id=>{const d=cabinet.drawers?.find(d=>d.id===id);return d?.stack&&d.stack.order<Math.max(...cabinet.drawers!.filter(v=>v.stack?.groupId===d.stack!.groupId).map(v=>v.stack!.order));});
  const optimal=recommendedDrawerFront(cabinet,intent,'overlay'),showOverlap=customOverlap||(['left','right','top','bottom'] as const).some(k=>front[k]!==optimal[k]);
  const frontField=(key:'gap'|'clearance'|'left'|'right'|'top'|'bottom',label:string)=><DimensionField plain step={.1} key={key} label={label}
   value={front[key]} cancelValue={front[key]} limits={{min:0,max:key==='gap'||key==='clearance'?10:50}}
@@ -53,9 +54,9 @@ export function SimpleDrawerInspector({cabinet,model,id,ids,partId,onSelectMany,
  return <>
   {mixed&&<p className="field-note">Selected drawers have different settings. Changing a field sets that value for the selection.</p>}
   <Section title={ids.length>1?'Shared drawer settings':'Drawer'}>
-   <DrawerPackFields automatic value={intent.pack} onChange={pin=>{
+   <DrawerPackFields automatic={!intent.manualRail} value={intent.pack} onChange={(pin,manual)=>{
     const selected=drawerPack(pin);
-    edit({pack:pin,...!intent.stack?{frontHeight:Math.max(intent.frontHeight,selected.minimumHeight)}:{}});
+    edit({pack:pin,...manual!==undefined?{manualRail:manual}:{},...!intent.stack?{frontHeight:Math.max(intent.frontHeight,selected.minimumHeight)}:{}});
    }}/>
 
    {!intent.stack&&<>   <FieldPair>{(['offset','frontHeight'] as const).map(key=><DimensionField plain key={key} label={key==='offset'?'Bottom offset':'Allocation height'}
@@ -65,14 +66,14 @@ export function SimpleDrawerInspector({cabinet,model,id,ids,partId,onSelectMany,
   </Section>
   <Section title={ids.length>1?'Shared front features':'Drawer front'}>
    {ids.length===1&&<FieldPair>
-    <DimensionField plain label="Width" disabled={front.placement==='inset'} value={drawer.front[0]} cancelValue={drawer.front[0]} limits={{min:80,max:cabinet.envelope.width}} onPreview={()=>{}} onCommit={width=>{
-     const extra=(width-drawer.front[0])/2;
-     return edit({front:{...front,left:front.left+extra,right:front.right+extra}});
-    }} onCancel={()=>{}}/>
-    <DimensionField plain label="Height" disabled={bottom} value={bottom?drawer.front[1]:intent.stack?.height??drawer.front[1]} cancelValue={bottom?drawer.front[1]:intent.stack?.height??drawer.front[1]} limits={{min:intent.stack?0:98.5,max:opening.size[1]+50}} onPreview={()=>{}} onCommit={heightEdit} onCancel={()=>{}}/>
+    <DimensionField plain hideControls label={bottom?'Height · auto':'Height'} accessibleLabel="Drawer front height" disabled={bottom} value={bottom?drawer.front[1]:intent.stack?.height??drawer.front[1]} cancelValue={bottom?drawer.front[1]:intent.stack?.height??drawer.front[1]} limits={{min:intent.stack?0:98.5,max:opening.size[1]+50}} onPreview={()=>{}} onCommit={heightEdit} onCancel={()=>{}}/>
+    <DimensionField plain label="Width" accessibleLabel="Drawer front width" disabled hideControls value={drawer.front[0]} cancelValue={drawer.front[0]} limits={{min:drawer.front[0],max:drawer.front[0]}} onPreview={()=>{}} onCommit={()=>false} onCancel={()=>{}}/>
    </FieldPair>}
-   {ids.length>1&&intent.stack&&<DimensionField plain label="Front height" value={intent.stack.height} cancelValue={intent.stack.height} limits={{min:0,max:opening.size[1]+50}} onPreview={()=>{}} onCommit={heightEdit} onCancel={()=>{}}/>}
-   {intent.stack&&<p className="field-note">{bottom?`Bottom front fills the remaining space: ${+drawer.front[1].toFixed(1)} mm.`:`Enter 0 for automatic sizing · current front ${+drawer.front[1].toFixed(1)} mm.`}</p>}
+   {ids.length>1&&intent.stack&&<FieldPair><DimensionField plain hideControls label={editableHeights?'Front height':'Front height · auto'} disabled={!editableHeights} value={editableHeights?intent.stack.height:drawer.front[1]} cancelValue={editableHeights?intent.stack.height:drawer.front[1]} limits={{min:0,max:opening.size[1]+50}} onPreview={()=>{}} onCommit={heightEdit} onCancel={()=>{}}/></FieldPair>}
+   <p className="field-note">Width follows the opening, edge clearance and frame coverage.</p>
+   {intent.stack&&<p className="field-note">{bottom?`${cabinet.drawers!.filter(d=>d.stack?.groupId===intent.stack!.groupId).length===1?'The only front fills the opening':'Bottom front fills the remaining space'}: ${+drawer.front[1].toFixed(1)} mm.`:`Enter 0 for automatic sizing · current front ${+drawer.front[1].toFixed(1)} mm.`}</p>}
+   {/* Height allocation remains automatic for the bottom front. */}
+
    <label className="construction-choice">Placement<span className="select select--fluid"><select aria-label="Drawer front placement" value={front.placement} onChange={e=>{
     const placement=e.target.value as 'overlay'|'inset';
     try{
@@ -82,9 +83,10 @@ export function SimpleDrawerInspector({cabinet,model,id,ids,partId,onSelectMany,
    <FieldPair>{frontField('gap','Edge clearance')}{frontField('clearance','Front stand-off')}</FieldPair>
    {front.placement==='overlay'&&<><label className="construction-choice">Frame coverage<span className="select select--fluid"><select aria-label="Frame coverage" value={showOverlap?'custom':'frame'} onChange={e=>{if(e.target.value==='custom')setCustomOverlap(true);else {setCustomOverlap(false);commit(setDrawerPlacement(cabinet,ids,'overlay'));}}}><option value="frame">Cover cabinet frame</option><option value="custom">Custom edge overlaps</option></select><Icon name="chevron" size={12}/></span></label>{showOverlap&&<><FieldPair>{frontField('left','Left overlap')}{frontField('right','Right overlap')}</FieldPair>
     <FieldPair>{frontField('top','Top overlap')}{frontField('bottom','Bottom overlap')}</FieldPair></>}</>}
+   <FieldPair><DimensionField plain hideControls label="Corner radius" value={intent.cornerRadius??0} cancelValue={intent.cornerRadius??0} limits={{min:0,max:Math.min(...drawer.front.slice(0,2))/2}} step={.1} onPreview={()=>{}} onCommit={n=>commit({...cabinet,drawers:cabinet.drawers!.map(d=>ids.includes(d.id)?{...d,cornerRadius:n}:d)})} onCancel={()=>{}}/></FieldPair>
    {ids.length===1&&<div className="data-row"><span>Front size</span><strong>{drawer.front.map(n=>+n.toFixed(1)).join(' × ')} mm</strong></div>}
   </Section>
-  <Section title="Front corners"><FieldPair><DimensionField plain label="Corner radius" value={intent.cornerRadius??0} cancelValue={intent.cornerRadius??0} limits={{min:0,max:Math.min(...drawer.front.slice(0,2))/2}} step={.1} onPreview={()=>{}} onCommit={n=>commit({...cabinet,drawers:cabinet.drawers!.map(d=>ids.includes(d.id)?{...d,cornerRadius:n}:d)})} onCancel={()=>{}}/></FieldPair></Section>
+
   <HandleFields drawer handle={intent.handle??defaultDrawerHandle()} onCancel={()=>{}} onChange={patch=>{try{return commit({...cabinet,drawers:cabinet.drawers!.map(d=>ids.includes(d.id)?{...d,handle:{...(d.handle??defaultDrawerHandle()),...patch}}:d)});}catch(error){notice((error as Error).message);return false;}}}/>
   <Section title="Duplicate">   <div className="interior-actions"><Button onClick={()=>{try{const next=duplicateDrawers(cabinet,ids);if(commit(next.cabinet))onSelectMany(next.featureIds);}catch(error){notice((error as Error).message);}}}>Duplicate {ids.length>1?'group':'drawer'}</Button>
 </div></Section>

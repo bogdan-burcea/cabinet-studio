@@ -14,7 +14,7 @@ export function Structure({ cabinet, evaluated, selection, selectedIds, onSelect
   const alertIds=new Set(evaluated.issues.filter(i=>i.code.startsWith('machining-')).flatMap(affectedItems));
   const row=(p:{id:string;label:string},icon:Parameters<typeof StructureItem>[0]['icon'])=><StructureItem key={p.id} id={p.id} label={cabinet.names?.[p.id]??p.label} icon={icon} selected={(selectedIds??[selection]).includes(p.id)} hidden={hiddenIds.includes(p.id)} alert={alertIds.has(p.id)} onSelect={onSelect} onRename={onRename} onToggleVisibility={onToggleVisibility}/>;
   return <aside className="elements-panel" aria-label="Cabinet elements"><div className="panel-heading"><h2>Structure</h2><span className="count-badge">1</span></div>
-    {nameEditor?<div className={`cabinet-name-row ${selection===cabinet.id?'selected':''}`}>{nameEditor}</div>:(
+    {nameEditor?<div className={`cabinet-name-row ${selection===cabinet.id?'selected':''}`}>{nameEditor}</div>:!simple&&(
     <button className={`tree-root ${selection === cabinet.id ? 'selected' : ''}`} onClick={() => onSelect(cabinet.id)} aria-pressed={selection === cabinet.id}><Icon name="cube"/><span>Cabinet body<small>Rectangular carcass</small></span><Icon name="chevron" size={13}/></button>)}
 
     <StructureGroup title="PANELS" count={evaluated.panels.filter(p=>p.role!=='door').length}>{evaluated.panels.filter(p=>p.role!=='door').map(p=>row(p,elementIcon(p.role,cabinet.contents.some(s=>s.id===p.id))))}</StructureGroup>

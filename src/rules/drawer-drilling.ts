@@ -1,4 +1,4 @@
-import {woodPilotDiameter} from '../catalogue/pilots';
+import {pilotDiameter} from '../catalogue/pilots';
 import {resolveHandle} from './handles';
 import type {Cabinet,Vec3} from '../domain/cabinet';
 import type {CabineoBore} from './cabineo';
@@ -22,13 +22,13 @@ export function drawerDrilling(c:Cabinet,panels:Panel[]):CabineoBore[]{
    for(const station of stations){
     const point:Vec3=[face,low+33,front-station];
     const id=`${drawer.id}/runner-${side}/pilot-${station}`;
-    bores.push({id,group:id,panelId:panel.id,kind:'pilot',point,axis:0,sign:left?-1:1,diameter:woodPilotDiameter,depth:10});
+    bores.push({id,group:id,panelId:panel.id,kind:'pilot',point,axis:0,sign:left?-1:1,diameter:pilotDiameter(c),depth:10});
    }
   }
   const part=(key:string)=>drawer.parts.find(p=>p.id===drawer.id+'/'+key)!;
   const bore=(key:string,side:string,station:number,point:Vec3,axis:0|1|2,sign:1|-1)=>{
    const id=`${drawer.id}/${key}/pilot-${side}-${station}`;
-   bores.push({id,group:id,panelId:part(key).id,kind:'pilot',point,axis,sign,diameter:woodPilotDiameter,depth:10});
+   bores.push({id,group:id,panelId:part(key).id,kind:'pilot',point,axis,sign,diameter:pilotDiameter(c),depth:10});
   };
   const back=part('back'),frontPart=part('front'),base=part('bottom');
   if(drawer.intent.handle)bores.push(...resolveHandle(drawer.intent.handle,frontPart).bores);

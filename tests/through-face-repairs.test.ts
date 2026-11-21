@@ -1,3 +1,4 @@
+import {addMetalDrawer} from '../src/commands/drawers.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createCabinet} from '../src/domain/cabinet.ts';
@@ -19,5 +20,23 @@ test('compatible mixed drilling offers either receiving fastener pilots or adjus
  for(const option of options){const e=evaluate(option.cabinet);assert.ok(!e.issues.some(i=>i.code==='machining-faces'&&i.featureId===id));assert.deepEqual(blindHousings(option.cabinet),blindHousings(c));assert.deepEqual(deserialize(serialize(option.cabinet)),option.cabinet);if(option.label.includes('receiving')){assert.ok(e.cabineo.flatMap(j=>j.bores).filter(b=>b.kind==='receiver'&&b.panelId===id).every(b=>b.through&&b.depth===18));assert.deepEqual(e.drilling,before.drilling);}else{assert.deepEqual(e.cabineo,before.cabineo);assert.ok(e.drilling.filter(b=>b.kind==='shelf-support'&&b.panelId===id).every(b=>b.through));}}
 });
 test('through repair metadata is strict, versioned and keeps older native drilling unchanged',()=>{
- const {c,id}=mixed(true),doc=JSON.parse(serialize(oneFaceRepairs(c,[id])[0].cabinet));assert.equal(doc.schemaVersion,38);for(const mode of ['housing',false,[],null]){const bad=structuredClone(doc);bad.cabinet.carcass.machining.throughHoles={[id]:mode};assert.throws(()=>deserialize(JSON.stringify(bad)));}const previous=JSON.parse(serialize(c));previous.schemaVersion=31;previous.evaluatorRevision='protruding-divider-31';assert.deepEqual(deserializeWithInfo(JSON.stringify(previous)),{cabinet:c,migrated:true});const invalid=structuredClone(doc);invalid.schemaVersion=31;invalid.evaluatorRevision='protruding-divider-31';assert.throws(()=>deserialize(JSON.stringify(invalid)));assert.equal(oneFaceRepairs(c,['unknown']).length,0);
+ const {c,id}=mixed(true),doc=JSON.parse(serialize(oneFaceRepairs(c,[id])[0].cabinet));assert.equal(doc.schemaVersion,41);for(const mode of ['housing',false,[],null]){const bad=structuredClone(doc);bad.cabinet.carcass.machining.throughHoles={[id]:mode};assert.throws(()=>deserialize(JSON.stringify(bad)));}const previous=JSON.parse(serialize(c));previous.schemaVersion=31;previous.evaluatorRevision='protruding-divider-31';assert.deepEqual(deserializeWithInfo(JSON.stringify(previous)),{cabinet:c,migrated:true});const invalid=structuredClone(doc);invalid.schemaVersion=31;invalid.evaluatorRevision='protruding-divider-31';assert.throws(()=>deserialize(JSON.stringify(invalid)));assert.equal(oneFaceRepairs(c,['unknown']).length,0);
+});
+
+test('divider housings share the drawer-pilot face and through shelf rows never constrain that choice',()=>{
+ for(const drawerSide of [0,1]){
+  const base=setCabineo(createCabinet(),'cabineo-8'),split=addDivision(base,base.compartments.id,'vertical',282),id=split.featureId;
+  const openings=evaluate(split.cabinet).openings;
+  let c=addMetalDrawer(split.cabinet,openings[drawerSide].id).cabinet;
+  c=addInteriors(c,[openings[1-drawerSide].id],'adjustable').cabinet;
+  // Genuine opposed blind drilling remains visible until the rows are through.
+  assert.ok(evaluate(c).issues.some(i=>i.code==='machining-faces'&&i.featureId===id));
+  c=setCnc(c,{throughHoles:{[id]:'adjustment'}});
+  const e=evaluate(c),housings=e.cabineo.flatMap(j=>j.bores).filter(b=>b.panelId===id&&b.kind==='housing'),pilots=e.drilling.filter(b=>b.panelId===id&&b.kind==='pilot');
+  assert.ok(housings.length&&pilots.length);
+  assert.ok(housings.every(b=>b.sign===pilots[0].sign&&b.depth===11&&!b.through));
+  assert.ok(e.drilling.filter(b=>b.panelId===id&&b.kind==='shelf-support').every(b=>b.through));
+  assert.ok(!e.issues.some(i=>['machining-faces','machining-collision','machining-hole-collision'].includes(i.code)));
+  assert.deepEqual(evaluate(deserialize(serialize(c))).cabineo,e.cabineo);
+ }
 });

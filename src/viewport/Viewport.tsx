@@ -19,7 +19,7 @@ export function Viewport(props: Props) {
   const divisionHandle = useRef<HTMLButtonElement>(null),cameraToolbar=useRef<HTMLDivElement>(null);
   const division = [...props.evaluated.divisions, ...props.evaluated.adjustable.shelves].find(d => d.id === props.selection&&!props.hiddenIds?.includes(d.id));
   const handles = useRef<Partial<Record<Axis, HTMLButtonElement | null>>>({});
-  const [error, setError] = useState(''), [view, setView] = useState<ViewName>('isometric');
+  const [error, setError] = useState(''), [view, setView] = useState<ViewName>('perspective');
   const [renderMode,setRenderMode]=useState<RenderMode>('solid'),[exploded,setExploded]=useState(false);
   useLayoutEffect(() => {
     try {
@@ -51,13 +51,14 @@ export function Viewport(props: Props) {
     {!error && !exploded && (['width', 'height', 'depth'] as const).map(axis => <button key={axis} ref={el => { labels.current[axis] = el; }} className={`viewport-pill dimension-label dimension-${axis}`} onClick={() => props.onEdit(axis)} aria-label={`Edit ${axis}, ${props.cabinet.envelope[axis]} millimetres`} title={`Edit ${axis}`}><span>{props.cabinet.envelope[axis]}</span><small>{axis === 'height' ? 'H' : axis === 'width' ? 'W' : 'D'}</small></button>)}
     {!error && !exploded && (['width', 'height', 'depth'] as const).map(axis => <button key={`handle-${axis}`} ref={el => { handles.current[axis] = el; }} className="resize-handle" aria-label={`Resize ${axis} handle. Drag to resize; press Enter to edit.`} title={`Drag to resize ${axis}`} onPointerDown={event => { event.preventDefault(); adapter.current?.startDrag(axis, event.nativeEvent); }} onClick={() => props.onEdit(axis)}><span/></button>)}
     {!error && !exploded && division && (props.selectedIds?.length??1)===1 && <button ref={divisionHandle} type="button" className={`viewport-pill division-move-handle ${division.axis==='horizontal'?'move-vertical':'move-horizontal'}`} aria-label={`Move ${division.axis==='horizontal'?'shelf':'divider'}: ${Number(division.before.toFixed(1))} / ${Number(division.after.toFixed(1))} mm. Drag to move; press Enter to edit.`} onPointerDown={event=>{event.preventDefault();adapter.current?.startDivisionDrag(event.nativeEvent);}} onClick={props.onEditDivision}><Icon name={division.axis==='horizontal'?'move-vertical':'move-horizontal'} size={16}/><span className="division-clearances">{Number(division.before.toFixed(1))} / {Number(division.after.toFixed(1))}<small>mm</small></span></button>}
+
     <div ref={cameraToolbar} className="camera-toolbar" role="toolbar" aria-label="Camera views"><div className="segmented-buttons camera-presets"><ul>
-      {(['isometric','front','side','top','rear'] as const).map(name=><li key={name}><button type="button" className="segmented-buttons__button" aria-current={view===name?'true':undefined} aria-pressed={view===name} onClick={()=>{adapter.current?.view(name);setView(name);}}>{name==='isometric'?'3D':name[0].toUpperCase()+name.slice(1)}</button></li>)}
-      </ul></div>
-      <span className="toolbar-divider"/><IconButton icon="fit" label="Fit cabinet" onClick={() => adapter.current?.fit()}/>
+      {(['perspective','front','side','top','rear'] as const).map(name=><li key={name}><button type="button" className="segmented-buttons__button" aria-current={view===name?'true':undefined} aria-pressed={view===name} onClick={()=>{adapter.current?.view(name);setView(name);}}>{name==='perspective'?'3D':name[0].toUpperCase()+name.slice(1)}</button></li>)}
+      </ul></div><div className="camera-actions"><span className="toolbar-divider"/><IconButton icon="fit" label="Fit cabinet" onClick={() => adapter.current?.fit()}/>
       <span className="toolbar-divider"/>{([{mode:'solid',icon:'cube',label:'Normal view'},{mode:'transparent',icon:'transparent',label:'Transparent view'},{mode:'wireframe',icon:'wireframe',label:'Wireframe view'}] as const).map(item=><IconButton key={item.mode} icon={item.icon} label={item.label} className={renderMode===item.mode?'active':''} aria-pressed={renderMode===item.mode} onClick={()=>setRenderMode(item.mode)}/>)}
       <IconButton icon="exploded" label="Exploded view" className={exploded?'active':''} aria-pressed={exploded} onClick={()=>setExploded(v=>!v)}/>
-      {props.onToggleDoors&&<><span className="toolbar-divider"/><IconButton icon={props.doorsOpen?'door-close':'door-open'} label={props.doorsOpen?'Close doors and drawers':'Open doors and drawers'} disabled={exploded} onClick={props.onToggleDoors}/></>}
+      {props.onToggleDoors&&<><span className="toolbar-divider"/><IconButton icon={props.doorsOpen?'door-close':'door-open'} label={props.doorsOpen?'Close doors and drawers':'Open doors and drawers'} aria-pressed={props.doorsOpen} disabled={exploded} onClick={props.onToggleDoors}/></>}
+      </div>
     </div>
 
   </div>;

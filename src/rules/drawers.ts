@@ -22,6 +22,7 @@ export function resolveDrawers(c:Cabinet){
  for(const [index,d] of layoutDrawerIntents(c).entries()){
   const fail=(message:string)=>issues.push({code:'drawer-fit',featureId:d.id,severity:'error',message:`Drawer ${index+1}: ${message} The previous cabinet is preserved.`});
   if(seen.has(d.id)||protectedIds.has(d.id)||!d.id||d.id.length>128){fail('duplicate or invalid drawer identity.');continue;}seen.add(d.id);
+  if(d.manualRail!==undefined&&typeof d.manualRail!=='boolean'){fail('choose automatic or manual rails.');continue;}
   let pack;try{pack=drawerPack(d.pack);}catch(e){fail((e as Error).message);continue;}
   if(d.kind!=='metal-drawer'||d.policyRevision!=='antaro-external-1'){fail('unsupported drawer policy.');continue;}
   const opening=interiors.openings.find(o=>o.id===d.openingId);

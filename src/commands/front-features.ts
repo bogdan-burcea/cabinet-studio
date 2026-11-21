@@ -10,6 +10,7 @@ export function editFrontFeatures(c:Cabinet,ids:string[],patch:{edgeGap?:number;
  if(doors.length)next=editSimpleDoors(next,doors.map(d=>d.id),{...(patch.edgeGap===undefined?{}:{reveal:patch.edgeGap}),...(patch.frontGap===undefined?{}:{clearance:patch.frontGap}),...(patch.placement?{placement:patch.placement}:{})});
  if(patch.placement&&drawerIds.length)next=setDrawerPlacement(next,drawerIds,patch.placement);
  next={...next,fronts:next.fronts.map(d=>targets.has(d.id)?{...d,...patch.cornerRadius===undefined?{}:{cornerRadius:patch.cornerRadius},...patch.handle?{handle:{...d.handle,...patch.handle}}:{}}:d),drawers:next.drawers?.map(d=>targets.has(d.id)?{...d,...patch.cornerRadius===undefined?{}:{cornerRadius:patch.cornerRadius},...patch.handle?{handle:{...(d.handle??defaultDrawerHandle()),...patch.handle}}:{},...patch.edgeGap===undefined&&patch.frontGap===undefined?{}:{front:{...(d.front??defaultDrawerFront()),...patch.edgeGap===undefined?{}:{gap:patch.edgeGap},...patch.frontGap===undefined?{}:{clearance:patch.frontGap}}}}:d)};
+ if(!c.drawers){const {drawers,...rest}=next;next=rest;}
  if(cabinetScope)next={...next,frontDefaults:{edgeGap:c.frontDefaults?.edgeGap??2,frontGap:c.frontDefaults?.frontGap??2,cornerRadius:c.frontDefaults?.cornerRadius??0,...patch.edgeGap===undefined?{}:{edgeGap:patch.edgeGap},...patch.frontGap===undefined?{}:{frontGap:patch.frontGap},...patch.cornerRadius===undefined?{}:{cornerRadius:patch.cornerRadius}}};
  return next;
 }

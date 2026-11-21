@@ -1,3 +1,4 @@
+import {CostPanel} from './CostPanel';
 import type {PlacementHistory} from '../cnc/placement-history';
 import {removalPlan} from '../commands/removal';
 import {FrontFeaturesInspector} from './FrontFeaturesInspector';
@@ -6,6 +7,7 @@ import {HingeInspector} from './HingeInspector';
 import {fitDrawerRails} from '../rules/drawer-rails';
 import {SimpleDrawerInspector} from './SimpleDrawerInspector';
 import {removeMetalDrawer} from '../commands/drawers';
+import {flattenParts} from '../cnc/parts';
 import {linkedPart} from '../docs/project';
 import type {SheetSettings} from '../cnc/layout';
 import {cabinetForExport} from '../cnc/sheet-export';
@@ -66,6 +68,8 @@ export function App(){
  const exportingCabinet=useRef(false);
  const [cabinetStepProgress,setCabinetStepProgress]=useState('');
  const [workspace,setWorkspace]=useState<Workspace>('box');
+ const [costsOpen,setCostsOpen]=useState(false),costTrigger=useRef<HTMLDivElement>(null);
+ function closeCosts(){setCostsOpen(false);costTrigger.current?.querySelector('button')?.focus();}
  const cncHistory=useRef<PlacementHistory|null>(null),[cutHistory,setCutHistory]=useState({canUndo:false,canRedo:false});
  const undo=()=>workspace==='cnc'?cncHistory.current?.undo():store.undo(),redo=()=>workspace==='cnc'?cncHistory.current?.redo():store.redo();
  const [sheetSettings,setSheetSettings]=useState<SheetSettings>({});
@@ -101,12 +105,11 @@ export function App(){
   if(connected.length){setPendingEdit({title:'Delete connected items?',message:`Deleting this selection also removes ${connected.length} connected item${connected.length===1?'':'s'} (interiors, doors or drawers). Undo restores all removed items.`,options:[{label:`Delete selection and ${connected.length} connected item${connected.length===1?'':'s'}`,cabinet:next}],base});}
   else if(commit(next))setSelection(cabinet.id);
  }
- const [notice,setNoticeText]=useState(startup.recovery?'Your earlier simple draft could not be opened. It is preserved; use Save to keep this cabinet.':''),[name,setName]=useState(cabinet.name==='Untitled cabinet'?'Cabinet':cabinet.name);
+ const [notice,setNoticeText]=useState(startup.recovery?'Your earlier simple draft could not be opened. It is preserved; use Save to keep this cabinet.':'');
  const [noticeError,setNoticeError]=useState(!!startup.recovery);
  function setNotice(message:string,error=false){setNoticeText(message);setNoticeError(error);}
- const file=useRef<HTMLInputElement>(null),fields=useRef<Partial<Record<Axis,HTMLInputElement|null>>>({}),drag=useRef<Cabinet|null>(null),cancelName=useRef(false),shelfPosition=useRef<HTMLInputElement|null>(null),pendingDimension=useRef<Axis|null>(null);
+ const file=useRef<HTMLInputElement>(null),fields=useRef<Partial<Record<Axis,HTMLInputElement|null>>>({}),drag=useRef<Cabinet|null>(null),shelfPosition=useRef<HTMLInputElement|null>(null),pendingDimension=useRef<Axis|null>(null);
  useLayoutEffect(()=>{document.documentElement.dataset.theme=theme;},[theme]);
- useEffect(()=>{setName(snapshot.committed.name==='Untitled cabinet'?'Cabinet':snapshot.committed.name);},[snapshot.committed]);
  useEffect(()=>{setSelection(cabinet.id);setDoorAngles({});setHiddenIds([]);},[cabinet.id]);
  useEffect(()=>{
   function selectLinkedPart(){
@@ -114,7 +117,8 @@ export function App(){
    if(!link)return;
    const current=store.getSnapshot().committed;
    if(current.id!==link.cabinet){setNotice('Open the cabinet file matching this part label.',true);return;}
-   if(!evaluate(current).panels.some(panel=>panel.id===link.part)){setNotice('This part is missing from the open cabinet.',true);return;}
+   if(link.part.includes('/offcut/')){setWorkspace('cnc');return;}
+   if(!flattenParts(evaluate(current)).some(panel=>panel.id===link.part)){setNotice('This part is missing from the open cabinet.',true);return;}
    setWorkspace('box');setSelection(link.part);setHiddenIds(ids=>ids.filter(id=>id!==link.part));
    history.replaceState(null,'',location.pathname+location.search);
   }
@@ -192,9 +196,9 @@ export function App(){
  }
  const notification=(snapshot.error||notice||reviewNotice)&&<Notice message={snapshot.error||notice||reviewNotice} error={!!snapshot.error||!!notice&&noticeError||!notice&&!!reviewNotice} onAction={!snapshot.error&&!notice&&reviewNotice?()=>{if(workspace==='box')resolveMachining(review);else {setDismissedReview(reviewKey);setSelection(cabinet.id);setWorkspace('box');resolveMachining(review);}}:undefined} onDismiss={()=>{if(snapshot.error)store.cancel();setNotice('');setDismissedReview(reviewKey);}}/>;
  return <div className="app-shell simple-workspace">
-  <header className="app-header"><div className="brand"><span className="brand-symbol"><Icon name="cabinet" size={23}/></span><span>Cabinet Studio</span></div><WorkspaceTabs value={workspace} onChange={next=>{store.cancel();setWorkspace(next);}}/><div className="document-actions"><div className="history-actions"><IconButton icon="undo" label="Undo (⌘Z)" disabled={!(workspace==='cnc'?cutHistory.canUndo:snapshot.canUndo)} onClick={undo}/><IconButton icon="redo" label="Redo (⇧⌘Z)" disabled={!(workspace==='cnc'?cutHistory.canRedo:snapshot.canRedo)} onClick={redo}/></div><span className="header-separator" aria-hidden="true"/><IconButton icon="new" label="New cabinet" onClick={()=>{commit({...createCabinet(),name:'Cabinet',cabinetType:'base'});setNotice('New cabinet. Undo returns to your previous cabinet.');}}/><IconButton icon="open" label="Open cabinet" onClick={()=>file.current?.click()}/><IconButton icon="save" label="Save cabinet" onClick={()=>{downloadCabinet({...snapshot.committed,name:snapshot.committed.name==='Untitled cabinet'?'Cabinet':snapshot.committed.name});setNotice('Saved a cabinet file.');}}/><span className="header-separator" aria-hidden="true"/><IconButton icon={theme==='graphite'?'sun':'moon'} label={`Switch to ${theme==='graphite'?'light':'dark'} mode`} onClick={()=>setTheme(theme==='graphite'?'linen':'graphite')}/><input ref={file} type="file" accept=".json,application/json" hidden onChange={load}/></div></header>
+  <header className="app-header"><div className="brand"><span className="brand-symbol"><Icon name="cabinet" size={23}/></span><span>Cabinet Studio</span></div><div className="workspace-navigation"><WorkspaceTabs value={workspace} onChange={next=>{store.cancel();setWorkspace(next);}}/></div><div className="document-actions"><div className="history-actions"><IconButton icon="undo" label="Undo (⌘Z)" disabled={!(workspace==='cnc'?cutHistory.canUndo:snapshot.canUndo)} onClick={undo}/><IconButton icon="redo" label="Redo (⇧⌘Z)" disabled={!(workspace==='cnc'?cutHistory.canRedo:snapshot.canRedo)} onClick={redo}/></div><span className="header-separator" aria-hidden="true"/><div ref={costTrigger}><IconButton icon="utilities" label="Utilities" aria-haspopup="dialog" aria-expanded={costsOpen} aria-controls="cost-estimate" onClick={()=>setCostsOpen(open=>!open)}/></div><span className="header-separator" aria-hidden="true"/><IconButton icon="new" label="New cabinet" onClick={()=>{commit({...createCabinet(),name:'Cabinet',cabinetType:'base'});setNotice('New cabinet. Undo returns to your previous cabinet.');}}/><IconButton icon="open" label="Open cabinet" onClick={()=>file.current?.click()}/><IconButton icon="save" label="Save cabinet" onClick={()=>{downloadCabinet({...snapshot.committed,name:snapshot.committed.name==='Untitled cabinet'?'Cabinet':snapshot.committed.name});setNotice('Saved a cabinet file.');}}/><span className="header-separator" aria-hidden="true"/><IconButton icon={theme==='graphite'?'sun':'moon'} label={`Switch to ${theme==='graphite'?'light':'dark'} mode`} onClick={()=>setTheme(theme==='graphite'?'linen':'graphite')}/><input ref={file} type="file" accept=".json,application/json" hidden onChange={load}/></div></header>
   <main className="workspace" id="workspace-box" role="tabpanel" aria-labelledby="workspace-tab-0" hidden={workspace!=='box'}>
-   <Structure simple nameEditor={<span className="textbox cabinet-name-input"><input className="textbox__control" aria-label="Cabinet name" onFocus={()=>setSelection(cabinet.id)} maxLength={100} value={name} onChange={e=>setName(e.target.value)} onBlur={()=>{if(cancelName.current){cancelName.current=false;return;}commit({...snapshot.committed,name:name.trim()||'Cabinet'});}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();if(e.key==='Escape'){cancelName.current=true;setName(snapshot.committed.name==='Untitled cabinet'?'Cabinet':snapshot.committed.name);e.currentTarget.blur();}}}/></span>} cabinet={cabinet} evaluated={evaluated} selection={selection} selectedIds={selectedIds} onSelect={select} onRename={(id,label)=>{try{commit(renameItem(snapshot.committed,id,label));}catch(e){setNotice((e as Error).message,true);}}} hiddenIds={hiddenIds} onToggleVisibility={id=>setHiddenIds(ids=>ids.includes(id)?ids.filter(v=>v!==id):[...ids,id])}/>
+   <Structure simple cabinet={cabinet} evaluated={evaluated} selection={selection} selectedIds={selectedIds} onSelect={select} onRename={(id,label)=>{try{commit(renameItem(snapshot.committed,id,label));}catch(e){setNotice((e as Error).message,true);}}} hiddenIds={hiddenIds} onToggleVisibility={id=>setHiddenIds(ids=>ids.includes(id)?ids.filter(v=>v!==id):[...ids,id])}/>
    <div className="canvas-area"><Viewport hiddenIds={hiddenIds} onToggleDoors={movableIds.length?toggleFronts:undefined} doorsOpen={doorsOpen} simple cabinet={cabinet} evaluated={evaluated} selection={selection} selectedIds={selectedIds} theme={theme} preview={!!snapshot.preview} cutaway={false} plinthVisible frontsVisible doorAngles={doorAngles}
      onSelect={select} onEdit={focus} onEditDivision={()=>{revealField(shelfPosition.current);}} onPreviewDivision={(id,value)=>{if(drag.current){failedCandidate.current=drag.current.contents.some(s=>s.id===id)?moveAdjustable(drag.current,id,value):moveDivision(drag.current,id,value);store.preview(failedCandidate.current);}}}
     onDragStart={()=>{store.cancel();failedCandidate.current=null;drag.current=store.getSnapshot().committed;}}
@@ -236,6 +240,7 @@ export function App(){
     notice={notification} onNotice={setNotice} onReview={id=>{setSelection(id??cabinet.id);setWorkspace('box');}}/>
 
 
+ {costsOpen&&<CostPanel key={cabinet.id} cabinet={cabinet} model={evaluated} settings={sheetSettings} history={cncHistory.current} onClose={closeCosts} onNotice={setNotice} onReview={()=>{closeCosts();setWorkspace('cnc');}}/>}
  {pendingEdit&&<EditConflict key={snapshot.revision} edit={pendingEdit} onCancel={()=>setPendingEdit(null)} onApply={index=>{if(pendingEdit.base!==store.getSnapshot().committed){setPendingEdit(null);setNotice('The cabinet changed. Try the edit again.');return;}const option=pendingEdit.options[index];if(option){const motion=pendingEdit.motion;if(commit(option.cabinet)){if(motion)setDoorAngles(safeDoorAngles(evaluate(option.cabinet),{},motion.ids,motion.target).angles);else if(pendingEdit.title)setSelection(cabinet.id);}}}}/>}
  </div>;
 }

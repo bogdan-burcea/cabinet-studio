@@ -13,6 +13,7 @@ export function bestDrawerPack(c:Cabinet,openingId:string,pin:ProductPin,inset=0
 export function fitDrawerRails(c:Cabinet):Cabinet{
  if(!c.drawers?.length)return c;
  const drawers=c.drawers.map(d=>{
+  if(d.manualRail)return d;
   const inset=d.front?.placement==='inset'?stock(c,'carcass').thickness+d.front.clearance:0;
   const pack=bestDrawerPack(c,d.openingId,d.pack,inset);
   return pack.id===d.pack.id?d:{...d,pack};

@@ -1,3 +1,5 @@
+import {viewDirection,perspectiveView,type ViewName} from './camera-presets';
+export type {ViewName} from './camera-presets';
 import {drawerPack} from '../catalogue/drawers';
 import {flattenParts} from '../cnc/parts';
 import {drawerDisplayGeometry,drawerDisplayEdges} from './drawer-mesh';
@@ -14,12 +16,11 @@ import { pickCabinetElement } from './picking';
 import {drawCncScene,type CncScene} from './cnc-scene';
 import { TouchZoom } from './touch-zoom';
 import { finishColor, type ViewportTheme } from '../design-system/themes';
-export type ViewName = 'isometric' | 'front' | 'side' | 'top' | 'rear';
 export interface CncAnchor {id:string;x:number;y:number}
 export interface DimensionAnchor { axis: Axis; x: number; y: number; handleX: number; handleY: number }
 interface Callbacks {
   usableHeight?(): number; editDivision?():void;
-  cncPartAnchor?(point:{x:number;y:number}|null):void; cncMovePart?(partId:string,sheetId:string):void;
+  cncPartAnchor?(point:{x:number;y:number}|null):void;
   cncAnchors?(anchors:CncAnchor[]):void;
   select(id: string,additive?:boolean): void; dragStart(): void; preview(axis: Axis, value: number): void; commit(): void; cancel(): void;
   anchors(anchors: DimensionAnchor[]): void; divisionAnchor(point: { x: number; y: number } | null): void; previewDivision(id: string, value: number): void;
@@ -47,7 +48,7 @@ export class CabinetViewport {
   private touchZoom = new TouchZoom();
   private suppressTouchClick = false;
   private down: { pointerId: number; x: number; y: number } | null = null;
-  private cncDrag:{pointerId:number;partId:string;x:number;y:number;mesh?:THREE.Object3D;origin?:THREE.Vector3}|null=null;
+
   private drag: { pointerId: number; axis: Axis; x: number; y: number; initial: number; px: number; py: number; featureId?: string; centre?: number } | null = null;
   private disposed = false;
   private presentationKey='';
@@ -225,10 +226,11 @@ export class CabinetViewport {
       ball.renderOrder = 10; ball.position.set(handle[0] + ox, handle[1] + oy, handle[2] + oz); ball.userData.axis = axis; this.handles.add(ball);
     }
     this.handles.visible=!explosion;this.dimensions.visible=!explosion;
-    if (first) this.view('isometric');
+    if (first) this.view('perspective');
   }
   updateCnc(scene: CncScene, selection: string, reverse: boolean, theme: ViewportTheme, mode: RenderMode,selectedIds:string[]=[selection]) {
     this.selected=selection;
+    this.theme=theme;
     const previous = this.cncScene;
     this.presentationKey='';this.cncScene = scene;
     this.controls.minDistance = 40;
@@ -248,6 +250,8 @@ export class CabinetViewport {
     const v = point.clone().project(this.camera); return { x: (v.x + 1) * this.host.clientWidth / 2, y: (1 - v.y) * this.host.clientHeight / 2 };
   }
   private updateAnchors() {
+
+
     if(this.cncScene){
       const part=this.cncScene.parts.find(p=>p.part.id===this.selected);this.callbacks.cncPartAnchor?.(part?this.project(new THREE.Vector3(part.x+part.width/2,part.part.thickness+10,part.y+part.height/2)):null);
       this.callbacks.cncAnchors?.((this.cncScene.sheets??[]).map(sheet=>({
@@ -290,7 +294,6 @@ export class CabinetViewport {
     }
     // OrbitControls still owns one-finger camera movement. Disable its controls
     // during our pinch so captured resize handles work as part of the gesture too.
-    if(this.cncDrag?.mesh&&this.cncDrag.origin)this.cncDrag.mesh.position.copy(this.cncDrag.origin);this.cncDrag=null;
     this.controls.enabled = false;
   };
 
@@ -312,7 +315,7 @@ export class CabinetViewport {
   private pointerDown = (event: PointerEvent) => {
     if (event.button !== 0 || this.touchZoom.blocksSinglePointer) return;
     this.down = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
-    if(this.cncScene&&this.callbacks.cncMovePart){this.setPointerRay(event);const partId=pickCabinetElement(this.raycaster,this.model.children,'');if(this.cncScene.parts.some(p=>p.part.id===partId)){const mesh=this.model.children.find(m=>m.userData.id===partId);this.cncDrag={pointerId:event.pointerId,partId,x:event.clientX,y:event.clientY,mesh,origin:mesh?.position.clone()};this.controls.enabled=false;this.renderer.domElement.setPointerCapture(event.pointerId);event.stopImmediatePropagation();return;}}
+
     const hit = this.explosion?undefined:this.hits(event, this.handles.children)[0];
     if (hit) {
       event.stopImmediatePropagation(); this.startDrag(hit.object.userData.axis, event);
@@ -337,7 +340,7 @@ export class CabinetViewport {
   }
   private pointerMove = (event: PointerEvent) => {
     if (this.touchZoom.blocksSinglePointer) return;
-    if(this.cncDrag){this.setPointerRay(event);const point=this.raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),new THREE.Vector3());if(point&&this.cncDrag.mesh){this.cncDrag.mesh.position.x=point.x;this.cncDrag.mesh.position.z=point.z;}this.renderer.domElement.style.cursor='grabbing';return;}
+
     if (this.drag) {
       if (this.drag.pointerId !== event.pointerId) return;
       const { axis, x, y, initial, px, py, featureId, centre } = this.drag, denominator = px * px + py * py;
@@ -350,15 +353,6 @@ export class CabinetViewport {
     } else this.renderer.domElement.style.cursor = !this.explosion&&this.hits(event, this.handles.children).length ? 'ew-resize' : 'grab';
   };
   private pointerUp = (event: PointerEvent) => {
-    if(this.cncDrag){
-     const drag=this.cncDrag;if(drag.mesh&&drag.origin)drag.mesh.position.copy(drag.origin);this.cncDrag=null;this.controls.enabled=true;this.setPointerRay(event);
-     if(Math.hypot(event.clientX-drag.x,event.clientY-drag.y)>=6){
-      const point=this.raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),new THREE.Vector3());
-      const sheet=point&&this.cncScene?.sheets?.find(s=>point.x>=s.x&&point.x<=s.x+s.width&&point.z>=s.y&&point.z<=s.y+s.height);
-      if(sheet)this.callbacks.cncMovePart?.(drag.partId,sheet.id);
-     }else this.callbacks.select(drag.partId,event.shiftKey||event.metaKey||event.ctrlKey);
-     this.down=null;if(this.renderer.domElement.hasPointerCapture(event.pointerId))this.renderer.domElement.releasePointerCapture(event.pointerId);return;
-    }
     if (this.drag && this.drag.pointerId !== event.pointerId) return;
     if (this.drag) { const tap=this.drag.featureId&&Math.hypot(event.clientX-this.drag.x,event.clientY-this.drag.y)<4; this.drag = null; this.controls.enabled = true; if(tap){this.callbacks.cancel();this.callbacks.editDivision?.();}else this.callbacks.commit(); }
     else if (this.down?.pointerId === event.pointerId && Math.hypot(event.clientX - this.down.x, event.clientY - this.down.y) < 5) {
@@ -371,7 +365,6 @@ export class CabinetViewport {
   private pointerCancel = (event?: PointerEvent) => {
     if (event && (this.suppressTouchClick && event.pointerType === 'touch' ||
         this.drag && this.drag.pointerId !== event.pointerId)) return;
-    if(this.cncDrag?.mesh&&this.cncDrag.origin)this.cncDrag.mesh.position.copy(this.cncDrag.origin);this.cncDrag=null;
     this.drag = null; this.down = null; this.controls.enabled = !this.touchZoom.blocksSinglePointer; this.callbacks.cancel();
   };
   private keyDown = (event: KeyboardEvent) => {
@@ -397,13 +390,13 @@ export class CabinetViewport {
     if (!this.cabinet && !this.cncScene) return;
     // Flush pending damping before changing the camera and its coordinate frame.
     this.controls.enableDamping = false; this.controls.update();
-    this.camera = name === 'isometric' ? this.perspective : this.elevation;
+    this.camera = perspectiveView(name,!!this.cncScene) ? this.perspective : this.elevation;
     this.controls.object = this.camera;
-    this.controls.enableRotate = name === 'isometric';
+    this.controls.enableRotate = true;
     this.camera.up.set(...(name === 'top' ? [0, 0, -1] : [0, 1, 0]) as Vec3);
-    const directions: Record<ViewName, Vec3> = {isometric: [1.25, .8, 1.8], front: [0, 0, 1], side: [1, 0, 0], rear: [0, 0, -1], top: [0, 1, 0]};
+
     this.controls.target.copy(this.displayBounds().getCenter(new THREE.Vector3()));
-    fitCamera(this.camera, this.displayBounds(), new THREE.Vector3(...directions[name]), this.area());
+    fitCamera(this.camera, this.displayBounds(), new THREE.Vector3(...viewDirection(name)), this.area());
     this.controls.update(); this.controls.enableDamping = true;
   }
   fit() {
@@ -415,7 +408,6 @@ export class CabinetViewport {
     this.controls.update(); this.controls.enableDamping = true;
   }
   orbit(theta: number, phi: number) {
-    if (this.camera instanceof THREE.OrthographicCamera) return;
     const offset = this.camera.position.clone().sub(this.controls.target), spherical = new THREE.Spherical().setFromVector3(offset);
     spherical.theta += theta; spherical.phi = Math.max(0.02, Math.min(Math.PI - 0.02, spherical.phi + phi));
     this.camera.position.copy(this.controls.target).add(new THREE.Vector3().setFromSpherical(spherical)); this.controls.update();

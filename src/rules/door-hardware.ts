@@ -1,3 +1,4 @@
+import {pilotDiameter} from '../catalogue/pilots';
 import {resolveHandle} from './handles';
 import type {Cabinet,SlabDoor,Vec3} from '../domain/cabinet';
 import type {FrontBody} from './fronts';
@@ -52,8 +53,8 @@ export function doorHardware(c:Cabinet,doors:FrontBody[]){
     const plateDepth=wide?46:24,reach=wide&&inset?17.5:8;
     hinges.push({id:key,ownerId:body.id,supportId,article,plate,y,cup:[cupX,y,rear],softClose:profile.softClose,maxAngle:profile.maxAngle,mountingZone:{center:[face-side*reach/2,y,plateZ-extra/2],size:[reach,48,plateDepth]}});
     add(`${key}/cup`,body.id,'hinge-cup',[cupX,y,rear],2,1,profile.cupDiameter,profile.cupDepth);
-    if(wide)add(`${key}/plate-screw/extra`,supportId,'hinge-pilot',[face,y,plateZ-extra],0,side,2.5,8);
-    for(const sign of [-1,1]){add(`${key}/cup-screw/${sign}`,body.id,'hinge-pilot',[cupX+side*profile.screwOffset,y+sign*profile.screwPitch/2,rear],2,1,2.5,10);add(`${key}/plate-screw/${sign}`,supportId,'hinge-pilot',[face,y+sign*profile.platePitch/2,plateZ],0,side,2.5,8);}
+    if(wide)add(`${key}/plate-screw/extra`,supportId,'hinge-pilot',[face,y,plateZ-extra],0,side,pilotDiameter(c),8);
+    for(const sign of [-1,1]){add(`${key}/cup-screw/${sign}`,body.id,'hinge-pilot',[cupX+side*profile.screwOffset,y+sign*profile.screwPitch/2,rear],2,1,pilotDiameter(c),10);add(`${key}/plate-screw/${sign}`,supportId,'hinge-pilot',[face,y+sign*profile.platePitch/2,plateZ],0,side,pilotDiameter(c),8);}
    }
   }
   bores.push(...resolveHandle(front.handle,body).bores);

@@ -220,3 +220,11 @@ Completed locally: scoped Evo alert notices with expandable detail; affected-ite
 Completed locally: toolbar-only door control; paired editable/calculated Cabineo fields; native Evo radio choices; transient snackbar feedback; matching rebate seat-depth layout; exterior bottom fastener access; contextual base feet/plinth controls with placement, side returns and evaluated clearance repairs. Exact support articles and verified hinge linkage motion remain pending.
 
 Completed locally: selectable bottom machining face and evaluated two-face repairs; front-pair/four feet with editable pilot drilling; holes-only support display and direct positioning; foot-relative plinth gap; wall support exclusion; 5 mm foot / 40 mm plinth limits; corrected plinth explosion; hinge-zone/shelf repair and part-specific door opening feedback. Exact foot fittings, physical trials, mounting-plate body CAD and proprietary Blum motion remain deferred.
+
+Local costs completion:
+- [x] Modal tables, contextual clickable product names, separate sheet/net-area rates, labour/profit and category/grand totals.
+- [x] Browser-local price/source defaults and accurate CSV, including profit and sub-cent unit rates.
+- [x] Store homepage search, confirmed product matching, public RON quote retrieval, explicit pack conversion and left/right purchase options.
+- [x] Six-hour open-modal refresh, manual override, stale-response protection and last-price retention.
+- [ ] Hosted price service/closed-app scheduling (not requested for publication).
+- [ ] Additional store-specific adapters as real shop links reveal unsupported search/metadata formats.

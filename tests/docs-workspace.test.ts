@@ -36,3 +36,12 @@ test('docs generate grayscale paginated labels and an individual label links to 
  assert.match(file,/example\.test\/studio/);
  assert.throws(()=>labelGrid({...sheet,width:100}),/fit at least one/);
 });
+
+test('label stock supports separate gaps, used-label slots and grayscale calibration',()=>{
+ const c=createCabinet(),parts=flattenParts(evaluate(c)),stock={...defaultLabelStock,width:64,height:34,margin:6.5,top:12.5,gapX:2.5,gapY:0,start:2};
+ const grid=labelGrid(stock);assert.equal(grid.columns,3);assert.ok(grid.rows>1);
+ const pdf=partLabels(c,parts,stock,'https://example.test/').output();assert.equal((pdf.match(/\/Subtype \/Link/g)??[]).length,parts.length);
+ const calibration=partLabels(c,[],stock,'invalid address',true).output();assert.match(calibration,/Print at actual size/);assert.doesNotMatch(calibration,/\/Subtype \/Link/);
+ assert.throws(()=>labelGrid({...stock,start:grid.columns*grid.rows}),/Skip used/);
+ assert.throws(()=>labelGrid({...stock,start:1.5}),/Skip used/);
+});

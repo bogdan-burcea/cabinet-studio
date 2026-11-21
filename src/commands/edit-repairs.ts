@@ -52,7 +52,7 @@ export function editRepairs(candidate:Cabinet,previous:Cabinet):EditRepair[]{
 
   if(message.includes('handle envelope')){
    try{const bad=new Set(resolveFronts(candidate).issues.filter(i=>i.message.includes('handle envelope')).map(i=>i.featureId));const without={...candidate,fronts:candidate.fronts.map(d=>({...d,handle:{...d.handle,kind:'none' as const}}))},shapes=evaluate(without).fronts.doors;
-    const fitted={...candidate,fronts:candidate.fronts.map(d=>{if(!bad.has(d.id)||!['hole','knob'].includes(d.handle.kind))return d;const body=shapes.find(p=>p.id===d.id)!;const diameter=Math.min(d.handle.diameter??(d.handle.kind==='hole'?30:24),Math.floor(Math.min(body.size[0],body.size[1])-10)),xMax=Math.floor(body.size[0]-diameter-5),yMax=Math.floor(body.size[1]-diameter-5);return {...d,handle:{...d.handle,diameter,...xMax<10?{horizontal:'centre' as const}:{edgeOffset:Math.min(d.handle.edgeOffset,xMax)},...yMax<10?{height:'centre' as const}:{endOffset:Math.min(d.handle.endOffset,yMax)}}};})};
+    const fitted={...candidate,fronts:candidate.fronts.map(d=>{if(!bad.has(d.id)||!['hole','knob'].includes(d.handle.kind))return d;const body=shapes.find(p=>p.id===d.id)!;const diameter=Math.min(d.handle.diameter??(d.handle.kind==='hole'?30:24),d.handle.kind==='hole'?100:80,Math.floor(Math.min(body.size[0],body.size[1])-10)),xMax=Math.floor(body.size[0]-diameter-5),yMax=Math.floor(body.size[1]-diameter-5);return {...d,handle:{...d.handle,diameter,...xMax<10?{horizontal:'centre' as const}:{edgeOffset:Math.min(d.handle.edgeOffset,xMax)},...yMax<10?{height:'centre' as const}:{endOffset:Math.min(d.handle.endOffset,yMax)}}};})};
     add('Fit hole / knob to the door with minimal offset changes',fitted);
    }catch{}
   }

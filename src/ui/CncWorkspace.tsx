@@ -1,3 +1,4 @@
+import {linkedPart} from '../docs/project';
 import {PlacementHistory} from '../cnc/placement-history';
 import {sheetSelection,sharedStockEdits} from '../cnc/selection';
 import {useEffect,useMemo,useRef,useState,useSyncExternalStore,type ReactNode,type RefObject} from 'react';
@@ -41,7 +42,18 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
  const parts=useMemo(()=>model?flattenParts(model):[],[model]);
  const packed=useMemo(()=>{try{return {plan:planSheets(parts,settings,allowance,overrides),reset:false};}catch{return {plan:planSheets(parts,settings,allowance),reset:true};}},[parts,settings,allowance,overrides]);
  const {groups,sheets,unplaced}=packed.plan;
- useEffect(()=>{if(packed.reset){history.reset();onNotice('Manual sheet choices no longer fit. The layout was automatically rearranged.',true);}},[packed.reset]);
+ useEffect(()=>{
+  function selectLabelOffcut(){
+   if(!active)return;const link=linkedPart(location.hash);
+   if(!link||link.cabinet!==evaluated.cabinetId||!link.part.includes('/offcut/'))return;
+   const sheet=sheets.find(s=>link.part.startsWith(s.id+'/offcut/')),index=Number(link.part.split('/offcut/').at(-1));
+   if(!sheet||!Number.isInteger(index)||index<0||!stockOffcuts(sheet,150,bitDiameter)[index]){onNotice('This offcut is not in the current Cut layout. Check the label map and sheet settings.',true);return;}
+   setKeepOffcuts(true);setMinimum(150);setSelectedIds([link.part]);window.history.replaceState(null,'',location.pathname+location.search);
+  }
+  selectLabelOffcut();window.addEventListener('hashchange',selectLabelOffcut);return()=>window.removeEventListener('hashchange',selectLabelOffcut);
+ },[active,sheets,evaluated.cabinetId,bitDiameter]);
+
+ useEffect(()=>{if(packed.reset){history.reset();onNotice('Requested rotations no longer fit. The layout was automatically rearranged.',true);}},[packed.reset]);
  useEffect(()=>{const valid=new Set([...sheets.map(s=>s.id),...parts.map(p=>p.id)]);setSelectedIds(ids=>{const next=ids.filter(id=>valid.has(id)||id.includes('/offcut/')||id.startsWith('group/'));return next.length===ids.length?ids:next;});},[sheets,parts]);
  const part=parts.find(p=>p.id===selected);
  const sheetOfPart=part&&sheets.find(entry=>entry.sheet.placements.some(p=>p.part.id===part.id));
@@ -87,11 +99,6 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
   try{const plan=planSheets(parts,settings,allowance,next);if(plan.unplaced.some(p=>p.id===partId))throw Error('The rotated part does not fit the stock size.');history.commit(next);choose(partId);}
   catch(error){onNotice((error as Error).message,true);}
  }
- function movePart(partId:string,sheetId:string){
-  const source=parts.find(p=>p.id===partId),target=sheets.find(s=>s.id===sheetId);if(!source||!target)return;
-  if(source.stockKey!==target.key){onNotice('Choose a sheet with the same stock and thickness as this part.',true);return;}
-  repack(partId,{sheet:Number(target.id.split('/').at(-1))});
- }
  function rotatePart(){if(!part||!placement)return;if(part.grain!=='none'){onNotice('This part follows stock grain and cannot be quarter-turned.',true);return;}repack(part.id,{rotated:!placement.rotated});}
  async function exportStep(){
   if(!entry||exporting.current)return;
@@ -118,23 +125,23 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
    <aside className="elements-panel cnc-elements" aria-label="CNC elements">
       <div className="panel-heading"><h2>Layout</h2><span className="count-badge">{parts.length} parts</span></div>
       <StructureGroup title="Sheets" count={sheets.length}>
-       {sheets.map(s=><button type="button" className="tree-item" key={s.id} onDragOver={event=>event.preventDefault()} onDrop={event=>{event.preventDefault();movePart(event.dataTransfer.getData('text/plain'),s.id);}} aria-pressed={selectedIds.length?selectedIds.includes(s.id):entry?.id===s.id} onClick={event=>choose(s.id,event.shiftKey||event.metaKey||event.ctrlKey)}>
+       {sheets.map(s=><button type="button" className="tree-item" key={s.id} aria-pressed={selectedIds.length?selectedIds.includes(s.id):entry?.id===s.id} onClick={event=>choose(s.id,event.shiftKey||event.metaKey||event.ctrlKey)}>
         <Icon name="panel" size={20}/><span>{s.label}</span><small>{s.thickness} mm</small>
        </button>)}
       </StructureGroup>
       {entry&&<StructureGroup title={`${entry.label} parts`} count={entry.sheet.placements.length}>
-       {entry.sheet.placements.map(({part:p})=><button type="button" className="tree-item" draggable onDragStart={event=>event.dataTransfer.setData('text/plain',p.id)} key={p.id} onClick={()=>choose(p.id)} aria-pressed={part?.id===p.id}>
+       {entry.sheet.placements.map(({part:p})=><button type="button" className="tree-item" key={p.id} onClick={()=>choose(p.id)} aria-pressed={part?.id===p.id}>
         <Icon name={elementIcon(p.panel.role)} size={20}/><span>{p.label}</span>
        </button>)}
       </StructureGroup>}
       {unplaced.length>0&&<StructureGroup title="Unplaced parts" count={unplaced.length}>
-       {unplaced.map(p=><button type="button" className="tree-item" draggable onDragStart={event=>event.dataTransfer.setData('text/plain',p.id)} key={p.id} onClick={()=>choose(p.id)} aria-pressed={part?.id===p.id}>
+       {unplaced.map(p=><button type="button" className="tree-item" key={p.id} onClick={()=>choose(p.id)} aria-pressed={part?.id===p.id}>
         <Icon name={elementIcon(p.panel.role)} size={20}/><span>{p.label}</span>
        </button>)}
       </StructureGroup>}
    </aside>
    <div className="canvas-area">
-    <CncViewport onMovePart={movePart} onRotatePart={part&&placement?rotatePart:undefined} selectedIds={selectedIds.length?selectedIds:[entry?.id??'']} scene={scene} selection={part?.id??(offcutIndex>=0?selected:entry?.id)??''} reverse={other} theme={theme} onSelect={choose}/>
+    <CncViewport onRotatePart={part&&placement?rotatePart:undefined} selectedIds={selectedIds.length?selectedIds:[entry?.id??'']} scene={scene} selection={part?.id??(offcutIndex>=0?selected:entry?.id)??''} reverse={other} theme={theme} onSelect={choose}/>
     {active&&notice}
    </div>
    <aside className="inspector" aria-label="CNC inspector">

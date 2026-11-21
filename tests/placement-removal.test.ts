@@ -12,8 +12,8 @@ import {defaultDrawerHandle} from '../src/rules/handles.ts';
 import {serialize,deserialize} from '../src/persistence/files.ts';
 import {flattenParts} from '../src/cnc/parts.ts';
 
-test('manual placement undo/redo restores sheet and rotation, auto arrangement is undoable and a new edit clears redo',()=>{
- const h=new PlacementHistory();const a={p:{sheet:1}},b={p:{sheet:1,rotated:true}};h.commit(a);h.commit(b);h.undo();assert.deepEqual(h.getSnapshot().choices,a);h.redo();assert.deepEqual(h.getSnapshot().choices,b);h.commit({});h.undo();assert.deepEqual(h.getSnapshot().choices,b);h.undo();h.commit({q:{sheet:0}});assert.equal(h.getSnapshot().canRedo,false);h.reset();assert.equal(h.getSnapshot().canUndo,false);
+test('rotation undo/redo restores quarter-turn choices, auto arrangement is undoable and a new edit clears redo',()=>{
+ const h=new PlacementHistory();const a={p:{rotated:false}},b={p:{rotated:true}};h.commit(a);h.commit(b);h.undo();assert.deepEqual(h.getSnapshot().choices,a);h.redo();assert.deepEqual(h.getSnapshot().choices,b);h.commit({});h.undo();assert.deepEqual(h.getSnapshot().choices,b);h.undo();h.commit({q:{rotated:false}});assert.equal(h.getSnapshot().canRedo,false);h.reset();assert.equal(h.getSnapshot().canUndo,false);
 });
 test('deleting a supporting divider explicitly lists connected drawers and preserves unrelated elements; one Undo restores all',()=>{
  let c=createCabinet();const div=addDivision(c,c.compartments.id,'vertical',282);c=div.cabinet;const opening=evaluate(c).openings[0];c=addDrawerStack(c,opening.id,2).cabinet;

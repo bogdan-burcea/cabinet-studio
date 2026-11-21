@@ -52,7 +52,7 @@ export function resolveFronts(c: Cabinet, obstacles?: Bounds[]) {
     if(!precise(front.reveal,1,10)||!precise(front.clearance,1,10)) {fail('reveal and front clearance must be 1–10 mm in 0.1 mm steps.');continue;}
     let profile; try {profile=handleGeometry(handle.geometry);}catch(error){fail((error as Error).message);continue;}
     if(!['none','knob','pull','hole','notch'].includes(handle.kind)||!['vertical','horizontal'].includes(handle.orientation)||!['top','centre','bottom'].includes(handle.height)||!(profile.pitches as readonly number[]).includes(handle.pitch)||!precise(handle.edgeOffset,10,200)||!precise(handle.endOffset,10,300)) {fail('unsupported handle style, pitch, placement or offset.');continue;}
-    if(handle.horizontal!==undefined&&!['latch','left','centre','right'].includes(handle.horizontal)||handle.diameter!==undefined&&!precise(handle.diameter,10,80)||handle.projection!==undefined&&!precise(handle.projection,12,80)||handle.drillDiameter!==undefined&&!precise(handle.drillDiameter,2,8)){fail('unsupported handle dimensions or position.');continue;}
+    if(handle.horizontal!==undefined&&!['latch','left','centre','right'].includes(handle.horizontal)||handle.diameter!==undefined&&!precise(handle.diameter,10,handle.kind==='hole'?100:80)||handle.projection!==undefined&&!precise(handle.projection,12,80)||handle.drillDiameter!==undefined&&!precise(handle.drillDiameter,2,8)){fail('unsupported handle dimensions or position.');continue;}
     const thickness=stock(c,'front',front.id).thickness;
     const rear=oz+d+(front.placement==='overlay'?front.clearance:-front.clearance-thickness);
     const inset=(key:'left'|'right'|'bottom'|'top')=>{

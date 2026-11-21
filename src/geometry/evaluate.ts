@@ -1,3 +1,4 @@
+import {cnc} from '../rules/cnc';
 import {frontProfileCuts} from '../rules/front-profiles';
 import {drawerBoardPanels} from './drawer-panels';
 import {drawerDrilling} from '../rules/drawer-drilling';
@@ -26,7 +27,7 @@ import { resolveMounting } from '../rules/mounting';
 import { resolveInstallation } from '../rules/installation';
 import { resolveConstruction } from '../rules/construction';
 import { resolveInteriors, type Division, type Opening } from '../rules/interiors';
-export const EVALUATOR_REVISION = 'notch-mouth-38';
+export const EVALUATOR_REVISION = 't-bone-seats-41';
 export interface Panel extends ReturnType<typeof panelMaterials> {
   id: string; role: PanelRole; label: string; size: Vec3; center: Vec3; materialRole: MaterialRole;
   provenance: string; orientation: 'yz' | 'xz' | 'xy'; constructionPart?: 'top' | 'back'; installationPart?: 'plinth';
@@ -77,11 +78,11 @@ export function evaluate(c: Cabinet): EvaluatedCabinet {
   const drawers=resolveDrawers(c);
   const profiles=frontProfileCuts(c,fronts.doors,drawers.drawers);
   const interiorsWithFingers=fingerInteriors(c,basePanels,construction.pockets),fingerCuts=addDogbones(c,interiorsWithFingers.panels.map(p=>({...p,origin:p.center.map((n,i)=>n-p.size[i]/2) as Vec3})),interiorsWithFingers.pockets),hanging=wallHangingCuts(c),pockets=[...construction.pockets,...fingerCuts,...hanging.pockets,...rearCornerCuts(c,interiorsWithFingers.panels),...profiles];
-  const narrow=narrowToolCuts(c,pockets);if(narrow.length){const width=Math.min(...narrow.flatMap(p=>p.size.filter((_,i)=>i!==p.axis)));issues.push({code:'machining-tool-width',featureId:c.id,severity:'notice',relatedIds:[...new Set([...narrow.map(p=>p.panelId),...narrow.every(p=>!p.kind)?[`${c.id}/panel/back`]:[]])],message:`${narrow.length} connection cuts are narrower than the Ø${c.carcass.machining!.bitDiameter} mm cutter (smallest width ${+width.toFixed(2)} mm). Use a smaller cutter or compatible thicker stock. Joint fit allowance is unchanged.`});}
+  const narrow=narrowToolCuts(c,pockets);if(narrow.length){const width=Math.min(...narrow.flatMap(p=>p.size.filter((_,i)=>i!==p.axis)));issues.push({code:'machining-tool-width',featureId:c.id,severity:'notice',relatedIds:[...new Set([...narrow.map(p=>p.panelId),...narrow.every(p=>!p.kind)?[`${c.id}/panel/back`]:[]])],message:`${narrow.length} connection cuts are narrower than the Ø${cnc(c).bitDiameter} mm cutter (smallest width ${+width.toFixed(2)} mm). Use a smaller cutter or compatible thicker stock. Joint fit allowance is unchanged.`});}
   const panels: Panel[] = interiorsWithFingers.panels.map(panel => ({ ...panel, ...panelMaterials(c, panel) }));
   panels.forEach(name);
   const hardware=doorHardware(c,fronts.doors);issues.push(...hingePlateReview(panels,hardware.hinges));
-  const drilling=[...drawerDrilling(c,panels),...hanging.bores,...footDrilling(c),...hardware.bores,...backPilots(c),...shelfDrilling(c,panels,interiors.openings)],backFasteners=resolveBackFasteners(c),cabineo=oneFaceBores(c,panels,resolveCabineo(c,panels),[...backFasteners,...drilling],pockets);issues.push(...machiningReview([...panels,...drawerBoardPanels(drawers.drawers,panels.find(p=>p.role==='bottom')!)],cabineo,[...backFasteners,...drilling],pockets));
+  const drilling=[...drawerDrilling(c,panels),...hanging.bores,...footDrilling(c),...hardware.bores,...backPilots(c),...shelfDrilling(c,panels,interiors.openings)],backFasteners=resolveBackFasteners(c),cabineo=oneFaceBores(c,panels,resolveCabineo(c,panels,[...backFasteners,...drilling]),[...backFasteners,...drilling],pockets);issues.push(...machiningReview([...panels,...drawerBoardPanels(drawers.drawers,panels.find(p=>p.role==='bottom')!)],cabineo,[...backFasteners,...drilling],pockets));
   return { doorHardware:hardware, drilling, backFasteners, pockets, cabineo, revision: EVALUATOR_REVISION, cabinetId: c.id, issues, drawers, fronts, adjustable, installation, mounting: resolveMounting(c), panels, opening: interiors.root, openings: interiors.openings, divisions: interiors.divisions,
     construction: { rearSetback: construction.rearSetback, topGap: construction.topGap, backGap: construction.backGap } };
 }

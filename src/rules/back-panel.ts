@@ -21,8 +21,8 @@ export function backLayout(c:Cabinet,t:number,b:number){
  if(seated){
   const z=mode==='rebate'?0:inset-clearance,cutWidth=b+2*clearance;
   const add=(role:string,local:Vec3,size:Vec3,axis:0|1,face:1|-1)=>pockets.push({id:`${c.id}/back-seat/${role}`,panelId:`${c.id}/panel/${role}`,origin:local.map((n,i)=>n+o[i]) as Vec3,size,axis,face});
-  add('left',[t-depth,0,z],[depth,h,cutWidth],0,1);
-  add('right',[w-t,0,z],[depth,h,cutWidth],0,-1);
+  add('left',[t-depth,t-depth,z],[depth,h-2*(t-depth),cutWidth],0,1);
+  add('right',[w-t,t-depth,z],[depth,h-2*(t-depth),cutWidth],0,-1);
   // A finger-jointed horizontal spans under the sides. Its seat must
   // clear the back over the full engaged width, including both corners.
   const x=c.carcass.corner?t-depth:t;

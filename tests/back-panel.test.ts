@@ -34,5 +34,5 @@ test('display back grooves remove only their pocket volume and retain canonical 
  const c=setBackPanel(createCabinet(),{mode:'groove'}),e=evaluate(c),p=e.panels.find(p=>p.role==='left')!,g=panelDisplayGeometry(p,e.pockets),position=g.getAttribute('position');let volume=0;
  // Box pieces share no interior volume. Sum their oriented triangle volumes.
  const ix=g.index;for(let i=0;i<(ix?.count??position.count);i+=3){const ids=[0,1,2].map(j=>ix?ix.getX(i+j):i+j),v=ids.map(j=>[position.getX(j),position.getY(j),position.getZ(j)]);volume+=(v[0][0]*(v[1][1]*v[2][2]-v[1][2]*v[2][1])-v[0][1]*(v[1][0]*v[2][2]-v[1][2]*v[2][0])+v[0][2]*(v[1][0]*v[2][1]-v[1][1]*v[2][0]))/6;}
- assert.ok(Math.abs(volume-(18*720*560-6*720*6.2))<1);g.dispose();assert.deepEqual(p.size,[18,720,560]);
+ const rectangular=18*720*560-6*696*6.2,extra=48*Math.sin(Math.PI/24)*9*6;assert.ok(Math.abs(volume-(rectangular-extra))<2);g.dispose();assert.deepEqual(p.size,[18,720,560]);
 });

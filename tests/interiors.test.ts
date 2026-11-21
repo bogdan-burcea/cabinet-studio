@@ -101,7 +101,7 @@ test('new divisions can be added to a child opening with distinct identities and
 
 test('version 12 round trip preserves nested intent, product pins and all evaluated geometry', () => {
   const { c } = nested(), encoded = serialize(c), doc = JSON.parse(encoded);
-  assert.equal(doc.schemaVersion, 38); assert.equal(doc.evaluatorRevision, 'notch-mouth-38');
+  assert.equal(doc.schemaVersion, 41); assert.equal(doc.evaluatorRevision, 't-bone-seats-41');
   assert.deepEqual(deserialize(encoded), c); assert.deepEqual(evaluate(deserialize(encoded)), evaluate(c));
 });
 

@@ -75,7 +75,7 @@ input::-webkit-inner-spin-button{appearance:none}
 .field-note{font-size:var(--font-size-body);line-height:var(--font-line-height-250);color:var(--color-foreground-secondary);margin-top:var(--spacing-200)}
 .camera-toolbar{position:absolute;left:50%;bottom:48px;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:var(--spacing-100);width:max-content;max-width:calc(100% - 32px);padding:var(--spacing-100);background:var(--color-background-elevated);border:1px solid var(--color-border-subtle);border-radius:calc(var(--border-radius-150) * .75);box-shadow:var(--shadow-subtle)}
 .camera-presets{border:0;min-width:0;padding:var(--spacing-50);background:var(--color-background-primary)}
-.camera-presets .segmented-buttons__button{white-space:nowrap}
+.camera-presets .segmented-buttons__button{white-space:nowrap;padding-inline:var(--spacing-100)}
 .toolbar-divider{align-self:stretch;width:1px;background:var(--color-border-subtle);margin:var(--spacing-50) 0}
 .app-icon-button[aria-pressed='true']{background:var(--color-background-strong);color:var(--color-foreground-on-strong)}
 button.app-icon-button[aria-pressed='true']>svg{fill:currentColor}
@@ -340,3 +340,79 @@ button.add-adjustable-shelf{margin-top:var(--spacing-200)}
 /* Keep explanatory copy separate from the next field label. */
 .inspector .field-note{margin-bottom:var(--spacing-200)}
 .inspector .field-note:last-child{margin-bottom:0}
+
+/* All action labels use Evo regular weight, including primary actions. */
+button.btn,.btn .btn__cell,.segmented-buttons__button{font-weight:400}
+/* Full-width disclosure headers; child item geometry remains unchanged. */
+.tree-children.structure-disclosure{position:relative;border-bottom:0}
+.tree-children.structure-disclosure:after{content:'';position:absolute;bottom:0;left:calc(-1 * var(--spacing-200));right:calc(-1 * var(--spacing-200));height:1px;background:var(--color-border-subtle)}
+.structure-disclosure>summary.details__summary{margin-inline:calc(-1 * var(--spacing-200));width:calc(100% + 2 * var(--spacing-200));padding-inline:var(--spacing-300);border-radius:0}
+
+.camera-actions{display:flex;align-items:center;gap:var(--spacing-100);flex-shrink:0}
+/* Cost estimate: Evo standard dialog, compact table with manual prices. */
+.workspace-navigation{display:flex;align-items:center;gap:var(--spacing-300)}
+.cost-dialog{padding:0;border:0;width:100%;height:100%;max-width:none;max-height:none;background:transparent;color:var(--color-foreground-primary)}
+.cost-dialog[open]{display:flex;align-items:center;justify-content:center}
+.cost-dialog::backdrop{background:var(--dialog-scrim-color-show)}
+.cost-dialog .lightbox-dialog__window{width:min(540px,calc(100vw - 32px));max-width:min(540px,calc(100vw - 32px));max-height:90dvh;flex:0 1 auto;margin:auto}
+.cost-dialog .cost-title{align-items:center;gap:var(--spacing-200);margin:0;padding:var(--spacing-300);border-bottom:1px solid var(--color-border-subtle)}
+.cost-dialog .cost-title h2{min-width:0}
+.cost-dialog .cost-fields{padding:0;min-height:0;flex:1;overflow-y:auto;overscroll-behavior:contain}
+.cost-dialog .inspector-section{padding:var(--spacing-300)}
+.cost-dialog #utility-panel-costs>.inspector-section{padding-bottom:0;border-bottom:1px solid var(--color-border-subtle)}
+.cost-dialog #utility-panel-costs>.cost-breakdown{padding-bottom:var(--spacing-200);border-bottom:0}
+.cost-table{overflow:visible;font-size:var(--font-size-body)}
+.cost-table table{table-layout:fixed;width:100%}
+.cost-table th,.cost-table td{height:44px}
+.cost-table .cost-input{width:66px;max-width:100%;--textbox-border-color:transparent;--textbox-background-color:var(--color-background-secondary);--textbox-focus-background-color:var(--color-background-secondary)}
+.cost-table input.textbox__control{width:100%;min-width:0;text-align:right;font-size:var(--font-size-body);font-variant-numeric:tabular-nums;padding-inline:8px}
+.cost-dialog .cost-table tfoot th{padding-left:0;font-weight:700}
+.cost-table tfoot th,.cost-table tfoot td{border-top:1px solid var(--color-border-subtle);border-bottom:0}
+.cost-summary-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--spacing-200)}
+.cost-dialog .cost-total{flex:none;border-top:1px solid var(--color-border-subtle);border-bottom:0}
+.cost-grand-total{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 var(--spacing-200)}
+.cost-grand-total>span{font-weight:700}
+.cost-grand-total strong{font-size:24px;line-height:28px}
+.cost-grand-total small{font-size:var(--font-size-small);font-weight:400;color:var(--color-foreground-secondary)}
+.cost-total .interior-actions{margin-bottom:0}
+.cost-dialog .notice{z-index:10;max-width:calc(100vw - 32px)}
+@media(max-width:600px){
+ .workspace-navigation{order:3;width:100%;justify-content:center;gap:var(--spacing-100)}
+ .cost-dialog[open]{align-items:flex-end}
+ .cost-dialog .lightbox-dialog__window{width:100%;max-width:100%;max-height:calc(100dvh - 16px);margin:0;border-bottom-left-radius:0;border-bottom-right-radius:0}
+ .cost-dialog .inspector-section,.cost-dialog .cost-title{padding:var(--spacing-200)}
+ .cost-dialog .cost-title{display:grid;grid-template-columns:1fr auto;gap:var(--spacing-100)}
+ .cost-dialog .cost-title h2{grid-column:1;grid-row:1;font-size:20px}
+ .cost-dialog .cost-title>.app-icon-tooltip{grid-column:2;grid-row:1}
+ .cost-table th,.cost-table td{padding:8px 4px}
+}
+@media(max-width:350px){.cost-total .interior-actions{grid-template-columns:1fr}}
+
+.utilities-tabs{padding-inline:var(--spacing-300);flex:none;border-bottom:1px solid var(--color-border-subtle)}
+.utilities-tabs .tabs__items{gap:40px}
+.offcut-deduction{display:flex;gap:8px;align-items:center;margin-top:16px;font-size:var(--font-size-body);color:var(--color-foreground-primary)}
+.label-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 24px}
+.label-fields label,.label-app-address{display:grid;gap:8px;color:var(--color-foreground-secondary);font-size:var(--font-size-small)}
+.label-fields .textbox,.label-fields input,.label-app-address .textbox,.label-app-address input{width:100%;min-width:0}
+.label-settings>.inspector-section{border-bottom:1px solid var(--color-border-subtle)}
+.label-selection,.label-actions{display:flex;gap:8px}
+.label-actions{padding:24px;justify-content:flex-end}
+.label-part-choice{display:flex;gap:8px;align-items:center;color:var(--color-foreground-primary);font-size:var(--font-size-body)}
+.label-preview{display:grid;grid-template-columns:1fr 100px;gap:16px;border:1px solid var(--color-border-subtle);padding:16px;margin-bottom:24px;background:#fff;color:#111}
+.label-preview p{font-size:12px;margin:8px 0}.label-preview svg{width:100%;height:100px}.label-qr-note{font-size:12px;align-self:center}
+@media(max-width:600px){.utilities-tabs{padding-inline:16px}.label-fields{gap:16px}.label-actions{padding:16px;flex-wrap:wrap}}
+
+.cost-item-detail{display:block;margin-top:4px;font-size:var(--font-size-small);line-height:16px;font-weight:400;color:var(--color-foreground-secondary)}
+.cost-dialog .estimate-table th:first-child{padding-left:0;text-align:left}.cost-dialog .estimate-table .table-cell--numeric{padding-right:0;text-align:right}
+
+.edit-conflict-dialog .education-notice{margin-block:var(--spacing-200)}
+.edit-conflict-dialog .education-notice__main>p{margin:0}
+/* Selected camera presets persist after hover/focus leaves. Evo neutral variant. */
+.camera-presets .segmented-buttons__button[aria-current]{background-color:var(--color-foreground-primary);color:var(--color-foreground-on-inverse)}
+.camera-presets .segmented-buttons__button[aria-current]:active{background-color:var(--color-foreground-primary);color:var(--color-foreground-on-inverse)}
+.app-icon-button[aria-expanded=true]{background-color:var(--color-background-tertiary)}
+.btn:not(.btn--destructive):not(:disabled):active:after{background-color:var(--color-state-layer-pressed)}
+button:not(.btn,.icon-btn,.icon-button,.segmented-buttons__button,.link-button,.fake-link):not(:disabled):not([aria-disabled=true]):active,[role=tab]:not([aria-disabled=true]):active{background-image:linear-gradient(var(--color-state-layer-pressed),var(--color-state-layer-pressed))}
+
+/* Press feedback applies to actions; persistent state belongs only to toggles. */
+button:not(:disabled):not([aria-disabled=true]):active{background-color:var(--color-foreground-primary);color:var(--color-foreground-on-inverse)}
