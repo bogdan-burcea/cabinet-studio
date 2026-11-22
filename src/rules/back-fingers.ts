@@ -4,7 +4,7 @@ import {cnc} from './cnc';
 /** Complementary through-cut fingers around the back's four edges.
  * Corners belong to the carcass; side/top patterns stop at the corner blocks. */
 export function backFingerCuts(c:Cabinet,t:number,b:number):BackPocket[]{
- const joint=c.carcass.back.joint;if(c.carcass.back.mode!=='full'||joint?.mode!=='finger')return [];
+ const joint=c.carcass.back.joint;if(!['full','rails-panel'].includes(c.carcass.back.mode)||joint?.mode!=='finger')return [];
  const {width:w,height:h,origin:o}=c.envelope,pitch=joint.fingerPitch??50,a=cnc(c).tolerance/2,cuts:BackPocket[]=[];
  const add=(role:string,key:string,origin:Vec3,size:Vec3,axis:0|1|2,face:1|-1)=>cuts.push({id:`${c.id}/back-finger/${role}/${key}`,panelId:`${c.id}/panel/${role}`,origin:origin.map((n,i)=>n+o[i]) as Vec3,size,axis,face,kind:'puzzle'});
  for(const x of [0,w-t])for(const y of [0,h-t])add('back',`corner/${x}/${y}`,[x,y,0],[t,t,b],2,-1);

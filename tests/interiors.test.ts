@@ -101,7 +101,7 @@ test('new divisions can be added to a child opening with distinct identities and
 
 test('version 12 round trip preserves nested intent, product pins and all evaluated geometry', () => {
   const { c } = nested(), encoded = serialize(c), doc = JSON.parse(encoded);
-  assert.equal(doc.schemaVersion, 48); assert.equal(doc.evaluatorRevision, 'rail-count-fit-48');
+  assert.equal(doc.schemaVersion, 56); assert.equal(doc.evaluatorRevision, 'rail-hanger-access-56');
   assert.deepEqual(deserialize(encoded), c); assert.deepEqual(evaluate(deserialize(encoded)), evaluate(c));
 });
 

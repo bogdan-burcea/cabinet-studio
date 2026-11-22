@@ -41,23 +41,13 @@ test('wall hanging adds Workshop pilots and access cuts in translated Studio coo
  assert.equal(evaluate(setWallHanging(cabinet,false)).drilling.length,0);
 });
 
-test('back-fixing shelf collisions offer a move or an actual 45 degree rear profile cut',()=>{
- let cabinet=setBackFastener(createCabinet(),true);
- const fastener=cabinet.carcass.back.joint!.fastener!;
- cabinet=setBackPanel(cabinet,{fastener:{...fastener,perSide:1}});
+test('side back fixings move automatically clear of a shelf without changing the shelf',()=>{
+ const cabinet=setBackPanel(setBackFastener(createCabinet(),true),{fastener:{id:'hafele-26009765',revision:'rpc-1',perSide:1}});
  const {cabinet:withShelf,featureIds:[id]}=addInteriors(cabinet,[cabinet.compartments.id],'fixed');
- const before=evaluate(withShelf),options=backFastenerInteriorRepairs(withShelf,before.issues);
- assert.ok(options.some(o=>o.label.startsWith('Move')));
- const repaired=options.find(o=>o.label.includes('45°'))!.cabinet,after=evaluate(repaired);
- assert.deepEqual(repaired.compartments,withShelf.compartments);
- assert.deepEqual(after.backFasteners,before.backFasteners);
- assert.ok(!after.issues.some(i=>i.code==='machining-collision'&&i.relatedIds?.includes(id)));
- const panel=after.panels.find(p=>p.id===id)!,cuts=after.pockets.filter(p=>p.panelId===id);
- assert.equal(cuts.length,2);
- assert.ok(cuts.every(p=>p.triangle&&p.size[0]===p.size[2]));
- assert.notEqual(partPreview(panel,[],cuts,1).outline,partPreview(panel,[],[],1).outline);
- const mesh=panelDisplayGeometry(panel,cuts);assert.ok(mesh.getAttribute('position').count>36);mesh.dispose();
- assert.deepEqual(readSimpleCabinet(serialize(repaired)),repaired);
+ const before=evaluate(cabinet),after=evaluate(withShelf),ids=new Set(after.backFasteners.map(b=>b.id));
+ assert.equal(after.backFasteners.length,2);assert.ok(after.backFasteners.every(b=>b.point[1]!==before.backFasteners.find(p=>p.id===b.id)!.point[1]));
+ assert.ok(!after.issues.some(i=>i.operationIds?.some(id=>ids.has(id))));
+ assert.ok(!after.pockets.some(p=>p.panelId===id));assert.deepEqual(readSimpleCabinet(serialize(withShelf)),withShelf);
 });
 
 test('row insets shift shared front and rear bore positions with through-only parts excluded from flipping',()=>{
@@ -79,7 +69,7 @@ test('wall hanging and back fasteners coexist in either order with Workshop notc
  const wall=applySimplePreset(createCabinet(),'wall');
  for(const c of [setBackFastener(setWallHanging(wall,true),true),setWallHanging(setBackFastener(wall,true),true)]){
   const result=evaluate(c),notch=result.pockets.find(p=>p.kind==='hanger-access')!;
-  assert.equal(result.backFasteners.length,6);
+  assert.equal(result.backFasteners.length,4);
   assert.equal(result.drilling.length,4);
   assert.ok(result.backFasteners.filter(b=>b.axis===0).every(b=>b.point[1]+b.diameter/2<=notch.origin[1]-50+1e-6));
   assert.deepEqual(readSimpleCabinet(serialize(c)),c);
@@ -160,7 +150,7 @@ test('a saved wall cabinet through setting never cuts housing pockets through th
  const bores=[...e.cabineo.flatMap(j=>j.bores),...e.backFasteners].filter(b=>b.panelId===bottom.id);
  const inside=partPreview(bottom,bores,e.pockets,1),outside=partPreview(bottom,bores,e.pockets,-1);
  assert.equal(inside.bores.find(b=>b.kind==='housing')?.path,'');
- assert.equal(inside.bores.find(b=>b.kind==='back-fixing')?.path,'');
+ assert.ok(!bores.some(b=>b.kind==='back-fixing'));
  assert.ok(outside.bores.find(b=>b.kind==='housing')?.path);
  assert.ok(bores.filter(b=>b.kind==='housing'||b.kind==='back-fixing').every(b=>!b.through&&b.depth<bottom.size[1]));
  const housing=bores.find(b=>b.kind==='housing'&&b.id.endsWith('/2'))!;
@@ -175,6 +165,6 @@ test('a saved wall cabinet through setting never cuts housing pockets through th
  mesh.geometry.dispose();mesh.material.dispose();
  assert.ok(e.issues.some(i=>i.featureId===bottom.id&&i.code==='machining-faces'));
  const options=bottomFaceRepairs(cabinet);
- assert.ok(options.some(o=>o.label.includes('Move top/bottom back fixings')));
+ assert.ok(options.some(o=>o.label.includes('inside')));
  for(const option of options)assert.ok(!evaluate(option.cabinet).issues.some(i=>i.featureId===bottom.id&&i.code.startsWith('machining-')));
 });

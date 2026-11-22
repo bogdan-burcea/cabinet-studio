@@ -1,0 +1,130 @@
+{
+  "format": "cabinet-studio",
+  "schemaVersion": 55,
+  "evaluatorRevision": "flush-rear-rails-55",
+  "cabinet": {
+    "id": "2786a4dd-b4ac-4cef-89b8-fb00c0ea0414",
+    "name": "Cabinet",
+    "envelope": {
+      "width": 600,
+      "height": 720,
+      "depth": 350,
+      "origin": [
+        0,
+        0,
+        0
+      ]
+    },
+    "carcass": {
+      "construction": "rectangular-butt",
+      "policyRevision": "construction-1",
+      "top": {
+        "mode": "full",
+        "frontDepth": 80,
+        "rearDepth": 80
+      },
+      "back": {
+        "mode": "rails-panel",
+        "upperHeight": 80,
+        "lowerHeight": 80,
+        "joint": {
+          "revision": "back-1",
+          "mode": "groove",
+          "inset": 25,
+          "depth": 6,
+          "clearance": 0.2,
+          "fastener": {
+            "id": "hafele-26009765",
+            "revision": "rpc-1",
+            "perSide": 3
+          }
+        }
+      },
+      "machining": {
+        "revision": "cnc-1",
+        "tolerance": 0.2,
+        "bitDiameter": 3,
+        "dogbones": false,
+        "throughOpposed": true,
+        "cabineoPerSide": 0,
+        "bottomFace": "inside",
+        "bottomFastenersThrough": false
+      }
+    },
+    "compartments": {
+      "id": "2786a4dd-b4ac-4cef-89b8-fb00c0ea0414/opening",
+      "kind": "opening",
+      "children": []
+    },
+    "contents": [],
+    "fronts": [],
+    "installation": {
+      "type": "unassigned",
+      "policyRevision": "support-1",
+      "mounting": {
+        "mode": "suspended-concept",
+        "policyRevision": "mounting-1",
+        "geometry": {
+          "id": "blum-48n0510",
+          "revision": "1"
+        },
+        "wallGap": 30,
+        "topOffset": 33,
+        "sideInset": 60,
+        "floorClearance": 300
+      },
+      "feet": {
+        "geometry": {
+          "id": "concept-foot-60",
+          "revision": "1"
+        },
+        "height": 100,
+        "sideInset": 60,
+        "frontInset": 120,
+        "rearInset": 60
+      },
+      "plinth": {
+        "enabled": false,
+        "leftReturn": false,
+        "rightReturn": false,
+        "frontSetback": 60,
+        "topGap": 5,
+        "bottomGap": 0,
+        "material": null
+      }
+    },
+    "materials": {
+      "carcass": {
+        "stock": {
+          "id": "generic-panel-18",
+          "revision": "1"
+        },
+        "finish": {
+          "id": "unspecified",
+          "revision": "1"
+        },
+        "grain": "none"
+      },
+      "back": {
+        "stock": {
+          "id": "generic-back-3",
+          "revision": "1"
+        },
+        "finish": {
+          "id": "unspecified",
+          "revision": "1"
+        },
+        "grain": "none"
+      },
+      "interior": null
+    },
+    "banding": {},
+    "hardware": [
+      {
+        "id": "cabineo-12",
+        "revision": "surface-1"
+      }
+    ],
+    "cabinetType": "wall"
+  }
+}

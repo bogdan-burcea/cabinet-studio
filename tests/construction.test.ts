@@ -1,3 +1,4 @@
+import {disjointAfterNotches} from './notched-overlap';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCabinet, resize, type Cabinet, type Carcass } from '../src/domain/cabinet.ts';
@@ -26,7 +27,7 @@ function noOverlapsAndEnclosed(c: Cabinet, e: EvaluatedCabinet) {
     }
     for (const b of e.panels.filter(p => p.id !== a.id)) {
       const overlap = a.size.map((size, axis) => Math.min(a.center[axis] + size / 2, b.center[axis] + b.size[axis] / 2) - Math.max(a.center[axis] - size / 2, b.center[axis] - b.size[axis] / 2));
-      assert.ok(overlap.some(n => n <= 1e-6), `${a.label} intersects ${b.label}`);
+      assert.ok(disjointAfterNotches(a,b,e.pockets), `${a.label} intersects ${b.label}`);
     }
   }
 }
@@ -46,7 +47,7 @@ test('all four top/back combinations retain furnished geometry without overlap a
   }
 });
 
-test('independent top rails replace only the full top and leave interior geometry unchanged', () => {
+test('independent top rails preserve openings and shelves while notching extended dividers', () => {
   const c = furnished(), next = changeConstruction(c, { ...c.carcass, top: { mode: 'rails', frontDepth: 100, rearDepth: 60 } });
   const before = evaluate(c), e = evaluate(next);
   assert.equal(e.panels.some(p => p.role === 'top'), false);
@@ -54,7 +55,10 @@ test('independent top rails replace only the full top and leave interior geometr
   assert.deepEqual(e.panels.find(p => p.role === 'top-rear-rail')!.size, [564, 18, 60]);
   assert.equal(e.panels.find(p => p.role === 'top-front-rail')!.center[2], -10 + 560 - 50);
   assert.equal(e.construction.topGap, 400);
-  assert.deepEqual(e.panels.filter(p => p.role === 'shelf' || p.role === 'divider'), before.panels.filter(p => p.role === 'shelf' || p.role === 'divider'));
+  assert.deepEqual(e.panels.filter(p => p.role === 'shelf'), before.panels.filter(p => p.role === 'shelf'));
+  assert.deepEqual(e.divisions,before.divisions);
+  assert.ok(e.pockets.some(p=>p.kind==='rail-notch'));
+  noOverlapsAndEnclosed(next,e);
   assert.deepEqual(e.openings, before.openings);
 });
 
@@ -126,7 +130,7 @@ test('native schema 21 round trips every construction choice including dormant d
   for (const top of ['full', 'rails'] as const) for (const back of ['full', 'rails'] as const) {
     const config = modes(c, top, back); config.top.frontDepth = 90; config.back.lowerHeight = 95;
     const next = changeConstruction(c, config), json = serialize(next), doc = JSON.parse(json);
-    assert.equal(doc.schemaVersion, 48); assert.equal(doc.evaluatorRevision, 'rail-count-fit-48');
+    assert.equal(doc.schemaVersion, 56); assert.equal(doc.evaluatorRevision, 'rail-hanger-access-56');
     assert.deepEqual(deserialize(json), next); assert.deepEqual(evaluate(deserialize(json)), evaluate(next));
   }
 });

@@ -69,7 +69,7 @@ input::-webkit-inner-spin-button{appearance:none}
 .data-row{display:flex;align-items:start;justify-content:space-between;gap:var(--spacing-200);font-size:var(--font-size-body);line-height:var(--font-line-height-250);margin:var(--spacing-200) 0}
 .data-row>span{color:var(--color-foreground-secondary)}
 .data-row strong{font-weight:var(--font-weight-bold);text-align:right}
-.interior-actions{display:flex;flex-wrap:wrap;gap:var(--spacing-100);margin-top:var(--spacing-200)}
+.interior-actions{display:flex;flex-wrap:wrap;gap:var(--spacing-200);margin-top:var(--spacing-200)}
 .interior-actions>.btn{flex:1;white-space:nowrap}
 .interior-action-divider{border:0;border-top:1px solid var(--color-border-subtle);margin:var(--spacing-200) 0 0}
 .field-note{font-size:var(--font-size-small);line-height:var(--font-line-height-200);color:var(--color-foreground-secondary);margin-top:var(--spacing-200)}
@@ -334,7 +334,7 @@ button.add-adjustable-shelf{margin-top:var(--spacing-200)}
 /* Filled neutral Evo treatment for the large secondary action pills. */
 .btn:not(.btn--destructive){background-color:var(--color-background-secondary);border-color:transparent;color:var(--color-foreground-primary)}
 .btn:not(.btn--destructive):hover{background-color:var(--color-background-tertiary);border-color:transparent}
-.btn:not(.btn--destructive):disabled{background-color:var(--color-background-secondary);color:var(--color-foreground-disabled)}
+.btn:not(.btn--destructive):disabled{border-color:transparent;background-color:var(--color-background-secondary);color:var(--color-foreground-disabled)}
 .cnc-part-rotate{position:absolute;z-index:4;transform:translate(-50%,-100%);display:flex;align-items:center;gap:8px;padding:8px 12px;visibility:hidden;cursor:pointer}
 
 /* Keep explanatory copy separate from the next field label. */
@@ -423,3 +423,21 @@ button:not(:disabled):not([aria-disabled=true]):active{background-color:var(--co
 .machining-checks-notice .btn:not(.btn--destructive){background-color:var(--color-background-strong);color:var(--color-foreground-on-strong)}
 
 .inspector .machining-checks-notice,.inspector .inspector-accordion>.machining-checks-notice{border:0;box-shadow:none}
+
+/* Native notice dialogs use the same Evo lightbox shell as Utilities. */
+.notice-details{padding:0;border:0;width:100%;height:100%;max-width:none;max-height:none;background:transparent;color:var(--color-foreground-primary)}
+.notice-details[open]{display:flex;align-items:center;justify-content:center}
+.notice-details::backdrop{background:var(--dialog-scrim-color-show)}
+.notice-details .lightbox-dialog__window{flex:0 1 auto}
+.label-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+
+.label-actions{gap:var(--spacing-200)}
+.cost-fields:has(#utility-panel-labels:not([hidden])){display:flex;flex-direction:column;overflow:hidden}
+#utility-panel-labels:not([hidden]){display:flex;flex:1;min-height:0}
+.label-settings{display:flex;flex-direction:column;min-height:0;width:100%}
+.label-settings-body{overflow-y:auto;min-height:0;flex:1}
+.label-actions{flex:none;border-top:1px solid var(--color-border-subtle);background:var(--color-background-primary)}
+
+.cost-dialog .lightbox-dialog__window{overflow:hidden}
+
+.back-with-panel{display:flex;align-items:center;gap:var(--spacing-100)}

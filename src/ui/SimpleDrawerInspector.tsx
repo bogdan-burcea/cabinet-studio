@@ -52,8 +52,8 @@ export function SimpleDrawerInspector({cabinet,model,id,ids,partId,onSelectMany,
  function heightEdit(height:number){try{return intent!.stack?commit(setDrawerFrontHeight(cabinet,ids,height)):edit({frontHeight:intent!.frontHeight+height-drawer!.front[1]});}catch(e){notice((e as Error).message);return false;}}
 
  return <>
-  {mixed&&<p className="field-note">Selected drawers have different settings. Changing a field sets that value for the selection.</p>}
   <Section title={ids.length>1?'Shared drawer settings':'Drawer'}>
+  {mixed&&<p className="field-note">Selected drawers have different settings. Changing a field sets that value for the selection.</p>}
    <DrawerPackFields automatic={!intent.manualRail} value={intent.pack} onChange={(pin,manual)=>{
     const selected=drawerPack(pin);
     edit({pack:pin,...manual!==undefined?{manualRail:manual}:{},...!intent.stack?{frontHeight:Math.max(intent.frontHeight,selected.minimumHeight)}:{}});

@@ -56,10 +56,10 @@ export function CncViewport({scene, selection, selectedIds, reverse, theme, onSe
             aria-current={view === preset ? 'true' : undefined} aria-pressed={view === preset} onClick={() => { viewport.current?.view(preset); setView(preset); }}>{preset === 'top' ? 'Top' : '3D'}</button></li>)}
         </ul></div>
         <span className="toolbar-divider"/>
-        <IconButton icon="fit" label="Fit layout" onClick={() => viewport.current?.fit()}/>
+        <IconButton icon="cube" label="Fit layout" onClick={() => viewport.current?.fit()}/>
         <span className="toolbar-divider"/>
-        {([{mode:'solid',icon:'cube',label:'Normal view'},{mode:'transparent',icon:'transparent',label:'Transparent view'},{mode:'wireframe',icon:'wireframe',label:'Wireframe view'}] as const).map(item =>
-          <IconButton key={item.mode} icon={item.icon} label={item.label} aria-pressed={mode === item.mode} onClick={() => setMode(item.mode)}/>)}
+        {([{mode:'transparent',icon:'transparent',label:'Transparent view'},{mode:'wireframe',icon:'wireframe',label:'Wireframe view'}] as const).map(item =>
+          <IconButton key={item.mode} icon={item.icon} label={item.label} aria-pressed={mode === item.mode} onClick={() => setMode(mode===item.mode?'solid':item.mode)}/>)}
       </div>}
   </div>;
 }

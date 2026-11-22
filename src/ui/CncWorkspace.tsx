@@ -1,4 +1,4 @@
-import {linkedPart} from '../docs/project';
+import {PartDrawing} from './PartDrawing';
 import {PlacementHistory} from '../cnc/placement-history';
 import {sheetSelection,sharedStockEdits} from '../cnc/selection';
 import {useEffect,useMemo,useRef,useState,useSyncExternalStore,type ReactNode,type RefObject} from 'react';
@@ -6,7 +6,6 @@ import {flattenParts,flatPreview,type FaceSign} from '../cnc/parts';
 import {validStock,type StockSheet,type NestOverride} from '../cnc/nesting';
 import {planSheets,sheetOverview,stockOffcuts,type SheetSettings} from '../cnc/layout';
 import {cutterLimit} from '../cnc/tooling';
-import {cabinetFace} from '../geometry/part-face';
 import {Icon} from '../design-system/Icon';
 import type {ThemeName} from '../design-system/themes';
 import type {EvaluatedCabinet} from '../geometry/evaluate';
@@ -14,7 +13,6 @@ import {CncViewport} from '../viewport/CncViewport';
 import type {CncScene} from '../viewport/cnc-scene';
 import {sheetForExport} from '../cnc/sheet-export';
 import {downloadSheetStep,requestSheetStep} from '../cnc/step-download';
-import {PartDrawing} from './PartDrawing';
 import {Button,FieldPair,IconButton,Section} from './components';
 import {DimensionField} from './DimensionField';
 import {StructureGroup} from './Structure';
@@ -42,17 +40,6 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
  const parts=useMemo(()=>model?flattenParts(model):[],[model]);
  const packed=useMemo(()=>{try{return {plan:planSheets(parts,settings,allowance,overrides),reset:false};}catch{return {plan:planSheets(parts,settings,allowance),reset:true};}},[parts,settings,allowance,overrides]);
  const {groups,sheets,unplaced}=packed.plan;
- useEffect(()=>{
-  function selectLabelOffcut(){
-   if(!active)return;const link=linkedPart(location.hash);
-   if(!link||link.cabinet!==evaluated.cabinetId||!link.part.includes('/offcut/'))return;
-   const sheet=sheets.find(s=>link.part.startsWith(s.id+'/offcut/')),index=Number(link.part.split('/offcut/').at(-1));
-   if(!sheet||!Number.isInteger(index)||index<0||!stockOffcuts(sheet,150,bitDiameter)[index]){onNotice('This offcut is not in the current Cut layout. Check the label map and sheet settings.',true);return;}
-   setKeepOffcuts(true);setMinimum(150);setSelectedIds([link.part]);window.history.replaceState(null,'',location.pathname+location.search);
-  }
-  selectLabelOffcut();window.addEventListener('hashchange',selectLabelOffcut);return()=>window.removeEventListener('hashchange',selectLabelOffcut);
- },[active,sheets,evaluated.cabinetId,bitDiameter]);
-
  useEffect(()=>{if(packed.reset){history.reset();onNotice('Requested rotations no longer fit. The layout was automatically rearranged.',true);}},[packed.reset]);
  useEffect(()=>{const valid=new Set([...sheets.map(s=>s.id),...parts.map(p=>p.id)]);setSelectedIds(ids=>{const next=ids.filter(id=>valid.has(id)||id.includes('/offcut/')||id.startsWith('group/'));return next.length===ids.length?ids:next;});},[sheets,parts]);
  const part=parts.find(p=>p.id===selected);
@@ -115,9 +102,6 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
  const field=(key:'width'|'height'|'margin'|'gap',label:string)=>options&&<DimensionField plain label={label}
   value={options[key]} cancelValue={options[key]} limits={key==='width'||key==='height'?{min:100,max:10000}:{min:0,max:500}}
   onPreview={()=>{}} onCommit={value=>changeStock({[key]:value})} onCancel={()=>{}}/>;
- const dimensions=part&&[part.width,part.height,part.thickness].map(rounded).join(' × ');
- const orientation=part&&face?`Faces ${cabinetFace(part.normal,face).toLowerCase()}`:undefined;
- const sheetPosition=placement?`${sheetOfPart?.label} · ${placement.rotated?'90° rotation':'0° rotation'}`:'Unplaced';
  const toolParts=part?[part]:entry?.sheet.placements.map(p=>p.part)??[];
 
  return <div className="workspace cnc-workspace" id="workspace-cnc" role="tabpanel" aria-labelledby="workspace-tab-1" hidden={!active}>
@@ -139,14 +123,7 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
         <Icon name={elementIcon(p.panel.role)} size={20}/><span>{p.label}</span>
        </button>)}
       </StructureGroup>}
-    {offcutIndex<0&&part&&preview&&<Section title="Machining face">
-     <PartDrawing preview={preview} label={part.label}/>
-     <div className="data-row"><span>Cabinet orientation</span><strong>{orientation}</strong></div>
-     <div className="data-row"><span>Placement</span><strong>{sheetPosition}</strong></div>
-     <div className="data-row"><span>Blank</span><strong>{dimensions} mm</strong></div>
-     {part.twoSided&&<Button className="full-width-button" onClick={()=>setReverse(!reverse)}>{other?'Show sheet face':'Show other face'}</Button>}
-     {!sheetOfPart&&<Button onClick={()=>choose(`group/${part.stockKey}`)}>Edit matching stock size</Button>}
-    </Section>}
+
    </aside>
    <div className="canvas-area">
     <CncViewport onRotatePart={part&&placement?rotatePart:undefined} selectedIds={selectedIds.length?selectedIds:[entry?.id??'']} scene={scene} selection={part?.id??(offcutIndex>=0?selected:entry?.id)??''} reverse={other} theme={theme} onSelect={choose}/>
@@ -159,7 +136,7 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
     {offcutIndex>=0&&entry?<Section title="Offcut">
      <div className="data-row"><span>Size</span><strong>{offcuts.get(entry.id)?.[offcutIndex]?.width} × {offcuts.get(entry.id)?.[offcutIndex]?.height} × {entry.thickness} mm</strong></div>
      <Button onClick={()=>choose(entry.id)}>Sheet settings</Button>
-    </Section>:part&&preview?null:options&&<><Section title={shared?'Shared stock settings':'Stock sheet'} aside={<span className="unit-badge">mm</span>}>
+    </Section>:part&&preview?<Section title="Part preview"><PartDrawing preview={preview} label={part.label}/><div className="data-row"><span>Thickness</span><strong>{part.thickness} mm</strong></div>{part.twoSided&&<Button onClick={()=>setReverse(v=>!v)}>Flip part</Button>}{placement&&<Button onClick={rotatePart}>Rotate part 90°</Button>}</Section>:options&&<><Section title={shared?'Shared stock settings':'Stock sheet'} aside={<span className="unit-badge">mm</span>}>
      {shared&&<p className="field-note">Changes apply to every selected stock type. Sheets of the same stock share settings.{sharedMixed?' Values differ; each edited field updates the selection.':''}</p>}
      <div className="data-row"><span>Material</span><strong>{activeGroup?.entries[0].material}</strong></div>
      <label className="construction-choice">Sheet size<span className="select select--fluid"><select aria-label="Sheet size"
@@ -195,16 +172,9 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
       {(!part&&!!unplaced.length)&&<p className="field-note">{unplaced.length} unplaced {unplaced.length===1?'part':'parts'}. Check sheet size or margins.</p>}
       {!part&&entry&&entry.stock.gap<bitDiameter&&<p className="field-note">Effective part gap is smaller than the cutter.</p>}
       {toolParts.some(p=>p.twoSided||p.edgeOperations)&&<p className="field-note">Some cuts require a reverse-face or edge setup.</p>}
-      {!!review.length&&<Button onClick={()=>onReview(part?.id)}>Review machining checks in Box</Button>}
+      {!!review.length&&<Button onClick={()=>onReview(part?.id)}>Review machining checks in Build</Button>}
      </Section>}
-    {offcutIndex<0&&part&&preview&&<Section title="Machining face">
-     <PartDrawing preview={preview} label={part.label}/>
-     <div className="data-row"><span>Cabinet orientation</span><strong>{orientation}</strong></div>
-     <div className="data-row"><span>Placement</span><strong>{sheetPosition}</strong></div>
-     <div className="data-row"><span>Blank</span><strong>{dimensions} mm</strong></div>
-     {part.twoSided&&<Button className="full-width-button" onClick={()=>setReverse(!reverse)}>{other?'Show sheet face':'Show other face'}</Button>}
-     {!sheetOfPart&&<Button onClick={()=>choose(`group/${part.stockKey}`)}>Edit matching stock size</Button>}
-    </Section>}
+
    </aside>
   </>}
  </div>;

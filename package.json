@@ -13,10 +13,8 @@
   },
   "dependencies": {
     "@ebay/skin": "19.39.0",
-    "fflate": "0.8.3",
     "jspdf": "4.2.1",
     "polygon-clipping": "0.15.7",
-    "qrcode": "1.5.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "replicad": "1.2.1",
@@ -24,7 +22,6 @@
     "three": "0.180.0"
   },
   "devDependencies": {
-    "@types/qrcode": "1.5.6",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
     "@types/three": "0.180.0",

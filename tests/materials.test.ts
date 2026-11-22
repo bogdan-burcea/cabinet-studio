@@ -1,3 +1,4 @@
+import {disjointAfterNotches} from './notched-overlap';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCabinet, defaultBinding, type Cabinet, type MaterialBinding } from '../src/domain/cabinet.ts';
@@ -132,7 +133,7 @@ test('schema 21 preserves stock/finish/grain pins, inheritance, dormant settings
   c = changeMaterial(c, 'interior', { ...binding('generic-panel-16'), finish: pin('white-concept'), grain: 'v' });
   c = setBanding(c, panel.id, 'v-max', pin('generic-edge-2'));
   c = setBanding(c, `${c.id}/panel/back`, 'u-min', pin('generic-edge-1'));
-  const text = serialize(c); assert.equal(JSON.parse(text).schemaVersion, 48);
+  const text = serialize(c); assert.equal(JSON.parse(text).schemaVersion, 56);
   const reopened = deserialize(text); assert.deepEqual(reopened, c); assert.deepEqual(evaluate(reopened), evaluate(c));
 });
 
@@ -179,7 +180,7 @@ test('mixed material roles remain enclosed and non-overlapping for all 192 stock
         assert.ok(panel.center[axis] - panel.size[axis] / 2 >= c.envelope.origin[axis] - 1e-6);
         assert.ok(panel.center[axis] + panel.size[axis] / 2 <= c.envelope.origin[axis] + [c.envelope.width, c.envelope.height, c.envelope.depth][axis] + 1e-6);
       }
-      for (let j = i + 1; j < e.panels.length; j++) assert.ok(noOverlap(panel, e.panels[j]));
+      for (let j = i + 1; j < e.panels.length; j++) assert.ok(disjointAfterNotches(panel, e.panels[j],e.pockets));
     }
   }
 });

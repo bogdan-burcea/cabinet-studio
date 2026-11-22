@@ -54,7 +54,7 @@ export function DocsWorkspace({active,cabinet,model,settings,allowance,onNotice}
   try{
    const {partLabels}=await import('../docs/pdf');
    const stem=cabinet.name.replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'')||'cabinet';
-   partLabels(cabinet,parts,prefs.stock,prefs.address).save(`${stem}-labels.pdf`);
+   partLabels(cabinet,parts,prefs.stock).save(`${stem}-labels.pdf`);
    onNotice('Part labels downloaded.');
   }catch(cause){setError((cause as Error).message);}
   finally{setWorking(false);}
@@ -68,9 +68,7 @@ export function DocsWorkspace({active,cabinet,model,settings,allowance,onNotice}
      <div className="docs-label-grid">
       {[0,2,4].map(i=><FieldPair key={i}>{stockField(labelFields[i])}{stockField(labelFields[i+1])}</FieldPair>)}
      </div>
-     <label className="construction-choice">App address for QR codes<span className="textbox">
-      <input className="textbox__control" type="url" value={prefs.address} onChange={event=>patch({address:event.target.value})}/></span></label>
-     <p className="field-note">Print at 100% scale. To scan from another device, use an app address that device can reach and open the matching cabinet file.</p>
+     <p className="field-note">Print at 100% scale. Labels use numbered part references.</p>
      {error&&<p className="field-note" role="alert">{error}</p>}
      <div className="docs-actions"><Button disabled={working} onClick={download}>Download labels PDF</Button></div>
     </Section>

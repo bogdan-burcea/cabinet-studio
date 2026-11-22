@@ -14,7 +14,6 @@ import {setPuzzleCorners} from '../src/commands/stock';
 import {CabinetStore} from '../src/commands/store';
 import {flattenParts} from '../src/cnc/parts';
 import {planSheets} from '../src/cnc/layout';
-import {encodeQrCabinet,decodeQrCabinet} from '../src/docs/qr-cabinet';
 const rails=(c:Cabinet)=>{const next=structuredClone(c);next.carcass.frontRails=defaultFrontRails();next.carcass.frontRails.top={enabled:true,width:90};next.carcass.frontRails.bottom={enabled:true,width:60};return next;};
 
 test('every top/back combination produces actual independent rail parts and valid machining',()=>{
@@ -27,7 +26,7 @@ test('every top/back combination produces actual independent rail parts and vali
   assert.equal(part('back-upper-rail')?.size[1],back==='rails'?110:undefined);assert.equal(part('back-lower-rail')?.size[1],back==='rails'?65:undefined);
   assert.equal(part('front-upper-rail')?.size[1],90);assert.equal(part('front-lower-rail')?.size[1],60);
   assert.ok(m.cabineo.every(j=>m.panels.some(p=>p.id===j.hostId)&&m.panels.some(p=>p.id===j.receiverId)));
-  assert.deepEqual(m.issues,[]);assert.deepEqual(readSimpleCabinet(serialize(c)),c);assert.deepEqual(decodeQrCabinet(encodeQrCabinet(c)),c);
+  assert.deepEqual(m.issues,[]);assert.deepEqual(readSimpleCabinet(serialize(c)),c);
   assert.equal(flattenParts(m).length,m.panels.length);assert.equal(planSheets(flattenParts(m),{},.2).unplaced.length,0);
   // No rectangular bodies intersect; neighbouring boards share boundary faces.
   for(let i=0;i<m.panels.length;i++)for(const q of m.panels.slice(i+1)){const p=m.panels[i];assert.ok(![0,1,2].every(a=>Math.min(p.center[a]+p.size[a]/2,q.center[a]+q.size[a]/2)-Math.max(p.center[a]-p.size[a]/2,q.center[a]-q.size[a]/2)>.001),`${top}/${back}: ${p.role} intersects ${q.role}`);}
@@ -45,7 +44,7 @@ test('front reinforcement reserves a usable opening for dividers and drawer stac
 test('open backs retain dormant back settings without orphan holes; captured backs seat in the rear top rail',()=>{
  let c=setBackFastener(createCabinet(),true);const saved=structuredClone(c.carcass.back.joint);
  c=setConstructionMode(c,'back','open');const m=evaluate(c);assert.equal(m.backFasteners.length,0);assert.equal(m.pockets.filter(p=>p.id.includes('/back-seat/')).length,0);assert.deepEqual(c.carcass.back.joint,saved);
- c=setConstructionMode(c,'back','full');c=setConstructionMode(c,'top','rails');assert.ok(evaluate(c).backFasteners.some(b=>b.panelId.endsWith('/top-rear-rail')));
+ c=setConstructionMode(c,'back','full');c=setConstructionMode(c,'top','rails');assert.ok(evaluate(c).backFasteners.every(b=>b.axis===0));assert.ok(evaluate(c).pockets.some(p=>p.panelId.endsWith('/top-rear-rail')));
  for(const mode of ['groove','rebate','applied','finger'] as const){const base=setBackPanel(createCabinet(),{mode});for(const top of ['rails','open'] as const){const next=setConstructionMode(base,'top',top),model=evaluate(next),ids=new Set(model.panels.map(p=>p.id));assert.ok(model.pockets.every(p=>ids.has(p.panelId)),`${mode}/${top} has an orphan cut`);assert.ok(model.drilling.every(h=>ids.has(h.panelId)));}}
 });
 

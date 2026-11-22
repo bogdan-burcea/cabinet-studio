@@ -1,3 +1,4 @@
+import {disjointAfterNotches} from './notched-overlap';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCabinet, defaultBinding, resize, type Cabinet, type Installation } from '../src/domain/cabinet.ts';
@@ -76,7 +77,7 @@ test('plinth geometry and foot envelopes are disjoint across stock, height and r
     let c = changeInstallation(original, layout); c = changeMaterial(c, 'plinth', defaultBinding(pin(`generic-panel-${stock}`)));
     const e = evaluate(c), parts = [...e.panels, ...e.installation.feet.flatMap(f => f.parts)];
     assert.equal(e.installation.panels.length, 1 + Number(leftReturn) + Number(rightReturn));
-    for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) assert.ok(disjoint(parts[i], parts[j]), `Overlap at ${stock}/${height}/${leftReturn}/${rightReturn}`);
+    for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) assert.ok(disjointAfterNotches(parts[i], parts[j],e.pockets), `Overlap at ${stock}/${height}/${leftReturn}/${rightReturn}`);
   }
 });
 
@@ -139,7 +140,7 @@ test('switching support modes or disabling returns retains dormant plinth materi
 test('schema 21 round trip pins support geometry, plinth binding and every existing cabinet feature', () => {
   const c = furnished(); let next = changeInstallation(c, feet(c, true));
   next = setBanding(next, `${c.id}/panel/plinth-front`, 'u-max', pin('generic-edge-0.8'));
-  const json = serialize(next); assert.equal(JSON.parse(json).schemaVersion, 48); assert.equal(JSON.parse(json).evaluatorRevision, 'rail-count-fit-48');
+  const json = serialize(next); assert.equal(JSON.parse(json).schemaVersion, 56); assert.equal(JSON.parse(json).evaluatorRevision, 'rail-hanger-access-56');
   assert.deepEqual(deserialize(json), next); assert.deepEqual(evaluate(deserialize(json)), evaluate(next));
 });
 

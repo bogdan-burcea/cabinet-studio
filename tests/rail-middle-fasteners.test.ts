@@ -1,3 +1,5 @@
+import {addDivision,removeDivisionTree} from '../src/commands/interiors';
+import {CabinetStore} from '../src/commands/store';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createCabinet} from '../src/domain/cabinet';
@@ -60,4 +62,21 @@ test('120 mm rails spread pairs symmetrically without increasing automatic count
  assert.equal(bottom[0].bores[0].point[2],350,'full panel keeps 50 mm setback');
  const doc=JSON.parse(serialize(c));doc.schemaVersion=43;doc.evaluatorRevision='rail-connectors-43';
  const loaded=deserializeWithInfo(JSON.stringify(doc));assert.equal(loaded.migrated,true);assert.deepEqual(evaluate(loaded.cabinet),evaluate(c));
+});
+
+test('a divider-to-rail connection replaces only that rail centre Cabineo, including off-centre dividers',()=>{
+ const base=fixture();
+ for(const position of [140,282]){
+  const split=addDivision(base,base.compartments.id,'vertical',position),m=evaluate(split.cabinet);
+  assert.equal(m.cabineo.filter(j=>j.id.includes('/middle/')).length,0);
+  for(const rail of m.panels.filter(p=>['back-upper-rail','back-lower-rail','front-upper-rail','front-lower-rail'].includes(p.role))){
+   assert.ok(m.cabineo.some(j=>j.hostId===split.featureId&&j.receiverId===rail.id));
+   assert.ok(m.cabineo.some(j=>j.hostId===rail.id&&!j.id.includes('/middle/')),'side connections remain');
+   assert.ok(!flattenParts(m).find(p=>p.id===rail.id)!.holes.some(h=>h.group.includes('/middle/')));
+  }
+  assert.deepEqual(evaluate(deserializeWithInfo(serialize(split.cabinet)).cabinet).cabineo,m.cabineo);
+  const store=new CabinetStore(split.cabinet),removed=removeDivisionTree(split.cabinet,split.featureId);assert.ok(store.commit(removed));assert.equal(evaluate(removed).cabineo.filter(j=>j.id.includes('/middle/')).length,4);store.undo();assert.deepEqual(evaluate(store.getSnapshot().committed).cabineo,m.cabineo);
+ }
+ const horizontal=addDivision(base,base.compartments.id,'horizontal',250),upper=evaluate(horizontal.cabinet).openings.sort((a,b)=>b.origin[1]-a.origin[1])[0],split=addDivision(horizontal.cabinet,upper.id,'vertical',140),m=evaluate(split.cabinet);
+ const middle=m.cabineo.filter(j=>j.id.includes('/middle/'));assert.equal(middle.length,2);assert.ok(middle.every(j=>j.hostId.endsWith('lower-rail')),'rails untouched by the divider retain their middle connectors');
 });

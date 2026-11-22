@@ -36,7 +36,7 @@ test('drawer pulls, knobs and finger holes share door-style controls and produce
   assert.equal(cabinetForExport(model,'Test').parts.filter(p=>p.name.startsWith('Drawer 1 · handle')).length,bodies.length);
   assert.deepEqual(deserialize(serialize(c)),c);
   const store=new CabinetStore(c);assert.ok(store.commit(removeMetalDrawer(c,featureIds[0])));assert.ok(!evaluate(store.getSnapshot().committed).drawers.drawers.some(d=>d.id===featureIds[0]));store.undo();assert.deepEqual(store.getSnapshot().committed,c);
-  for(const invalid of [null,{...handle,extra:true},{...handle,pitch:999}]){const doc=JSON.parse(serialize(c));doc.cabinet.drawers[0].handle=invalid;assert.throws(()=>deserialize(JSON.stringify(doc)));}
+  for(const invalid of [null,{...handle,extra:true},{...handle,pitch:2000.1}]){const doc=JSON.parse(serialize(c));doc.cabinet.drawers[0].handle=invalid;assert.throws(()=>deserialize(JSON.stringify(doc)));}
  }
 });
 test('shared sheet editing deduplicates stock groups, preserves unrelated fields and rejects an invalid batch atomically',()=>{

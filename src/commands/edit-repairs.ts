@@ -1,3 +1,5 @@
+import {railFastenerFitRepairs} from './rail-fastener-fit';
+import {railCollisionRepairs} from './rail-collision-repairs';
 import {resolveConstruction} from '../rules/construction';
 import {drawerRepairs} from './drawer-repairs';
 import {cupSetbackMax} from '../catalogue/hinges';
@@ -25,6 +27,7 @@ export function editError(c:Cabinet):string|null {try{evaluate(c);return null;}c
  * smallest readable adjustment in that direction. Keep the user's edited field. */
 export function editRepairs(candidate:Cabinet,previous:Cabinet):EditRepair[]{
  const message=editError(candidate);if(!message)return [];
+ if(message.startsWith('Divider-to-rail Cabineos')){const fitted=railFastenerFitRepairs(candidate);if(fitted.length)return fitted;}
  const options:EditRepair[]=/Drawer|drawer/.test(message)?drawerRepairs(candidate,previous):[],settings=cnc(candidate),old=cnc(previous);
  if(/Notch interior corner/.test(message)){
   const bit=cnc(candidate).bitDiameter;
@@ -47,6 +50,7 @@ export function editRepairs(candidate:Cabinet,previous:Cabinet):EditRepair[]{
    if(r[side].enabled&&available>=20&&available<r[side].width){r[side].width=available;add(`Use a ${available} mm ${side} front rail`,c);}
   }
  }
+ if(message.includes('Rails with a panel require'))add('Keep rails with a panel and remove incompatible Ixconnect fixings',setBackFastener(candidate,false));
  if(message.includes('Blum wall hanging')&&candidate.carcass.back.mode!=='full')add('Keep the open back and remove wall hanging',{...candidate,installation:{...candidate.installation,mounting:{...candidate.installation.mounting,mode:'none'}}});
  if(/Plinth height/.test(message)){
   const height=40+candidate.installation.plinth.topGap+candidate.installation.plinth.bottomGap;
@@ -99,6 +103,7 @@ export function editRepairs(candidate:Cabinet,previous:Cabinet):EditRepair[]{
  if(joint&&joint.mode===prior?.mode&&/back seat depth|back engagement/.test(message))add('Use an inset back without routed seats',setBackPanel(candidate,{mode:'inset',depth:1}));
  if(joint&&message.includes('behind it')&&joint.inset===prior?.inset)search(Math.ceil(joint.inset),100,1,n=>setBackPanel(candidate,{inset:n}),n=>`Move back groove inward · rear inset ${n} mm`);
  if(/Cabineo|Ixconnect/.test(message)){
+  try{for(const option of railCollisionRepairs(candidate))add(option.label,option.cabinet);}catch{}
   if(stock(candidate,'carcass').thickness===stock(previous,'carcass').thickness)search(Math.ceil(stock(candidate,'carcass').thickness),24,1,n=>setStockThickness(candidate,n),n=>`Increase stock thickness to ${n} mm`);
   if(message.includes('Cabineo')){
    if(candidate.hardware[0]?.id==='cabineo-12')add('Use Cabineo 8',setCabineo(candidate,'cabineo-8'));

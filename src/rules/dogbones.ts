@@ -6,9 +6,9 @@ import {cnc} from './cnc';
  * Other joinery keeps diagonal relief at r/√2 inside the pocket.
  * Only internal profile corners receive relief; open stock edges are excluded. */
 export function addDogbones(c:Cabinet,panels:(Pick<ConstructionPanel,'role'|'origin'|'size'>&{id?:string})[],cuts:BackPocket[]):BackPocket[]{
- const settings=cnc(c),grooves=['groove','rebate'].includes(c.carcass.back.joint?.mode??'');if(!settings.dogbones&&!grooves)return cuts;
+ const settings=cnc(c),grooves=['groove','rebate'].includes(c.carcass.back.joint?.mode??'');if(!settings.dogbones&&!grooves&&!cuts.some(p=>p.kind==='rail-notch'))return cuts;
  const r=settings.bitDiameter/2,offset=r/Math.SQRT2;
- return cuts.map(cut=>{if(!settings.dogbones&&!(grooves&&cut.id.includes('/back-seat/')))return cut;const panel=panels.find(p=>(p.id??`${c.id}/panel/${p.role}`)===cut.panelId);if(!panel)return cut;const axes=[0,1,2].filter(a=>a!==cut.axis),[u,v]=axes,reliefs:{center:Vec3;radius:number}[]=[];
+ return cuts.map(cut=>{if(!settings.dogbones&&cut.kind!=='rail-notch'&&!(grooves&&cut.id.includes('/back-seat/')))return cut;const panel=panels.find(p=>(p.id??`${c.id}/panel/${p.role}`)===cut.panelId);if(!panel)return cut;const axes=[0,1,2].filter(a=>a!==cut.axis),[u,v]=axes,reliefs:{center:Vec3;radius:number}[]=[];
   // A cutter that cannot enter a slot must not enlarge the fit clearance.
   // Keep the designed cut, skip unavailable relief, and report tooling separately.
   if(Math.min(cut.size[u],cut.size[v])+1e-6<settings.bitDiameter)return {...cut,reliefs:[]};
@@ -29,5 +29,5 @@ export function addDogbones(c:Cabinet,panels:(Pick<ConstructionPanel,'role'|'ori
 /** Tool feasibility is a notice, independent of the designed mating clearance. */
 export function narrowToolCuts(c:Cabinet,cuts:BackPocket[]):BackPocket[]{
  const settings=cnc(c),seats=['groove','rebate'].includes(c.carcass.back.joint?.mode??'');
- return cuts.filter(cut=>(settings.dogbones||seats&&cut.id.includes('/back-seat/'))&&!cut.outline&&Math.min(...cut.size.filter((_,axis)=>axis!==cut.axis))+1e-6<settings.bitDiameter);
+ return cuts.filter(cut=>(settings.dogbones||cut.kind==='rail-notch'||seats&&cut.id.includes('/back-seat/'))&&!cut.outline&&Math.min(...cut.size.filter((_,axis)=>axis!==cut.axis))+1e-6<settings.bitDiameter);
 }

@@ -9,16 +9,16 @@ import {CabinetStore} from '../src/commands/store.ts';
 import {serialize,deserializeWithInfo} from '../src/persistence/files.ts';
 import {readSimpleCabinet} from '../src/persistence/simple.ts';
 
-test('Ixconnect uses Workshop matched six bores, no back drilling, and compatible intent in one undo step',()=>{
+test('Ixconnect uses Workshop matched side bores, no back drilling, and compatible intent in one undo step',()=>{
  const c=setCabineo(setBackPanel(createCabinet(),{mode:'applied',thickness:9}),'cabineo-8'),store=new CabinetStore(c),next=setBackFastener(c,true);assert.ok(store.commit(next));
- const e=evaluate(next),f=e.backFasteners;assert.equal(f.length,6);assert.ok(f.every(b=>b.diameter===15&&b.depth===12.5));assert.ok(f.every(b=>!b.panelId.endsWith('/back')));assert.equal(next.materials.back.stock.id,'generic-back-3');assert.equal(next.carcass.back.joint!.mode,'groove');assert.equal(next.carcass.back.joint!.inset,11);
- assert.deepEqual(f.filter(b=>b.panelId.endsWith('/left')).map(b=>+b.point[1].toFixed(1)),[62.1,657.9]);assert.ok(f.every(b=>b.point[2]===12.5));assert.equal(f.find(b=>b.panelId.endsWith('/top'))!.sign,1);assert.equal(f.find(b=>b.panelId.endsWith('/bottom'))!.sign,1);
+ const e=evaluate(next),f=e.backFasteners;assert.equal(f.length,4);assert.ok(f.every(b=>b.diameter===15&&b.depth===12.5));assert.ok(f.every(b=>!b.panelId.endsWith('/back')));assert.equal(next.materials.back.stock.id,'generic-back-3');assert.equal(next.carcass.back.joint!.mode,'groove');assert.equal(next.carcass.back.joint!.inset,11);
+ assert.deepEqual(f.filter(b=>b.panelId.endsWith('/left')).map(b=>+b.point[1].toFixed(1)),[62.1,657.9]);assert.ok(f.every(b=>b.point[2]===12.5));assert.ok(f.every(b=>b.axis===0));
  assert.ok(e.cabineo.length>0);assert.deepEqual(readSimpleCabinet(serialize(next)),next);store.undo();assert.deepEqual(store.getSnapshot().committed,c);store.redo();assert.deepEqual(store.getSnapshot().committed,next);
  assert.equal(evaluate(setBackFastener(next,false)).backFasteners.length,0);
 });
 test('counts and strict stock, captured-back, edge and spacing checks preserve last good intent',()=>{
  const c=setBackFastener(createCabinet(),true),f=c.carcass.back.joint!.fastener!,store=new CabinetStore(c);
- assert.equal(evaluate(setBackPanel(c,{fastener:{...f,perSide:1}})).backFasteners.length,4);
+ assert.equal(evaluate(setBackPanel(c,{fastener:{...f,perSide:1}})).backFasteners.length,2);
  assert.throws(()=>evaluate(setBackPanel(resizeCabinet(c,'height',600),{fastener:{...f,perSide:20}})),/pitch/);
  for(const patch of [{thickness:6},{mode:'rebate' as const},{depth:7},{inset:10},{fastener:{...f,perSide:21}},{fastener:{...f,perSide:1.5}}]){assert.equal(store.commit(setBackPanel(c,patch)),false);assert.deepEqual(store.getSnapshot().committed,c);}
 });

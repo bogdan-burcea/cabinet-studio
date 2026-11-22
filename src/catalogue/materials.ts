@@ -14,7 +14,7 @@ export const edgeProducts = Object.fromEntries([0.8, 1, 2].map(thickness => {
 }));
 export function material(pin: ProductPin) {
   const custom=pin.id.match(/^generic-(panel|back)-(\d+(?:\.\d)?)$/),n=custom?Number(custom[2]):NaN;
-  const record = materials[pin.id]??(pin.revision==='1'&&n>=3&&n<=24&&custom?.[2]===String(n)?custom?.[1]==='back'?back(n):panel(n):undefined);
+  const record = materials[pin.id]??(pin.revision==='1'&&n>=.1&&n<=100&&custom?.[2]===String(n)?custom?.[1]==='back'?back(n):panel(n):undefined);
   if (!record || record.revision !== pin.revision) throw new Error(`Unavailable material revision: ${pin.id}@${pin.revision}`);
   return record;
 }

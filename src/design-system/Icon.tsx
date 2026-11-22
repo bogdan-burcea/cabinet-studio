@@ -1,3 +1,4 @@
+import {actionSymbols} from './action-icons';
 type ElementIcon='element-drawer'|'element-foot'|'element-left'|'element-right'|'element-door'|'element-side'|'element-shelf'|'element-adjustable'|'element-divider'|'element-back'|'element-top'|'element-bottom'|'element-opening';
 export type IconName=ElementIcon|'utilities'|'costs'|'door-open'|'door-close'|'rotate'|'delete'|'add'|'remove'|'chevron-up'|'move-horizontal'|'move-vertical'|'move'|'information'|'attention'|'attention-filled'|'cabinet'|'undo'|'redo'|'save'|'open'|'cube'|'fit'|'chevron'|'panel'|'sun'|'moon'|'check'|'help'|'close'|'arrow'|'eye'|'transparent'|'wireframe'|'exploded'|'new'|'zoom-in'|'cut';
 // Application actions map to unmodified icons from the official eBay Evo library.
@@ -41,5 +42,6 @@ export function Icon({name,size=20}:{name:IconName;size?:number}){
   return <svg className={`icon icon--${grid}`} width={grid} height={grid} viewBox={`0 0 ${grid} ${grid}`} fill="none" style={{fill:'none',strokeWidth:2}} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" focusable="false" aria-hidden="true"><path d={path} transform={name==='move-vertical'?`rotate(90 ${grid/2} ${grid/2})`:undefined}/></svg>;
  }
  const base=names[name as Exclude<IconName,ElementIcon|'door-open'|'door-close'|'rotate'>];const iconSize=base.startsWith('chevron')?size<=14?12:16:['checkmark','split-view'].includes(base)?24:size<=18?16:24;
+ if(name==='close'||name==='delete')return <svg className={`icon icon--${size<=14?12:size<=18?16:size<=22?20:24}`} width={size} height={size} viewBox={`0 0 ${iconSize} ${iconSize}`} focusable="false" aria-hidden="true" dangerouslySetInnerHTML={{__html:actionSymbols[`icon-${base}-${iconSize}`]}}/>;
  return <svg className={`icon icon--${size<=14?12:size<=18?16:size<=22?20:24}`} width={size} height={size} viewBox={`0 0 ${iconSize} ${iconSize}`} focusable="false" aria-hidden="true" style={name==='redo'?{transform:'scaleX(-1)'}:undefined}><use href={`${import.meta.env.BASE_URL}assets/evo-icons.svg#icon-${base}-${iconSize}`}/></svg>;
 }

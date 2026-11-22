@@ -62,7 +62,7 @@ test('inspection rotation is outward for each handing, clamped and separate from
 });
 test('schema 21 round trips fronts and all existing intent; schema 7 upgrades as an unchanged copy',()=>{
  const c=baseline(),previous=JSON.stringify({format:'cabinet-studio',schemaVersion:7,evaluatorRevision:'interiors-7',cabinet:c}),result=deserializeWithInfo(previous);assert.equal(result.migrated,true);assert.deepEqual(result.cabinet,c);assert.deepEqual(evaluate(result.cabinet),evaluate(c));assert.deepEqual(JSON.parse(previous).cabinet,c);
- const pair=addDoorPair(c).cabinet,encoded=serialize(pair),loaded=deserializeWithInfo(encoded);assert.equal(JSON.parse(encoded).schemaVersion,48);assert.equal(loaded.migrated,false);assert.deepEqual(loaded.cabinet,pair);assert.deepEqual(evaluate(loaded.cabinet),evaluate(pair));assert.equal(AUTOSAVE_KEY,'cabinet-studio.autosave.v48');assert.ok(PREVIOUS_AUTOSAVE_KEYS.includes('cabinet-studio.autosave.v7'));
+ const pair=addDoorPair(c).cabinet,encoded=serialize(pair),loaded=deserializeWithInfo(encoded);assert.equal(JSON.parse(encoded).schemaVersion,56);assert.equal(loaded.migrated,false);assert.deepEqual(loaded.cabinet,pair);assert.deepEqual(evaluate(loaded.cabinet),evaluate(pair));assert.equal(AUTOSAVE_KEY,'cabinet-studio.autosave.v56');assert.ok(PREVIOUS_AUTOSAVE_KEYS.includes('cabinet-studio.autosave.v7'));
 });
 test('strict native validation rejects malformed fronts, unknown pins and shared front/handle/tree/content identities',()=>{
  const c=addDoorPair(baseline()).cabinet,store=new CabinetStore(c),id=c.fronts[0].id;

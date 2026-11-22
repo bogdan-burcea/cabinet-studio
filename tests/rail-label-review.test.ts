@@ -29,8 +29,8 @@ test('label job includes every reusable offcut and appends sheet maps after labe
  const c=createCabinet(),m=evaluate(c),parts=flattenParts(m),plan=planSheets(parts,{},.2),job=labelJob(parts,plan,6);
  assert.ok(job.parts.length>parts.length);assert.equal(new Set(job.parts.map(p=>p.id)).size,job.parts.length);
  for(const sheet of job.map.sheets)for(const item of sheet.items)assert.ok(job.parts.some(p=>p.id===item.id));
- const pdf=partLabels(c,job.parts,defaultLabelStock,'https://example.test/',false,job.map).output();
- assert.match(pdf,/label map/);assert.doesNotMatch(pdf,/arrangement reference|Cabinet - part reference|Sheet \d+ - parts/);assert.equal((pdf.match(/\/Subtype \/Link/g)??[]).length,job.parts.length);
+ const pdf=partLabels(c,job.parts,defaultLabelStock,false,job.map).output();
+ assert.match(pdf,/label map/);assert.doesNotMatch(pdf,/arrangement reference|Cabinet - part reference|Sheet \d+ - parts/);assert.doesNotMatch(pdf,/\/Subtype \/Link/);assert.doesNotMatch(pdf,/exploded diagram/);
 });
 
 test('back-seat T-bones run along the slot walls, stay tangent to the ends and round-trip under native 41',()=>{
@@ -41,7 +41,7 @@ test('back-seat T-bones run along the slot walls, stay tangent to the ends and r
    assert.ok(Math.abs(relief.center[1]-cut.origin[1]-relief.radius)<1e-6||Math.abs(relief.center[1]-(cut.origin[1]+cut.size[1]-relief.radius))<1e-6);
    assert.ok(Math.abs(relief.center[2]-cut.origin[2])<1e-6||Math.abs(relief.center[2]-cut.origin[2]-cut.size[2])<1e-6);
   }
-  const doc=JSON.parse(serialize(c));assert.equal(doc.schemaVersion,48);doc.schemaVersion=40;doc.evaluatorRevision='wall-rail-notch-40';assert.equal(deserializeWithInfo(JSON.stringify(doc)).migrated,true);
+  const doc=JSON.parse(serialize(c));assert.equal(doc.schemaVersion,56);doc.schemaVersion=40;doc.evaluatorRevision='wall-rail-notch-40';assert.equal(deserializeWithInfo(JSON.stringify(doc)).migrated,true);
  }
  const thin=setBackPanel(createCabinet(),{mode:'groove',thickness:3});assert.ok(evaluate(thin).issues.some(i=>i.code==='machining-tool-width'));
 });

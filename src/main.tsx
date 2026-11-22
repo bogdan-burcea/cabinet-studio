@@ -15,6 +15,7 @@ import '@ebay/skin/accordion.css';
 import '@ebay/skin/tooltip.css';
 import '@ebay/skin/field.css';
 import '@ebay/skin/radio.css';
+import '@ebay/skin/checkbox.css';
 import '@ebay/skin/segmented-buttons.css';
 import '@ebay/skin/tabs.css';
 import '@ebay/skin/section-notice.css';

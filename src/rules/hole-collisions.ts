@@ -1,4 +1,6 @@
 import type {CabineoBore} from './cabineo';
+/** Minimum edge-to-feature gap for automatic safe-placement corrections. */
+export const SAFE_FEATURE_CLEARANCE=10;
 /** Exact intersection of finite, axis-aligned drill cylinders. Tangency is not
  * interference. Unlike bounding boxes, perpendicular bores need a shared round section. */
 export function holesOverlap(a:CabineoBore,b:CabineoBore){

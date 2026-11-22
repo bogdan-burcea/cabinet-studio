@@ -5,7 +5,8 @@ import {billOfMaterials} from '../docs/project';
 import {drawerPack} from '../catalogue/drawers';
 export type CostLine={id:string;label:string;detail?:string;quantity:number;unit:string;sheetArea?:number;offcutArea?:number;paired?:boolean};
 export type StockBasis='sheet'|'area';
-export type CostPreferences={version:1;prices:Record<string,number>;labourHours:number;labourRate?:number;profitPercent?:number;deductOffcuts?:boolean;stockBasis?:StockBasis};
+export type CatalogueMeta={tags:Record<string,string>;stock:Record<string,{width:number;height:number}>};
+export type CostPreferences={version:1;prices:Record<string,number>;labourHours:number;labourRate?:number;profitPercent?:number;deductOffcuts?:boolean;stockBasis?:StockBasis;catalogue?:CatalogueMeta};
 export const validPrice=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=1_000_000&&Math.abs(n*1e6-Math.round(n*1e6))<1e-4;
 export const validHours=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=100_000&&Math.abs(n*100-Math.round(n*100))<1e-5;
 export function parseCostInput(raw:string,hours=false):number|undefined{
@@ -44,7 +45,7 @@ export function costQuantities(c:Cabinet,model:EvaluatedCabinet,plan:ReturnType<
 export function calculateEstimate(quantities:ReturnType<typeof costQuantities>,prefs:CostPreferences){
  if(prefs.profitPercent!==undefined&&(!validPrice(prefs.profitPercent)||prefs.profitPercent>1000))throw Error('Profit must be between 0 and 1,000%.');
  if(!validHours(prefs.labourHours)||prefs.labourRate!==undefined&&!validPrice(prefs.labourRate)||Object.values(prefs.prices).some(p=>!validPrice(p)))throw Error('Invalid estimate amounts.');
- const price=(line:CostLine)=>({...line,unitPrice:prefs.prices[line.id],cents:Math.round((prefs.prices[line.id]??0)*100*line.quantity)});
+ const price=(line:CostLine)=>{const unitPrice=prefs.prices[line.id];return {...line,unitPrice,cents:Math.round((unitPrice??0)*100*line.quantity)};};
  const stock=quantities.stock.map(price),hardware=quantities.hardware.map(price);
  const stockCents=stock.reduce((n,r)=>n+r.cents,0),hardwareCents=hardware.reduce((n,r)=>n+r.cents,0);
  const labourCents=Math.round(Math.round((prefs.labourRate??0)*100)*Math.round(prefs.labourHours*100)/100);

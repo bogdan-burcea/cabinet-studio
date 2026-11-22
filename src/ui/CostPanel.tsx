@@ -5,7 +5,7 @@ import {flattenParts} from '../cnc/parts';
 import {planSheets,type SheetSettings} from '../cnc/layout';
 import {PlacementHistory} from '../cnc/placement-history';
 import {costQuantities,calculateEstimate,formatRon,parseCostInput,estimateCsv,type CostPreferences,type CostLine} from '../costs/estimate';
-import {decodeCostPreferences,estimateKey,priceBookKey} from '../costs/preferences';
+import {decodeCostPreferences,manualCostPreferences,estimateKey,priceBookKey} from '../costs/preferences';
 import {UtilitiesTabs} from './UtilitiesTabs';
 import {labelJob} from '../docs/label-job';
 import {PartLabelsPanel} from './PartLabelsPanel';
@@ -24,9 +24,11 @@ export function CostPanel({cabinet,model,settings,history,onClose,onNotice,onRev
  const choices=useSyncExternalStore((history??emptyHistory).subscribe,(history??emptyHistory).getSnapshot).choices;
  const parts=useMemo(()=>flattenParts(model),[model]);
  const plan=useMemo(()=>{try{return planSheets(parts,settings,cabinet.carcass.machining?.tolerance??.2,choices);}catch{return planSheets(parts,settings,cabinet.carcass.machining?.tolerance??.2);}},[parts,settings,choices,cabinet.carcass.machining?.tolerance]);
- const [prefs,setPrefs]=useState<CostPreferences>(()=>{try{return {...decodeCostPreferences(localStorage.getItem(estimateKey(cabinet.id)),decodeCostPreferences(localStorage.getItem(priceBookKey))),stockBasis:'sheet'};}catch{return {version:1,prices:{},labourHours:0};}});
- const [tab,setTab]=useState<'costs'|'labels'>('costs');
  const quantities=useMemo(()=>costQuantities(cabinet,model,plan,'sheet'),[cabinet,model,plan]);
+ const [prefs,setPrefs]=useState<CostPreferences>(()=>{try{const defaults=decodeCostPreferences(localStorage.getItem(priceBookKey)),saved=decodeCostPreferences(localStorage.getItem(estimateKey(cabinet.id)),defaults);if(defaults.catalogue||Object.keys(defaults.prices).some(id=>id.startsWith('stock/reference/')||id.startsWith('stock/catalogue/')))localStorage.setItem(priceBookKey,JSON.stringify(manualCostPreferences([...quantities.stock,...quantities.hardware],defaults)));return {...manualCostPreferences([...quantities.stock,...quantities.hardware],{...saved,prices:{...defaults.prices,...saved.prices},catalogue:saved.catalogue??defaults.catalogue}),stockBasis:'sheet'};}catch{return {version:1,prices:{},labourHours:0};}});
+
+ const [tab,setTab]=useState<'costs'|'labels'>('costs');
+
  const labels=useMemo(()=>labelJob(parts,plan,cabinet.carcass.machining?.bitDiameter??6),[parts,plan,cabinet.carcass.machining?.bitDiameter]);
  const estimate=useMemo(()=>calculateEstimate(quantities,prefs),[quantities,prefs]);
  const content=useRef<HTMLDivElement>(null);
