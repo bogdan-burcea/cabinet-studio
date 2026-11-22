@@ -83,7 +83,7 @@ test('fixed/adjustable conversion previews preserve panel identity and banding; 
   const converted=fixedToAdjustable(c,fixed.featureId);assert.equal(converted.contents[0].id,fixed.featureId);assert.deepEqual(converted.banding,c.banding);assert.equal(evaluate(converted).openings.length,1);
   const restored=adjustableToFixed(converted,fixed.featureId);assert.equal(evaluate(restored).divisions[0].id,fixed.featureId);assert.deepEqual(restored.banding,c.banding);assert.equal(restored.contents.length,0);
   const nested=addDivision(c,evaluate(c).openings[0].id,'vertical',280).cabinet;assert.throws(()=>fixedToAdjustable(nested,fixed.featureId),/Remove child/);
-  const multiple=duplicateAdjustable(converted,fixed.featureId).cabinet;assert.throws(()=>adjustableToFixed(multiple,fixed.featureId),/Remove other/);
+  const multiple=duplicateAdjustable(converted,fixed.featureId).cabinet,split=adjustableToFixed(multiple,fixed.featureId);assert.equal(evaluate(split).adjustable.shelves.length,1);assert.deepEqual(evaluate(split).adjustable.shelves[0].origin,evaluate(multiple).adjustable.shelves.find(s=>s.id!==fixed.featureId)!.origin);
   const store=new CabinetStore(c);store.preview(converted);store.cancel();assert.deepEqual(store.getSnapshot().committed,c);store.commit(converted);store.undo();assert.deepEqual(store.getSnapshot().committed,c);
 });
 test('schema 11 preserves all adjustable intent/geometry and schema 6 migrates a copy without changing prior features',()=>{

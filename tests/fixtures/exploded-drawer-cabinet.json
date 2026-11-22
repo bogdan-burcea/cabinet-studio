@@ -1,0 +1,320 @@
+{
+  "format": "cabinet-studio",
+  "schemaVersion": 56,
+  "evaluatorRevision": "rail-hanger-access-56",
+  "cabinet": {
+    "id": "4b168629-d737-42fb-95b2-4da633fc1d58",
+    "name": "Cabinet",
+    "envelope": {
+      "width": 800,
+      "height": 1200,
+      "depth": 350,
+      "origin": [
+        0,
+        0,
+        0
+      ]
+    },
+    "carcass": {
+      "construction": "rectangular-butt",
+      "policyRevision": "construction-1",
+      "top": {
+        "mode": "full",
+        "frontDepth": 80,
+        "rearDepth": 80
+      },
+      "back": {
+        "mode": "full",
+        "upperHeight": 80,
+        "lowerHeight": 80,
+        "joint": {
+          "revision": "back-1",
+          "mode": "groove",
+          "inset": 25,
+          "depth": 6,
+          "clearance": 0.2,
+          "fastener": {
+            "id": "hafele-26009765",
+            "revision": "rpc-1",
+            "perSide": 3
+          }
+        }
+      },
+      "machining": {
+        "revision": "cnc-1",
+        "tolerance": 0.2,
+        "bitDiameter": 3,
+        "dogbones": false,
+        "throughOpposed": true,
+        "cabineoPerSide": 0,
+        "bottomFace": "inside",
+        "bottomFastenersThrough": false
+      }
+    },
+    "compartments": {
+      "id": "4b168629-d737-42fb-95b2-4da633fc1d58/opening",
+      "kind": "split",
+      "featureId": "87e1ec9c-47ea-494d-89dd-37c19357c519",
+      "axis": "horizontal",
+      "position": 235,
+      "policyRevision": "fixed-1",
+      "children": [
+        {
+          "id": "48f42366-fd67-4c8e-b65f-62836727c830",
+          "kind": "opening",
+          "children": []
+        },
+        {
+          "id": "0ac1ba1c-fa43-4f8e-8493-81e0ff5c3795",
+          "kind": "split",
+          "featureId": "eaa7d153-cb4b-4a78-9390-171d94add32c",
+          "axis": "horizontal",
+          "position": 460,
+          "policyRevision": "fixed-1",
+          "children": [
+            {
+              "id": "062ba839-d51f-4226-b433-b5553cbf00d6",
+              "kind": "split",
+              "featureId": "ea957637-23d6-42b1-966e-aa32a1c9273d",
+              "axis": "vertical",
+              "position": 382,
+              "policyRevision": "fixed-1",
+              "children": [
+                {
+                  "id": "ae315253-f765-4f00-8be9-1c528953181a",
+                  "kind": "opening",
+                  "children": []
+                },
+                {
+                  "id": "af6194e6-c743-4587-a0db-cfcc09f8102b",
+                  "kind": "opening",
+                  "children": []
+                }
+              ],
+              "anchor": "centre"
+            },
+            {
+              "id": "a3f20d1a-3ad9-41cb-8e8c-02cee72f70d1",
+              "kind": "opening",
+              "children": []
+            }
+          ],
+          "anchor": "centre"
+        }
+      ]
+    },
+    "contents": [
+      {
+        "id": "d859961e-9d6d-49fe-828a-2fee82c40815",
+        "kind": "adjustable-shelf",
+        "openingId": "a3f20d1a-3ad9-41cb-8e8c-02cee72f70d1",
+        "level": 2,
+        "frontSetback": 0,
+        "policyRevision": "adjustable-1",
+        "support": {
+          "id": "concept-shelf-support",
+          "revision": "1"
+        },
+        "drilling": {
+          "revision": "shelf-holes-1",
+          "count": 5,
+          "firstLevel": 0,
+          "anchor": "centre",
+          "center": 225.5
+        }
+      }
+    ],
+    "fronts": [
+      {
+        "id": "eef660e0-3184-4a99-a7e1-9341f9aaf159",
+        "kind": "slab-door",
+        "policyRevision": "slab-1",
+        "region": {
+          "left": 0,
+          "right": 0.5,
+          "bottom": 0.21083333333333334,
+          "top": 1
+        },
+        "placement": "overlay",
+        "handing": "left",
+        "reveal": 2,
+        "clearance": 2,
+        "material": null,
+        "handle": {
+          "geometry": {
+            "id": "concept-slab-handle",
+            "revision": "1"
+          },
+          "kind": "knob",
+          "pitch": 128,
+          "orientation": "vertical",
+          "edgeOffset": 60,
+          "height": "bottom",
+          "endOffset": 60,
+          "diameter": 24
+        },
+        "boundaryLinks": {
+          "bottom": "87e1ec9c-47ea-494d-89dd-37c19357c519",
+          "right": "ea957637-23d6-42b1-966e-aa32a1c9273d"
+        },
+        "hinge": {
+          "id": "blum-clip-110",
+          "revision": "blum-1",
+          "count": 2,
+          "endOffset": 100,
+          "cupDistance": 5
+        }
+      },
+      {
+        "id": "b205f64a-b314-4411-adf9-8b12bfb4e9d0",
+        "kind": "slab-door",
+        "policyRevision": "slab-1",
+        "region": {
+          "left": 0.5,
+          "right": 1,
+          "bottom": 0.21083333333333334,
+          "top": 1
+        },
+        "placement": "overlay",
+        "handing": "right",
+        "reveal": 2,
+        "clearance": 2,
+        "material": null,
+        "handle": {
+          "geometry": {
+            "id": "concept-slab-handle",
+            "revision": "1"
+          },
+          "kind": "knob",
+          "pitch": 128,
+          "orientation": "vertical",
+          "edgeOffset": 60,
+          "height": "bottom",
+          "endOffset": 60,
+          "diameter": 24
+        },
+        "boundaryLinks": {
+          "bottom": "87e1ec9c-47ea-494d-89dd-37c19357c519",
+          "left": "ea957637-23d6-42b1-966e-aa32a1c9273d"
+        },
+        "hinge": {
+          "id": "blum-clip-110",
+          "revision": "blum-1",
+          "count": 2,
+          "endOffset": 100,
+          "cupDistance": 5
+        }
+      }
+    ],
+    "installation": {
+      "type": "unassigned",
+      "policyRevision": "support-1",
+      "mounting": {
+        "mode": "suspended-concept",
+        "policyRevision": "mounting-1",
+        "geometry": {
+          "id": "blum-48n0510",
+          "revision": "1"
+        },
+        "wallGap": 30,
+        "topOffset": 33,
+        "sideInset": 60,
+        "floorClearance": 300
+      },
+      "feet": {
+        "geometry": {
+          "id": "concept-foot-60",
+          "revision": "1"
+        },
+        "height": 100,
+        "sideInset": 60,
+        "frontInset": 120,
+        "rearInset": 60
+      },
+      "plinth": {
+        "enabled": false,
+        "leftReturn": false,
+        "rightReturn": false,
+        "frontSetback": 60,
+        "topGap": 5,
+        "bottomGap": 0,
+        "material": null
+      }
+    },
+    "materials": {
+      "carcass": {
+        "stock": {
+          "id": "generic-panel-18",
+          "revision": "1"
+        },
+        "finish": {
+          "id": "unspecified",
+          "revision": "1"
+        },
+        "grain": "none"
+      },
+      "back": {
+        "stock": {
+          "id": "generic-back-3",
+          "revision": "1"
+        },
+        "finish": {
+          "id": "unspecified",
+          "revision": "1"
+        },
+        "grain": "none"
+      },
+      "interior": null
+    },
+    "banding": {},
+    "hardware": [
+      {
+        "id": "cabineo-12",
+        "revision": "surface-1"
+      }
+    ],
+    "cabinetType": "wall",
+    "drawers": [
+      {
+        "id": "5eec1629-45b5-420f-b4bf-a6c1851ddae0",
+        "kind": "metal-drawer",
+        "policyRevision": "antaro-external-1",
+        "pack": {
+          "id": "blum-antaro-m-300-blumotion-sw",
+          "revision": "catalogue-2024-1"
+        },
+        "openingId": "48f42366-fd67-4c8e-b65f-62836727c830",
+        "offset": 0,
+        "frontHeight": 226,
+        "stack": {
+          "groupId": "d896fe53-49ea-41e1-a76b-6952fee65d0e",
+          "order": 0,
+          "height": 0
+        },
+        "front": {
+          "placement": "overlay",
+          "gap": 2,
+          "clearance": 2,
+          "left": 18,
+          "right": 18,
+          "top": 9,
+          "bottom": 18
+        },
+        "handle": {
+          "geometry": {
+            "id": "concept-slab-handle",
+            "revision": "1"
+          },
+          "kind": "knob",
+          "pitch": 128,
+          "orientation": "horizontal",
+          "horizontal": "centre",
+          "height": "top",
+          "edgeOffset": 40,
+          "endOffset": 60,
+          "diameter": 24
+        }
+      }
+    ]
+  }
+}

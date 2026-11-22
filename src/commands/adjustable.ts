@@ -42,22 +42,64 @@ export function duplicateAdjustable(c: Cabinet, id: string) {
   if (c.banding[id]) next.cabinet = { ...next.cabinet, banding: { ...c.banding, [next.featureId]: structuredClone(c.banding[id]) } };
   return next;
 }
+/** Merge a horizontal opening without throwing away its floating shelves. */
+export function removeFixedShelfPreservingContents(c:Cabinet,id:string):Cabinet{
+ const node=findDivision(c.compartments,id);
+ if(!node||node.axis!=='horizontal'||node.children.some(n=>n.kind!=='opening'))throw Error('Choose a fixed shelf without child divisions.');
+ const childIds=new Set(node.children.map(n=>n.id));
+ if(c.drawers?.some(d=>childIds.has(d.openingId)))throw Error('This shelf bounds a drawer layout. Move the drawers before merging its openings. Nothing was changed.');
+ const existing=c.contents.filter(s=>childIds.has(s.openingId));
+ if(!existing.length)return removeDivision(c,id);
+ const before=evaluate(c),empty=removeDivision({...c,contents:c.contents.filter(s=>!childIds.has(s.openingId))},id);
+ const opening=resolveInteriors(empty,stock(c,'carcass').thickness,stock(c,'back').thickness,stock(c,'interior').thickness).openings.find(o=>o.id===node.id)!;
+ const contents=c.contents.map(s=>{
+  if(!childIds.has(s.openingId))return s;
+  const old=before.openings.find(o=>o.id===s.openingId)!,layout=before.adjustable.shelves.find(p=>p.id===s.id)!;
+  const center=old.origin[1]+(s.drilling?shelfPattern(c,s,old).center:layout.underside-conceptShelfSupport.padSize[1]/2)-opening.origin[1];
+  if(Math.abs(center*10-Math.round(center*10))>1e-6)throw Error('This shelf hole pattern cannot keep its exact height in the merged opening. Nothing was changed.');
+  return {...s,openingId:node.id,level:s.drilling?s.level-s.drilling.firstLevel:0,drilling:{...s.drilling,revision:'shelf-holes-1' as const,count:s.drilling?.count??1,firstLevel:0,anchor:'height' as const,center}};
+ });
+ return {...empty,contents};
+}
+
 export function fixedToAdjustable(c: Cabinet, id: string): Cabinet {
   const node = findDivision(c.compartments, id);
   if (!node || node.axis !== 'horizontal') throw new Error('Choose a fixed shelf.');
-  if (node.children.some(child => child.kind !== 'opening' || c.contents.some(s => s.openingId === child.id))) throw new Error('Remove child divisions/adjustable shelves before converting this fixed shelf. Nothing was deleted.');
+  if (node.children.some(child => child.kind !== 'opening')) throw new Error('Remove child divisions before converting this fixed shelf. Nothing was deleted.');
+  const childIds=new Set(node.children.map(n=>n.id)),existing=c.contents.filter(s=>childIds.has(s.openingId));
+  if(c.drawers?.some(d=>childIds.has(d.openingId)))throw Error('This fixed shelf bounds a drawer layout. Move the drawers before converting it. Nothing was deleted.');
+  if(existing.length){
+   const fixed=evaluate(c).divisions.find(s=>s.id===id)!;
+   const merged=removeFixedShelfPreservingContents(c,id);
+   const opening=resolveInteriors(merged,stock(c,'carcass').thickness,stock(c,'back').thickness,stock(c,'interior').thickness).openings.find(o=>o.id===node.id)!;
+   const added=addSimpleAdjustable(merged,node.id,node.frontSetback??0,fixed.origin[1]+fixed.size[1]/2-opening.origin[1]);
+   return {...added.cabinet,banding:c.banding,contents:added.cabinet.contents.map(s=>s.id===added.featureId?{...s,id}:s)};
+  }
   const placement=evaluate(c).divisions.find(s=>s.id===id)!.position;
   const removed = removeDivision(c,id), t = stock(c,'interior').thickness;
   const shelf = { ...defaultShelf(node.id, shelfLevelForCentre(placement,t,{id:conceptShelfSupport.id,revision:conceptShelfSupport.revision})), id, frontSetback:node.frontSetback??10 };
   return { ...removed, banding: c.banding, contents: [...removed.contents, shelf] };
 }
 export function adjustableToFixed(c: Cabinet, id: string): Cabinet {
-  const shelf = c.contents.find(s => s.id === id), layout = evaluate(c).adjustable.shelves.find(s => s.id === id);
-  if (!shelf || !layout) throw new Error('Choose an adjustable shelf.');
-  if (c.contents.some(s => s.id !== id && s.openingId === shelf.openingId)) throw new Error('Remove other adjustable shelves in this opening before converting it to a fixed division. Nothing was deleted.');
-  const next = addDivision(removeAdjustable(c,id), shelf.openingId,'horizontal',Math.round(layout.position*10)/10,shelf.frontSetback).cabinet;
-  const replace = (node: Cabinet['compartments']): Cabinet['compartments'] => node.kind === 'opening' ? node : { ...node, featureId: node.id === shelf.openingId ? id : node.featureId, children: node.children.map(replace) as typeof node.children };
-  return { ...next, banding: c.banding, compartments: replace(next.compartments) };
+  const before=evaluate(c),shelf=c.contents.find(s=>s.id===id),layout=before.adjustable.shelves.find(s=>s.id===id);
+  if(!shelf||!layout)throw Error('Choose an adjustable shelf.');
+  if(c.drawers?.some(d=>d.openingId===shelf.openingId))throw Error('This shelf shares an opening with drawers. Move the drawers before splitting it. Nothing was changed.');
+  const siblings=c.contents.filter(s=>s.id!==id&&s.openingId===shelf.openingId);
+  const empty={...removeAdjustable(c,id),contents:c.contents.filter(s=>s.id!==id&&s.openingId!==shelf.openingId)};
+  const next=addDivision(empty,shelf.openingId,'horizontal',Math.round(layout.position*10)/10,shelf.frontSetback,{featureId:id,children:[crypto.randomUUID(),crypto.randomUUID()]}).cabinet;
+  if(!siblings.length)return {...next,banding:c.banding};
+  const children=new Set(findDivision(next.compartments,id)!.children.map(n=>n.id));
+  const openings=resolveInteriors(next,stock(c,'carcass').thickness,stock(c,'back').thickness,stock(c,'interior').thickness).openings.filter(o=>children.has(o.id));
+  const contents=c.contents.filter(s=>s.id!==id).map(s=>{
+   if(s.openingId!==shelf.openingId)return s;
+   const original=before.openings.find(o=>o.id===s.openingId)!,body=before.adjustable.shelves.find(p=>p.id===s.id)!;
+   const world=body.origin[1]+body.size[1]/2,opening=openings.find(o=>world>o.origin[1]&&world<o.origin[1]+o.size[1]);
+   if(!opening)throw Error('An existing adjustable shelf meets the new fixed shelf. Move it before converting. Nothing was changed.');
+   const center=original.origin[1]+(s.drilling?shelfPattern(c,s,original).center:body.underside-conceptShelfSupport.padSize[1]/2)-opening.origin[1];
+   if(Math.abs(center*10-Math.round(center*10))>1e-6)throw Error('This shelf hole pattern cannot keep its exact height in the split opening. Nothing was changed.');
+   return {...s,openingId:opening.id,level:s.drilling?s.level-s.drilling.firstLevel:0,drilling:{...s.drilling,revision:'shelf-holes-1' as const,count:s.drilling?.count??1,firstLevel:0,anchor:'height' as const,center}};
+  });
+  const result={...next,banding:c.banding,contents};evaluate(result);return result;
 }
 
 /** Link matching hole sets across an actual vertical divider, in world height. */
@@ -85,7 +127,7 @@ export function positionShelfHoles(c:Cabinet,ids:string[],anchor:'centre'|'heigh
 }
 export function changeSimpleShelfKind(c:Cabinet,id:string,kind:'fixed'|'adjustable'):Cabinet{
  if(kind==='fixed')return adjustableToFixed(c,id);
- let converted=fixedToAdjustable(c,id);converted={...converted,contents:converted.contents.map(s=>s.id===id?{...s,frontSetback:findDivision(c.compartments,id)?.frontSetback??0}:s)};const o=resolveInteriors(converted,stock(converted,'carcass').thickness,stock(converted,'back').thickness,stock(converted,'interior').thickness).openings.find(o=>o.id===converted.contents.find(s=>s.id===id)!.openingId)!;
+ let converted=fixedToAdjustable(c,id);if(converted.contents.find(s=>s.id===id)?.drilling)return converted;converted={...converted,contents:converted.contents.map(s=>s.id===id?{...s,frontSetback:findDivision(c.compartments,id)?.frontSetback??0}:s)};const o=resolveInteriors(converted,stock(converted,'carcass').thickness,stock(converted,'back').thickness,stock(converted,'interior').thickness).openings.find(o=>o.id===converted.contents.find(s=>s.id===id)!.openingId)!;
  const count=Math.min(5,shelfHoleMaximum(converted,o)),withHoles=setShelfHoles({...converted,contents:converted.contents.map(s=>s.id===id?{...s,drilling:{revision:'shelf-holes-1',count,firstLevel:Math.max(0,Math.min(s.level-Math.floor(count/2),shelfHoleMaximum(converted,o)-count))}}:s)},[id],count);
  return centreNewShelfHoles(withHoles,id);
 }

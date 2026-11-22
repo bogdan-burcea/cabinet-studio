@@ -1,3 +1,4 @@
+import {sheetOverview,type PlannedSheet} from './layout';
 import {edgeProduct} from '../catalogue/materials';
 import type {Vec3} from '../domain/cabinet';
 import {pocketProfiles, rectProfile} from '../geometry/cut-profiles';
@@ -9,7 +10,7 @@ export type Point2 = [number, number];
 export type Bore = {id:string; kind:string; point:Vec3; direction:Vec3; diameter:number; depth:number; through:boolean};
 export type Pocket = {points:Point2[]; low:number; high:number; through:boolean};
 export type SheetPart = {
-  name:string; origin:Point2; width:number; height:number; thickness:number;
+  name:string; component?:string; origin:Point2; width:number; height:number; thickness:number;
   bores:Bore[]; pockets:Pocket[];
   frame?: {corner:Vec3; axes:[Vec3,Vec3,Vec3]};
   round?:boolean;
@@ -68,6 +69,22 @@ export function sheetForExport(sheet:NestedSheet,stock:StockSheet,offcuts:readon
     ...offcuts.map(({x,y,width,height},i):SheetPart=>({...blank(`Offcut ${i+1}`,width,height,thickness,[x,stock.height-y-height]),material,role:'offcut'})),
     ...includeStock?[{...blank('Stock sheet',stock.width,stock.height,thickness,[0,0]),material,role:'stock' as const}]:[],
   ]};
+}
+
+/** Export selected sheets as one product, separated like the Cut overview. */
+export function sheetsForExport(entries:readonly Pick<PlannedSheet,'id'|'label'|'sheet'|'stock'>[],offcuts:ReadonlyMap<string,readonly Rect[]>=new Map(),includeStock=false):ExportModel{
+ if(!entries.length)throw Error('Choose at least one sheet containing parts.');
+ if(entries.length===1){const e=entries[0];return sheetForExport(e.sheet,e.stock,offcuts.get(e.id),includeStock);}
+ const gap=170,overview=sheetOverview(entries.map(e=>e.stock),gap);
+ return {name:'Selected sheets',parts:entries.flatMap((entry,index)=>{
+  const sheet=sheetForExport(entry.sheet,entry.stock,offcuts.get(entry.id),includeStock),position=overview.positions[index];
+  const dx=position.x-gap,dy=overview.height-gap-position.y-entry.stock.height;
+  const move=([x,y]:Point2):Point2=>[x+dx,y+dy];
+  return sheet.parts.map(part=>({...part,component:entry.label,name:`${entry.label} / ${part.name}`,origin:move(part.origin),
+   bores:part.bores.map(b=>({...b,point:[b.point[0]+dx,b.point[1]+dy,b.point[2]] as Vec3})),
+   pockets:part.pockets.map(p=>({...p,points:p.points.map(move)})),
+  }));
+ })};
 }
 
 // CAD uses right-handed Z-up coordinates: the cabinet faces negative Y.

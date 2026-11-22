@@ -12,7 +12,7 @@ import {setCabineo} from '../src/commands/cabineo.ts';
 import {evaluate} from '../src/geometry/evaluate.ts';
 import {flattenParts, groupPartsByStock} from '../src/cnc/parts.ts';
 import {defaultSheet, nestStock} from '../src/cnc/nesting.ts';
-import {cabinetForExport,sheetForExport, toSheetCoordinates} from '../src/cnc/sheet-export.ts';
+import {cabinetForExport,sheetForExport,sheetsForExport, toSheetCoordinates} from '../src/cnc/sheet-export.ts';
 import {Vector3} from 'three';
 import {faceUpRotation} from '../src/viewport/cnc-scene.ts';
 import {buildSheetSolid, exportSheetStep} from '../src/cnc/step.ts';
@@ -141,4 +141,16 @@ test('sheet STEP matches the rotated preview and writes stock and offcuts as nam
   assert.deepEqual(max.map(Math.round),[1220,1220,0]);
  }finally{imported.delete();}
  assert.deepEqual(sheetForExport(sheet,stock).parts.map(p=>p.name),['Bottom']);
+});
+
+test('multi-sheet STEP exports one named component per sheet with independent bodies and materials',async()=>{
+ const parts=flattenParts(evaluate(createCabinet())),bottom=parts.find(p=>p.panel.role==='bottom')!,back=parts.find(p=>p.panel.role==='back')!;
+ const stock={...defaultSheet,width:1220,height:1220};
+ const entries=[bottom,back].map((part,i)=>({id:String(i),label:`Sheet ${i+1}`,stock,sheet:{placements:[{part,x:20,y:30,width:part.width,height:part.height,rotated:false}],utilization:0}}));
+ const model=sheetsForExport(entries,new Map(),true),file=await exportSheetStep(model);
+ assert.equal((file.match(/ = PRODUCT\(/g)??[]).length,2);
+ assert.match(file,/PRODUCT\('Sheet 1','Sheet 1'/);assert.match(file,/PRODUCT\('Sheet 2','Sheet 2'/);
+ assert.equal((file.match(/MANIFOLD_SOLID_BREP\(/g)??[]).length,4);
+ assert.equal((file.match(/PROPERTY_DEFINITION\('material property','material name'/g)??[]).length,2);
+ const imported=await importSTEP(new Blob([file]));try{const [min,max]=imported.boundingBox.bounds;assert.deepEqual(min.map(Math.round),[0,0,-18]);assert.deepEqual(max.map(Math.round),[2610,1220,0]);}finally{imported.delete();}
 });

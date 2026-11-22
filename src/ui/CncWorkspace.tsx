@@ -11,7 +11,7 @@ import type {ThemeName} from '../design-system/themes';
 import type {EvaluatedCabinet} from '../geometry/evaluate';
 import {CncViewport} from '../viewport/CncViewport';
 import type {CncScene} from '../viewport/cnc-scene';
-import {sheetForExport} from '../cnc/sheet-export';
+import {sheetsForExport} from '../cnc/sheet-export';
 import {downloadSheetStep,requestSheetStep} from '../cnc/step-download';
 import {Button,FieldPair,IconButton,Section} from './components';
 import {DimensionField} from './DimensionField';
@@ -91,11 +91,12 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
   if(!entry||exporting.current)return;
   exporting.current=true;setProgress('Preparing STEP…');
   try{
+   const exportingSheets=selectedSheets.length?selectedSheets:[entry];
    const material=entry.material.replace(/[^a-z0-9.-]+/gi,'-');
-   const file=await requestSheetStep(sheetForExport(entry.sheet,entry.stock,offcuts.get(entry.id),includeStock),
+   const file=await requestSheetStep(sheetsForExport(exportingSheets,offcuts,includeStock),
     (done,total)=>setProgress(`Building solid ${done} of ${total}…`));
-   downloadSheetStep(file,`${material}-${entry.label.toLowerCase().replace(' ','-')}.step`);
-   onNotice(`${entry.label} STEP downloaded.`);
+   downloadSheetStep(file,exportingSheets.length>1?'selected-sheets.step':`${material}-${entry.label.toLowerCase().replace(' ','-')}.step`);
+   onNotice(exportingSheets.length>1?`${exportingSheets.length} sheets downloaded in one STEP file.`:`${entry.label} STEP downloaded.`);
   }catch(error){onNotice((error as Error).message,true);}
   finally{exporting.current=false;setProgress('');}
  }
@@ -158,9 +159,9 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
       {((entry&&offcuts.get(entry.id))??[]).map((cut,i)=><div className="data-row" key={i}><span>Offcut {i+1}</span><strong>{cut.width} × {cut.height} mm</strong></div>)}
      </>}
     </Section>
-    <Section title="Export sheet">
+    <Section title={shared?`Export ${selectedSheets.length} sheets`:"Export sheet"}>
      <label className="cnc-rotate"><input type="checkbox" checked={includeStock} onChange={e=>setIncludeStock(e.target.checked)}/> Include stock body</label>
-     <Button className="full-width-button" disabled={shared||!entry||!!progress} onClick={exportStep}>Export STEP</Button>
+     <Button className="full-width-button" disabled={!entry||!!progress} onClick={exportStep}>Export STEP</Button>
      {progress&&<p className="field-note" role="status">{progress}</p>}
     </Section></>}
     {evaluated.drawers.drawers.length>0&&<Section title="Drawer preparation"><p className="field-note">Drawer boards are included. Prepare the runner, front brackets, and board-to-metal fixings using the matched Blum assembly instructions and template.</p></Section>}

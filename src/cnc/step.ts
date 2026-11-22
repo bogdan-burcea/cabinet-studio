@@ -37,7 +37,7 @@ export function buildSheetSolid(part:SheetPart) {
   }catch(error){shape.delete();throw error;}
 }
 
-// A single product lets CAD readers import these named solids as bodies.
+// A sheet component contains named solids; ordinary exports retain one product.
 function nameAndMaterial(file:string,model:ExportModel){
   let next=0;
   for(const match of file.matchAll(/^#(\d+) =/gm))next=Math.max(next,Number(match[1]));
@@ -53,15 +53,22 @@ function nameAndMaterial(file:string,model:ExportModel){
     const property=write('PROPERTY_DEFINITION',`'material property','material name',${target}`);
     write('PROPERTY_DEFINITION_REPRESENTATION',`#${property},#${representation}`);
   }
-  const stock=new Set(model.parts.map(part=>part.material));
-  if(stock.size===1&&model.parts[0].material)material(model.parts[0].material,`#${definition}`);
+  const componentNames=[...new Set(model.parts.map(p=>p.component??'StudioBodies'))];
+  const definitions=[...file.matchAll(/^#(\d+) = PRODUCT_DEFINITION\(/gm)].map(m=>m[1]);
+  const shapes=[...file.matchAll(/^#(\d+) = PRODUCT_DEFINITION_SHAPE\(/gm)].map(m=>m[1]);
+  const uniform=new Set<string>();
+  for(const [i,name] of componentNames.entries()){
+   const parts=model.parts.filter(p=>(p.component??'StudioBodies')===name),materials=new Set(parts.map(p=>p.material));
+   if(materials.size===1&&parts[0].material){if(!definitions[i])throw Error('STEP sheet component is missing.');material(parts[0].material,`#${definitions[i]}`);uniform.add(name);}
+  }
   let index=0;
   const named=file.replace(/^(#\d+) = MANIFOLD_SOLID_BREP\('(?:''|[^'])*'/gm,(_match,brep)=>{
     const part=model.parts[index++];
     if(!part)throw Error('STEP contains an extra solid. Review the part cuts.');
     const name=stepName(part.name);
-    if(part.material&&stock.size>1){
-      const aspect=write('SHAPE_ASPECT',`'${name}','body material',#${shape},.T.`);
+    if(part.material&&!uniform.has(part.component??'StudioBodies')){
+      const component=componentNames.indexOf(part.component??'StudioBodies');
+      const aspect=write('SHAPE_ASPECT',`'${name}','body material',#${shapes[component]??shape},.T.`);
       material(part.material,`#${aspect}`);
     }
     return `${brep} = MANIFOLD_SOLID_BREP('${name}'`;
@@ -76,18 +83,19 @@ function nameAndMaterial(file:string,model:ExportModel){
 export async function exportSheetStep(model:ExportModel, progress:(done:number,total:number)=>void=()=>{}) {
   if(!model.parts.length)throw Error('There are no parts to export.');
   const solids:ReturnType<typeof buildSheetSolid>[]=[];
-  let compound:ReturnType<typeof makeCompound>|undefined;
+  const compounds:ReturnType<typeof makeCompound>[]=[];
   try{
     for(const part of model.parts){
       try{solids.push(buildSheetSolid(part));}
       catch(error){throw Error(`${part.name}: ${(error as Error).message || 'CAD cut failed.'}`);}
       progress(solids.length,model.parts.length);
     }
-    compound=makeCompound(solids);
-    const file=await exportSTEP([{shape:compound,name:'StudioBodies',color:'#c7b396'}],{unit:'MM',modelUnit:'MM'}).text();
+    const groups=[...new Set(model.parts.map(p=>p.component??'StudioBodies'))];
+    const shapes=groups.map(name=>{const compound=makeCompound(solids.filter((_,i)=>(model.parts[i].component??'StudioBodies')===name));compounds.push(compound);return {shape:compound,name,color:'#c7b396'};});
+    const file=await exportSTEP(shapes,{unit:'MM',modelUnit:'MM'}).text();
     return nameAndMaterial(file,model);
   }finally{
-    compound?.delete();
+    compounds.forEach(compound=>compound.delete());
     solids.forEach(solid=>solid.delete());
   }
 }

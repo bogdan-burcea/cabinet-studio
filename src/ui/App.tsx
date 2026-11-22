@@ -106,10 +106,12 @@ export function App(){
  }
  function commitFasteners(candidate:Cabinet){const applied=commit(candidate,false);if(applied)setNotice('');return applied;}
  function requestRemoval(ids:string[]){
+  try{
   ids=[...new Set(ids.map(id=>evaluated.drawers.drawers.find(d=>d.parts.some(p=>p.id===id))?.id??id))];
   const base=store.getSnapshot().committed,{cabinet:next,connected}=removalPlan(base,ids);
   if(connected.length){setPendingEdit({title:'Delete connected items?',message:`Deleting this selection also removes ${connected.length} connected item${connected.length===1?'':'s'} (interiors, doors or drawers). Undo restores all removed items.`,options:[{label:`Delete selection and ${connected.length} connected item${connected.length===1?'':'s'}`,cabinet:next}],base});}
   else if(commit(next))setSelection(cabinet.id);
+  }catch(error){setNotice((error as Error).message,true);}
  }
  const [notice,setNoticeText]=useState('');
  const [noticeError,setNoticeError]=useState(false);
