@@ -1,3 +1,4 @@
+export interface CustomHingeSpec {article:string;plate:string;cupDiameter:number;cupDepth:number;screwPitch:number;screwOffset:number;plateLine:number;platePitch:number;doorPilotDiameter:number;doorPilotDepth:number;platePilotDiameter:number;platePilotDepth:number;maxAngle:number;mountingReach:number;mountingHeight:number;mountingDepth:number;openProtrusion:number;openingAdvance:number}
 export interface CncSettings {revision:'cnc-1';pilotDiameter?:number;tolerance:number;bitDiameter:number;dogbones:boolean;throughOpposed:boolean;cabineoPerSide:number;partCabineoCounts?:Record<string,number>;shelfRowInsets?:{front:number;rear:number};rearChamfers?:Record<string,{low?:number;high?:number}>;bottomFace?:'inside'|'outside';bottomFastenersThrough?:boolean;throughHoles?:Record<string,'fasteners'|'adjustment'>}
 export type Axis = 'width' | 'height' | 'depth';
 export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back' | 'shelf' | 'divider' | 'top-front-rail' | 'top-rear-rail' | 'back-upper-rail' | 'back-lower-rail' | 'front-upper-rail' | 'front-lower-rail' | 'plinth-front' | 'plinth-left' | 'plinth-right' | 'door';
@@ -47,7 +48,9 @@ export interface AdjustableShelf {
   id: string; kind: 'adjustable-shelf'; openingId: string; level: number; frontSetback: number;
   policyRevision: 'adjustable-1'; support: ProductPin;
 }
+export interface ShakerSettings {frameWidth:number;recessDepth:number;panelThickness:number;infill:'wood'|'glass'}
 export interface SlabDoor {
+  style?:'slab'|'shaker-routed'|'shaker-routed-panel'|'shaker-frame';shaker?:ShakerSettings;
   id: string; kind: 'slab-door'; policyRevision: 'slab-1';
   region: { left: number; right: number; bottom: number; top: number };
   boundaryLinks?: Partial<Record<'left'|'right'|'bottom'|'top',string>>;
@@ -55,7 +58,7 @@ export interface SlabDoor {
   material: MaterialBinding | null;
   handle: { geometry: ProductPin; kind: 'none' | 'knob' | 'pull' | 'hole' | 'notch'; pitch: number; orientation: 'vertical' | 'horizontal'; edgeOffset: number; height: 'top' | 'centre' | 'bottom'; endOffset: number; horizontal?: 'latch'|'left'|'centre'|'right'; diameter?: number; projection?: number; drillDiameter?: number;notchWidth?:number;notchDepth?:number;cornerDiameter?:number;outsideRadius?:number;notchEdge?:'left'|'right'|'top'|'bottom' };
   cornerRadius?:number;
-  hinge?: {id:'blum-clip-110'|'blum-clip-155'|'blum-thin-110'; revision:'blum-1'; count:number; endOffset:number; cupDistance:number;offsets?:number[]};
+  hinge?: {id:'blum-clip-110'|'blum-clip-155'|'blum-thin-110'|'hafele-metalla-155'|'hafele-metalla-110'|'custom-hinge'; custom?:CustomHingeSpec; revision:'blum-1'|'metalla-1'|'custom-1'; count:number; endOffset:number; cupDistance:number;offsets?:number[]};
 }
 export interface MetalDrawer {
   id:string; kind:'metal-drawer'; policyRevision:'antaro-external-1'; pack:ProductPin;

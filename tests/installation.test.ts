@@ -140,7 +140,7 @@ test('switching support modes or disabling returns retains dormant plinth materi
 test('schema 21 round trip pins support geometry, plinth binding and every existing cabinet feature', () => {
   const c = furnished(); let next = changeInstallation(c, feet(c, true));
   next = setBanding(next, `${c.id}/panel/plinth-front`, 'u-max', pin('generic-edge-0.8'));
-  const json = serialize(next); assert.equal(JSON.parse(json).schemaVersion, 58); assert.equal(JSON.parse(json).evaluatorRevision, 'merivobox-58');
+  const json = serialize(next); assert.equal(JSON.parse(json).schemaVersion, 61); assert.equal(JSON.parse(json).evaluatorRevision, 'shaker-elements-61');
   assert.deepEqual(deserialize(json), next); assert.deepEqual(evaluate(deserialize(json)), evaluate(next));
 });
 

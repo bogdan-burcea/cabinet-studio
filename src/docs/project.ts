@@ -1,3 +1,4 @@
+import {isMetallaArticle} from '../catalogue/hinges';
 import type {Cabinet} from '../domain/cabinet';
 import type {EvaluatedCabinet} from '../geometry/evaluate';
 import {cabineoVariants} from '../catalogue/cabineo';
@@ -15,7 +16,7 @@ export function billOfMaterials(cabinet:Cabinet,model:EvaluatedCabinet,plan:Retu
  const hardware=new Map<string,number>();
  function add(label:string,count=1){if(count>0)hardware.set(label,(hardware.get(label)??0)+count);}
  for(const joint of model.cabineo)add(cabineoVariants[joint.variant].name);
- for(const hinge of model.doorHardware.hinges){add(`Blum hinge ${hinge.article}`);add(`Blum mounting plate ${hinge.plate}`);}
+ for(const hinge of model.doorHardware.hinges){const brand=hinge.profileId==='custom-hinge'?'Custom':isMetallaArticle(hinge.article)?'Häfele':'Blum';add(`${brand} hinge ${hinge.article}`);add(`${brand} mounting plate ${hinge.plate}`);}
  for(const door of cabinet.fronts){
   if(door.handle.kind==='knob')add('Knob');
   if(door.handle.kind==='pull')add(`Pull handle · ${door.handle.pitch} mm`);

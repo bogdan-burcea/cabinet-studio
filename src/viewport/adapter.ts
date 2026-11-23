@@ -1,3 +1,4 @@
+import {physicalPanels,physicalPockets,type ShakerPanel} from '../rules/shaker';
 import {constructionOwner} from '../domain/construction-selection';
 import {viewDirection,perspectiveView,type ViewName} from './camera-presets';
 export type {ViewName} from './camera-presets';
@@ -130,22 +131,24 @@ export class CabinetViewport {
     const frontGroups=new Map<string,THREE.Group>();this.doorGroups.clear();this.drawerGroups.clear();
     if(frontsVisible)for(const door of geometry.fronts.doors.filter(d=>!hiddenIds.includes(d.id))){const group=new THREE.Group();const pose=(angle:number)=>doorOpeningPose(geometry,door,angle);const initial=pose(explosion?0:this.displayedAngles.get(door.id)??0);group.position.set(...initial.origin);const limit=doorAngleLimit(geometry,door.id),target=explosion?0:Math.min(limit,doorAngles[door.id]??0);if(explosion)this.displayedAngles.set(door.id,0);group.rotation.y=initial.angle;this.doorGroups.set(door.id,{group,handing:door.handing,target,limit,pivot:initial.pivot,pose});frontGroups.set(door.id,group);this.model.add(group);}
     const offsets=explodedCabinetLayout(geometry,explosion);
-    const attach=(mesh:THREE.Object3D,center:Vec3,id:string)=>{const group=frontGroups.get(id);mesh.position.set(...center);const panel=geometry.panels.find(p=>p.id===id);if(panel&&explosion)mesh.position.add(new THREE.Vector3(...offsets.get(panel.id)!));if(group){mesh.position.sub(new THREE.Vector3(...this.doorGroups.get(id)!.pivot));group.add(mesh);}else this.model.add(mesh);};
+    const attach=(mesh:THREE.Object3D,center:Vec3,id:string)=>{const owner=geometry.shaker?.panels.find(p=>p.id===id)?.doorOwnerId??id,group=frontGroups.get(owner);mesh.position.set(...center);const panel=geometry.panels.find(p=>p.id===owner);if(panel&&explosion)mesh.position.add(new THREE.Vector3(...offsets.get(id)!));if(group){mesh.position.sub(new THREE.Vector3(...this.doorGroups.get(owner)!.pivot));group.add(mesh);}else this.model.add(mesh);};
     const bores=[...geometry.cabineo.flatMap(j=>j.bores),...geometry.backFasteners,...geometry.drilling];
-    for (const panel of geometry.panels) {
+    const panelCuts=physicalPockets(geometry),panelBores=geometry.shaker?.bores??bores;
+    for (const panel of physicalPanels(geometry)) {
       if(hiddenIds.includes(panel.id)||hiddenIds.includes(constructionOwner(cabinet,panel.id)))continue;
       if(panel.role==='door'&&!frontsVisible)continue;
       if (panel.installationPart === 'plinth' && !plinthVisible) continue;
+      const glass=!!(panel as ShakerPanel).glass;
       const isSelected = selectedIds.includes(panel.id)||selectedIds.includes(constructionOwner(cabinet,panel.id));
       const material = new THREE.MeshStandardMaterial({ color: preview ? theme.ghost : isSelected ? theme.selected : finishColor(panel.finish.id, theme),
-        polygonOffset:true, polygonOffsetFactor:1, polygonOffsetUnits:1, roughness: 0.82, metalness: 0, transparent: (cutaway && panel.constructionPart === 'back') || preview, opacity: cutaway && panel.constructionPart === 'back' ? 0.12 : preview ? 0.68 : 1 });
-      const mesh = new THREE.Mesh(panelDisplayGeometry(panel,geometry.pockets,bores), material);
-      mesh.position.set(...panel.coreCenter); mesh.userData.id = constructionOwner(cabinet,panel.id); mesh.userData.pickKind = panel.role==='door'?'front':panel.role === 'shelf' || panel.role === 'divider' ? 'interior' : panel.constructionPart === 'back' ? 'back' : 'part'; mesh.userData.selectBase=finishColor(panel.finish.id,theme); mesh.userData.pickThrough = cutaway && panel.constructionPart === 'back';
-      const edge = new THREE.LineSegments(panelDisplayEdges(panel,mesh.geometry,geometry.pockets,bores), new THREE.LineBasicMaterial({ color: renderMode==='wireframe'?theme.wire:isSelected?(theme.selectedEdge??theme.selected):theme.edge, toneMapped:false, transparent: true, opacity: renderMode==='wireframe'?1:(theme.edgeOpacity??.65) }));
+        polygonOffset:true, polygonOffsetFactor:1, polygonOffsetUnits:1, roughness: glass?.15:.82, metalness: 0, depthWrite:!glass, transparent: glass||(cutaway && panel.constructionPart === 'back') || preview, opacity: glass?.22:cutaway && panel.constructionPart === 'back' ? 0.12 : preview ? 0.68 : 1 });
+      const mesh = new THREE.Mesh(panelDisplayGeometry(panel,panelCuts,panelBores), material);
+      mesh.position.set(...panel.coreCenter); mesh.userData.id = (panel as ShakerPanel).doorOwnerId?panel.id:constructionOwner(cabinet,panel.id); mesh.userData.ownerId=(panel as ShakerPanel).doorOwnerId; mesh.userData.pickKind = panel.role==='door'?'front':panel.role === 'shelf' || panel.role === 'divider' ? 'interior' : panel.constructionPart === 'back' ? 'back' : 'part'; mesh.userData.selectBase=finishColor(panel.finish.id,theme); mesh.userData.pickThrough = cutaway && panel.constructionPart === 'back';
+      const edge = new THREE.LineSegments(panelDisplayEdges(panel,mesh.geometry,panelCuts,panelBores), new THREE.LineBasicMaterial({ color: renderMode==='wireframe'?theme.wire:isSelected?(theme.selectedEdge??theme.selected):theme.edge, toneMapped:false, transparent: true, opacity: renderMode==='wireframe'?1:(theme.edgeOpacity??.65) }));
 
       mesh.add(edge); attach(mesh,panel.coreCenter,panel.id);
       for (const band of panel.edges.filter(edge => edge.product)) {
-        const strip = new THREE.Mesh(new THREE.BoxGeometry(...band.size), material.clone()); strip.position.set(...band.center); strip.userData.id = constructionOwner(cabinet,panel.id); strip.userData.selectBase=finishColor(panel.finish.id,theme); strip.userData.pickKind = mesh.userData.pickKind; strip.userData.pickThrough = mesh.userData.pickThrough;
+        const strip = new THREE.Mesh(new THREE.BoxGeometry(...band.size), material.clone()); strip.position.set(...band.center); strip.userData.id = mesh.userData.id; strip.userData.ownerId=mesh.userData.ownerId; strip.userData.selectBase=finishColor(panel.finish.id,theme); strip.userData.pickKind = mesh.userData.pickKind; strip.userData.pickThrough = mesh.userData.pickThrough;
         if (isSelected) strip.add(new THREE.LineSegments(new THREE.EdgesGeometry(strip.geometry), new THREE.LineBasicMaterial({ color: theme.handle, transparent: true, opacity: 0.9 })));
         attach(strip,band.center,panel.id);
       }

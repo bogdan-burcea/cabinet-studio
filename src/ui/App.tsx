@@ -1,3 +1,4 @@
+import {physicalPockets} from '../rules/shaker';
 import {holeSpacingRepairs} from '../commands/hole-spacing-repairs';
 import {railCollisionRepairs} from '../commands/rail-collision-repairs';
 import {constructionOwner,isConstructionSelection} from '../domain/construction-selection';
@@ -88,10 +89,10 @@ export function App(){
  const failedCandidate=useRef<Cabinet|null>(null);
  const [hiddenIds,setHiddenIds]=useState<string[]>([]);
  const [doorAngles,setDoorAngles]=useState<Record<string,number>>({});
- function setSelection(id:string){setSelectedIds([constructionOwner(cabinet,id)]);}
+ function setSelection(id:string){setSelectedIds([evaluated.shaker.panels.some(p=>p.id===id)?id:constructionOwner(cabinet,id)]);}
  function select(id:string,additive=false){
   if(!additive){setSelection(id);return;}
-  const kindOf=(id:string)=>frontTargets(cabinet,[id]).length?'front':evaluated.doorHardware.hinges.some(h=>h.id===id)?'hinge':evaluated.drawers.drawers.some(d=>d.parts.some(p=>p.id===id))?'drawer-part':evaluated.openings.some(o=>o.id===id)?'opening':cabinet.drawers?.some(d=>d.id===id)?'drawer':cabinet.fronts.some(d=>d.id===id)?'door':cabinet.contents.some(s=>s.id===id)?'adjustable':evaluated.divisions.find(d=>d.id===id)?.axis;
+  const kindOf=(id:string)=>evaluated.shaker.panels.some(p=>p.id===id)?'shaker-part':frontTargets(cabinet,[id]).length?'front':evaluated.doorHardware.hinges.some(h=>h.id===id)?'hinge':evaluated.drawers.drawers.some(d=>d.parts.some(p=>p.id===id))?'drawer-part':evaluated.openings.some(o=>o.id===id)?'opening':cabinet.drawers?.some(d=>d.id===id)?'drawer':cabinet.fronts.some(d=>d.id===id)?'door':cabinet.contents.some(s=>s.id===id)?'adjustable':evaluated.divisions.find(d=>d.id===id)?.axis;
   const kind=kindOf(id);
   if(!kind||selectedIds.some(selected=>kindOf(selected)!==kind)){if(selectedIds.length===1&&selectedIds[0]===cabinet.id){setSelection(id);return;}setNotice('Select openings together, or select elements of the same kind using Shift, Cmd or Ctrl.');return;}
   setSelectedIds(ids=>ids.includes(id)?(ids.length>1?ids.filter(i=>i!==id):[cabinet.id]):[...ids,id]);
@@ -144,8 +145,9 @@ export function App(){
  useEffect(()=>{const feedback=(e:Event)=>{const d=(e as CustomEvent<{message:string;error:boolean}>).detail;setNotice(d.message,d.error);};window.addEventListener('cabinet-input-feedback',feedback);return()=>window.removeEventListener('cabinet-input-feedback',feedback);},[]);
  const review=evaluated.issues.filter(i=>i.code.startsWith('machining-'));
  const constructionPart=selection===`${cabinet.id}/panel/top`?'top':selection===`${cabinet.id}/panel/back`?'back':undefined;
- const panel=evaluated.panels.find(p=>p.id===selection),opening=evaluated.openings.find(o=>o.id===selection)??(selection===cabinet.compartments.id?evaluated.opening:undefined),foot=evaluated.installation.feet.find(f=>f.id===selection);
- useEffect(()=>{setSelectedIds(ids=>{const valid=ids.filter(id=>id===cabinet.id||id===cabinet.compartments.id||isConstructionSelection(cabinet,id)||evaluated.drawers.drawers.some(d=>d.id===id||d.parts.some(p=>p.id===id))||evaluated.doorHardware.hinges.some(h=>h.id===id)||evaluated.panels.some(p=>p.id===id)||evaluated.openings.some(o=>o.id===id)||evaluated.installation.feet.some(f=>f.id===id));return valid.length===ids.length?ids:valid.length?valid:[cabinet.id];});},[cabinet,selectedIds,evaluated]);
+ const shakerPart=evaluated.shaker.panels.find(p=>p.id===selection);
+ const panel=shakerPart??evaluated.panels.find(p=>p.id===selection),opening=evaluated.openings.find(o=>o.id===selection)??(selection===cabinet.compartments.id?evaluated.opening:undefined),foot=evaluated.installation.feet.find(f=>f.id===selection);
+ useEffect(()=>{setSelectedIds(ids=>{const valid=ids.filter(id=>id===cabinet.id||id===cabinet.compartments.id||isConstructionSelection(cabinet,id)||evaluated.drawers.drawers.some(d=>d.id===id||d.parts.some(p=>p.id===id))||evaluated.doorHardware.hinges.some(h=>h.id===id)||evaluated.panels.some(p=>p.id===id)||evaluated.shaker.panels.some(p=>p.id===id)||evaluated.openings.some(o=>o.id===id)||evaluated.installation.feet.some(f=>f.id===id));return valid.length===ids.length?ids:valid.length?valid:[cabinet.id];});},[cabinet,selectedIds,evaluated]);
  useEffect(()=>{if(selection===cabinet.id&&pendingDimension.current){const input=fields.current[pendingDimension.current];revealField(input);pendingDimension.current=null;}},[selection,cabinet.id]);
  const selectedReview=review.filter(i=>selection===cabinet.id||selectedIds.some(id=>affectedItems(i).some(part=>constructionOwner(cabinet,part)===id)));
  function resolveMachining(issues=selectedReview){
@@ -158,7 +160,7 @@ export function App(){
  }
  function operateDoors(ids:string[],angle:number){
   const result=safeDoorAngles(evaluated,doorAngles,ids,angle);setDoorAngles(result.angles);
-  if(result.blocked){const hit=result.collision!,label=(id:string)=>evaluated.panels.find(p=>p.id===id)?.label??(id.includes('/handle/')?'handle':'part');setPendingEdit({title:'Door opening blocked',message:`${label(hit.movingId)} meets ${label(hit.otherId)} near ${Math.round(hit.angle)}°. This front-edge clearance study is not verified Blum linkage motion.`,options:doorOpeningRepairs(snapshot.committed,ids,angle),base:snapshot.committed,motion:{ids,target:angle}});}
+  if(result.blocked){const hit=result.collision!,label=(id:string)=>evaluated.panels.find(p=>p.id===id)?.label??(id.includes('/handle/')?'handle':'part');setPendingEdit({title:'Door opening blocked',message:`${label(hit.movingId)} meets ${label(hit.otherId)} near ${Math.round(hit.angle)}°. This front-edge clearance study is not verified manufacturer linkage motion.`,options:doorOpeningRepairs(snapshot.committed,ids,angle),base:snapshot.committed,motion:{ids,target:angle}});}
  }
  const doorIds=cabinet.fronts.map(d=>d.id),drawerIds=(cabinet.drawers??[]).map(d=>d.id);
  const movableIds=[...doorIds,...drawerIds],doorsOpen=movableIds.length>0&&(cabinet.drawers?.some(d=>d.internal)?movableIds.some(id=>(doorAngles[id]??0)>0):movableIds.every(id=>(doorAngles[id]??0)>0));
@@ -179,7 +181,7 @@ export function App(){
    const drawer=evaluated.drawers.drawers.find(d=>d.id===result.drawerId)!,hinge=evaluated.doorHardware.hinges.find(h=>h.id===result.otherId),door=evaluated.fronts.doors.find(d=>d.id===hinge?.ownerId);
    const obstacle=hinge?`hinge ${Number(hinge.id.split('/').at(-1))+1} on ${door?.label??'the door'} (mounting-clearance zone)`:evaluated.panels.find(p=>p.id===result.otherId)?.label??'another part';
    const message=`${drawer.label} is blocked by ${obstacle}. The drawer stopped at the last clear position.`,options=innerDrawerOpeningRepairs(snapshot.committed);
-   if(options.length)setPendingEdit({title:'Internal drawer opening blocked',message:message+(hinge?'':' The simplified door-motion preview intersects the drawer fittings; this is not verified Blum linkage motion.'),options,base:snapshot.committed,motion:{ids:doorIds,target:Math.max(0,...doorIds.map(id=>doorAngleLimit(evaluated,id))),drawers:true}});
+   if(options.length)setPendingEdit({title:'Internal drawer opening blocked',message:message+(hinge?'':' The simplified door-motion preview intersects the drawer fittings; this is not verified manufacturer linkage motion.'),options,base:snapshot.committed,motion:{ids:doorIds,target:Math.max(0,...doorIds.map(id=>doorAngleLimit(evaluated,id))),drawers:true}});
    else setNotice(`${message} ${hinge?'Adjust the hinge position or drawer spacing.':'Check the selected hinge’s inward door protrusion and the drawer-side clearance. Intermediate hinge motion remains approximate.'}`,true);
   }
  }
@@ -240,6 +242,7 @@ export function App(){
     {selection===cabinet.id&&<Section title="Fasteners"><label className="construction-choice">Assembly connectors<span className="select select--fluid"><select aria-label="Assembly connectors" value={cabinet.hardware[0]?.id??''} onChange={e=>commitFasteners(setCabineo(snapshot.committed,e.target.value as CabineoId|''))}><option value="">None</option>{Object.entries(cabineoVariants).map(([id,v])=><option key={id} value={id}>{v.name}</option>)}</select><Icon name="chevron" size={12}/></span></label>{cabinet.hardware.length>0&&<><FieldPair><DimensionField plain label="Cabineo per side" value={cnc(cabinet).cabineoPerSide||defaultCabineoCount} cancelValue={cnc(cabinet).cabineoPerSide||defaultCabineoCount} limits={{min:1,max:20}} onPreview={()=>{}} onCommit={cabineoPerSide=>commitFasteners(setCnc(snapshot.committed,{cabineoPerSide}))} onCancel={store.cancel}/><DimensionField plain disabled label="Connectors" accessibleLabel="Calculated connector count" value={evaluated.cabineo.length} cancelValue={evaluated.cabineo.length} limits={{min:0,max:9999}} onPreview={()=>{}} onCommit={()=>true} onCancel={()=>{}}/></FieldPair><Button className="full-width-button" disabled={cnc(cabinet).cabineoPerSide===0&&!Object.keys(cnc(cabinet).partCabineoCounts??{}).length} onClick={()=>commitFasteners(resetGlobalCabineoCount(snapshot.committed))}>Reset global</Button><p className="field-note">{cabinet.carcass.corner?'Fixed interiors only · puzzle corners interlock':'Surface mounted · 50 mm panel setback, adaptive on rails · spacing ≤300 mm'}</p></>}</Section>}
     {selection!==cabinet.id&&!(constructionPart&&(cabinet.carcass[constructionPart].mode==='rails'||cabinet.carcass[constructionPart].mode==='rails-panel'))&&partFastenerFields&&<div className="inspector-section">{partFastenerFields}</div>}
     {selection===cabinet.id&&cabinet.cabinetType==='wall'&&<WallHangingInspector cabinet={snapshot.committed} onCommit={commit} onCancel={store.cancel}/>}
+    {shakerPart&&<Section title="Door assembly"><Button className="full-width-button" onClick={()=>setSelection(shakerPart.doorOwnerId)}>Edit door</Button></Section>}
     <MachiningChecks issues={selectedReview} onResolve={()=>resolveMachining()}/>
     {!mixedFronts&&cabinet.fronts.some(d=>selectedIds.includes(d.id))&&<SimpleDoorInspector cabinet={snapshot.committed} evaluated={evaluated} ids={selectedIds} onCommit={commit} onCancel={store.cancel} onSelect={setSelectedIds} onRemove={requestRemoval} onNotice={message=>setNotice(message,true)}/>}
     {panel?.role==='bottom'&&<Section title="Bottom fasteners"><label className="construction-choice">Machining face<span className="select select--fluid"><select aria-label="Bottom fastener face" value={cnc(cabinet).bottomFastenersThrough?'outside-through':cnc(cabinet).bottomFace??'outside'} onChange={e=>{const value=e.target.value;commitFasteners(setCnc(snapshot.committed,{bottomFace:value==='inside'?'inside':'outside',bottomFastenersThrough:value==='outside-through'}));}}><option value="inside">Inside</option><option value="outside">Outside</option>{cnc(cabinet).bottomFastenersThrough&&<option value="outside-through">Outside · through pilots</option>}</select><Icon name="chevron" size={12}/></span></label>{cnc(cabinet).bottomFastenersThrough&&<p className="field-note">Connector pockets stay blind. Only receiving pilots can drill through.</p>}</Section>}
@@ -254,7 +257,7 @@ export function App(){
 
     {selectedIds.length===1&&opening&&evaluated.panels.some(p=>p.role==='front-upper-rail'||p.role==='front-lower-rail')&&<ConstructionThumbnail panels={evaluated.panels.filter(p=>p.role==='front-upper-rail'||p.role==='front-lower-rail')} joints={evaluated.cabineo} pockets={evaluated.pockets} backBores={evaluated.backFasteners} drilling={evaluated.drilling}/>}
     {selectedIds.length===1&&constructionPart&&cabinet.carcass[constructionPart].mode==='rails'&&<ConstructionThumbnail panels={evaluated.panels.filter(p=>p.role.startsWith(constructionPart==='top'?'top-':'back-'))} joints={evaluated.cabineo} pockets={evaluated.pockets} backBores={evaluated.backFasteners} drilling={evaluated.drilling}/>}
-    {selectedIds.length===1&&panel&&<PartThumbnail showThickness={!fastenerParts.some(p=>p.id===panel.id)} key={panel.id} panel={panel} joints={evaluated.cabineo} pockets={evaluated.pockets} backBores={evaluated.backFasteners} drilling={evaluated.drilling}/>}
+    {selectedIds.length===1&&panel&&<PartThumbnail showThickness={!fastenerParts.some(p=>p.id===panel.id)} key={panel.id} panel={panel} joints={shakerPart?[]:evaluated.cabineo} pockets={shakerPart?physicalPockets(evaluated):evaluated.pockets} backBores={shakerPart?[]:evaluated.backFasteners} drilling={shakerPart?evaluated.shaker.bores:evaluated.drilling}/>}
     </InspectorSections>
    </aside>
   </main>

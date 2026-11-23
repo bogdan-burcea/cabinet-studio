@@ -115,16 +115,16 @@ test('exploded inner fronts stay aligned with their own drawer rather than stack
 
 import {readFileSync} from 'node:fs';
 import {innerDrawerOpeningRepairs} from '../src/commands/clearance-repairs';
-test('saved pantry offers an explicit complete overlay correction while preserving the original inset cabinet',()=>{
+test('saved pantry offers complete inset-hinge and overlay corrections while preserving the original cabinet',()=>{
  const c=deserialize(readFileSync(new URL('./fixtures/pantry-inset-inner-drawers.json',import.meta.url),'utf8')),before=serialize(c),m=evaluate(c),ids=c.fronts.map(d=>d.id),opened=safeDoorAngles(m,{},ids,155);
  assert.equal(opened.blocked,false);assert.ok(ids.every(id=>opened.angles[id]===155));
  const blocked=safeInnerDrawerExtensions(m,{}, {...opened.angles,...Object.fromEntries(c.drawers!.map(d=>[d.id,100]))});
  assert.ok(blocked.blocked);assert.equal(m.drawers.drawers.find(d=>d.id===blocked.drawerId)!.label,'Internal drawer 5');assert.equal(blocked.otherId,ids[0]);
  const options=innerDrawerOpeningRepairs(c);assert.ok(options.length);assert.equal(serialize(c),before);assert.ok(c.fronts.every(d=>d.placement==='inset'));
  for(const option of options){
-  assert.match(option.label,/Change to overlay doors/);const next=option.cabinet,e=evaluate(next),doors=safeDoorAngles(e,{},ids,155),drawers=safeInnerDrawerExtensions(e,{}, {...doors.angles,...Object.fromEntries(next.drawers!.map(d=>[d.id,100]))});
+  assert.match(option.label,/Change to overlay doors|Häfele Metalla/);const next=option.cabinet,e=evaluate(next),doors=safeDoorAngles(e,{},ids,155),drawers=safeInnerDrawerExtensions(e,{}, {...doors.angles,...Object.fromEntries(next.drawers!.map(d=>[d.id,100]))});
   assert.equal(doors.blocked,false);assert.equal(drawers.blocked,false);assert.ok(next.drawers!.every(d=>drawers.angles[d.id]===100));
-  assert.deepEqual(next.drawers,c.drawers);assert.deepEqual(next.compartments,c.compartments);assert.deepEqual(next.fronts.map(d=>d.id),ids);assert.ok(next.fronts.every(d=>d.placement==='overlay'));
+  assert.deepEqual(next.drawers,c.drawers);assert.deepEqual(next.compartments,c.compartments);assert.deepEqual(next.fronts.map(d=>d.id),ids);assert.ok(next.fronts.every(d=>d.placement===(option.label.includes('Häfele')?'inset':'overlay')));
   assert.ok(!e.issues.some(i=>['machining-hinge-plate','machining-hole-collision','machining-collision'].includes(i.code)));
   assert.deepEqual(deserialize(serialize(next)),next);const store=new CabinetStore(c);assert.ok(store.commit(next));store.undo();assert.deepEqual(store.getSnapshot().committed,c);store.redo();assert.deepEqual(store.getSnapshot().committed,next);
  }
@@ -133,7 +133,7 @@ test('saved pantry offers an explicit complete overlay correction while preservi
 import {drawerOpeningIssue} from '../src/rules/door-motion';
 import {drawerOpeningEditIssue} from '../src/commands/drawer-opening-preflight';
 test('inset incompatibility is detected when editing, before opening, with reversible evaluated overlay correction',()=>{
- const inset=deserialize(readFileSync(new URL('./fixtures/pantry-inset-inner-drawers.json',import.meta.url),'utf8')),valid=innerDrawerOpeningRepairs(inset)[0].cabinet,ids=inset.fronts.map(d=>d.id);
+ const inset=deserialize(readFileSync(new URL('./fixtures/pantry-inset-inner-drawers.json',import.meta.url),'utf8')),valid=innerDrawerOpeningRepairs(inset).find(r=>r.label.includes('overlay'))!.cabinet,ids=inset.fronts.map(d=>d.id);
  assert.equal(drawerOpeningIssue(evaluate(valid)),null);
  const requested={...valid,fronts:valid.fronts.map(d=>({...d,placement:'inset' as const}))},before=serialize(valid),issue=drawerOpeningEditIssue(requested,valid);
  assert.ok(issue);assert.match(issue.message,/cannot fully extend/);assert.equal(serialize(valid),before);

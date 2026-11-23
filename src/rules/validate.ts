@@ -1,3 +1,4 @@
+import {resolveShaker} from './shaker';
 import {usesBlumWallHanger} from './wall-hanging';
 import {footDrilling} from './foot-drilling';
 import {doorHardware} from './door-hardware';
@@ -64,8 +65,8 @@ export function validate(c: Cabinet): Issue[] {
   if (!issues.some(issue => issue.severity === 'error')) issues.push(...resolveMounting(c).issues);
   if (!issues.some(issue=>issue.severity==='error')) issues.push(...resolveFronts(c).issues);
   if (!issues.some(issue=>issue.severity==='error')) issues.push(...resolveDrawers(c).issues);
-  try{doorHardware(c,resolveFronts(c).doors);}catch(error){issues.push({code:'door-hardware',featureId:c.id,severity:'error',message:(error as Error).message});}
-  if(c.fronts.length && !issues.some(issue=>issue.severity==='error')) issues.push({code:'provisional-fronts',featureId:c.fronts[0].id,severity:'notice',message:'Blum hinge cup geometry follows the pinned drawing; screw pilots and handle bodies are application choices. Load capacity and Blum linkage motion remain unverified.'});
+  try{const doors=resolveFronts(c).doors,hardware=doorHardware(c,doors);resolveShaker(c,doors,hardware.bores);}catch(error){issues.push({code:'door-hardware',featureId:c.id,severity:'error',message:(error as Error).message});}
+  if(c.fronts.length && !issues.some(issue=>issue.severity==='error')) issues.push({code:'provisional-fronts',featureId:c.fronts[0].id,severity:'notice',message:'Hinge cup geometry follows the selected manufacturer drawing; screw pilots and handle bodies are application choices. Load capacity and exact hinge linkage motion remain unverified.'});
   if (c.contents.length && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-adjustable', featureId: c.contents[0].id, severity: 'notice', message: 'Adjustable shelves use concept support levels and pads; no verified fitting or load capacity. Explicit drilling patterns are geometric studies.' });
   if (c.installation.mounting.mode !== 'none' && !issues.some(issue => issue.severity === 'error')) issues.push({ code: 'provisional-mounting', featureId: `${c.id}/installation/mounting`, severity: 'notice', message: usesBlumWallHanger(c)?'Blum hanger pilots and back access notches are included. Wall anchors and load capacity require separate verification.':'Concept wall layout only: no verified hanger/rail assembly, preparation, anchors or cabinet/wall load capacity.' });
   if(!issues.some(i=>i.severity==='error'))try{footDrilling(c);}catch(error){issues.push({code:'foot-pilot',featureId:c.id,severity:'error',message:(error as Error).message});}

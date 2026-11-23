@@ -1,0 +1,66 @@
+{
+  "sourceCommit": "2592efb",
+  "description": "Pre-drawer/hinge geometry, frozen from git commit 2592efb. Not generated from the implementation under test.",
+  "cases": {
+    "default": {
+      "sha256": "e5cf240f9ac99d9ca592a9a4c687ea5c7c96cd68035db04e85ef6620214ebebd",
+      "panels": 5,
+      "holes": 0
+    },
+    "stock-16": {
+      "sha256": "28d8a237022a91500b29d63e64a0972a21fc59a8c566cca4e05eebe2a741ed29",
+      "panels": 5,
+      "holes": 0
+    },
+    "grooved-back": {
+      "sha256": "485b46667a5689e66d731d2588cb84787cc227133d6a76248c2071219137c666",
+      "panels": 5,
+      "holes": 0
+    },
+    "rear-rails": {
+      "sha256": "b157ad43d682300769d1095e13f99b8a4501c79b6cd5ae5dd77d8fb4fb4b9209",
+      "panels": 6,
+      "holes": 0
+    },
+    "rails-with-back": {
+      "sha256": "d77b4971103ae6955c84ae20338d2f21b0dd7cab8b42d44a0f9726928f11ebeb",
+      "panels": 7,
+      "holes": 0
+    },
+    "screwed-rail-back": {
+      "sha256": "6a73d973e4eeb9b7af9f3f5fab8200bc12b73e895b6793ade9002cfce8422660",
+      "panels": 7,
+      "holes": 4
+    },
+    "top-rails": {
+      "sha256": "51e063e659efcd250e98ad5cc65181eb9881445d4facbf3c01cb73b1a0d2fe3f",
+      "panels": 6,
+      "holes": 0
+    },
+    "puzzle": {
+      "sha256": "00616b48c90cc962ea0033503bf773cc9a975c306670c8626e34739260f8858b",
+      "panels": 5,
+      "holes": 0
+    },
+    "feet-plinth": {
+      "sha256": "5b1be92c62fa5c4453ef982b693fe0a18c71af5f9c6ee6428f7bf9ee94068c76",
+      "panels": 6,
+      "holes": 16
+    },
+    "antaro-external": {
+      "sha256": "6c94349fe29e57c165d3ce93568f10f634ad216e75bcce0e9a2e17fa81fc11fe",
+      "panels": 5,
+      "holes": 60
+    },
+    "blum-110": {
+      "sha256": "c96d66328447f5a97e0f4e23f45626f0e277f9ce01af317d0534496f4285ce7d",
+      "panels": 7,
+      "holes": 20
+    },
+    "blum-155": {
+      "sha256": "a7296834893d5cf931aa4f3ee2505b2f496c72cdc376b9c9e2755e62e5e46bbe",
+      "panels": 7,
+      "holes": 24
+    }
+  }
+}

@@ -1,3 +1,5 @@
+import {fitMetallaHinges} from './metalla-hinges';
+import {isMetalla} from '../catalogue/hinges';
 import {railFastenerFitRepairs} from './rail-fastener-fit';
 import {railCollisionRepairs} from './rail-collision-repairs';
 import {resolveConstruction} from '../rules/construction';
@@ -57,6 +59,7 @@ export function editRepairs(candidate:Cabinet,previous:Cabinet):EditRepair[]{
   add(`Raise feet to ${height} mm for a 40 mm plinth`,{...candidate,installation:{...candidate.installation,feet:{...candidate.installation.feet,height}}});
  }
  if(candidate.fronts.length){
+  if(message.includes('Metalla')){try{add('Fit Metalla cup setbacks and edge gaps; retain door placement and internal drawers',fitMetallaHinges(candidate,candidate.fronts.filter(d=>d.hinge&&isMetalla(d.hinge.id)).map(d=>d.id),candidate.fronts.find(d=>d.hinge&&isMetalla(d.hinge.id))!.hinge!.id as 'hafele-metalla-110'|'hafele-metalla-155'));}catch{}}
   if(message.includes('cup setback'))add('Fit cup setbacks to the selected hinge application',{
    ...candidate,fronts:candidate.fronts.map(d=>d.hinge&&d.hinge.cupDistance>cupSetbackMax(d.hinge.id,d.placement==='inset')?
     {...d,hinge:{...d.hinge,cupDistance:cupSetbackMax(d.hinge.id,d.placement==='inset')}}:d),

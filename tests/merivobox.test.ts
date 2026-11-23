@@ -96,3 +96,26 @@ test('MERIVOBOX exploded side covers, gallery and rear fixings stay attached to 
   }
  }
 });
+
+import {Box3,Vector3,Triangle} from 'three';
+test('ANTARO conversion refits MERIVOBOX rear brackets around the back without wood intersections',()=>{
+ for(const internal of [false,true])for(const kind of ['m','e-gallery','e-closed']){
+  const b=base(),before=addDrawerStack(b,b.compartments.id,2,antaroPin,true,internal).cabinet,id=before.drawers![0].id;
+  const after=editDrawerGroup(before,[id],{pack:pin(pack(kind))}),model=evaluate(after),drawer=model.drawers.drawers.find(d=>d.id===id)!,back=drawer.parts.find(p=>p.id===id+'/back')!;
+  assert.equal(drawerPack(after.drawers![0].pack).family,'merivobox');assert.deepEqual(after.drawers![1],before.drawers![1]);assert.equal(after.drawers![0].internal?.setback,before.drawers![0].internal?.setback);
+  assert.deepEqual(drawer.back,[drawer.allocation.size[0]-51,kind==='m'?83:184,16]);
+  for(const side of ['left','right']){
+   const part=drawer.parts.find(p=>p.id===id+'/back-fixing-'+side)!,geometry=drawerDisplayGeometry(part),positions=geometry.getAttribute('position'),index=geometry.getIndex();
+   const wood=new Box3(new Vector3(...back.center).sub(new Vector3(...part.center)).sub(new Vector3(...back.size).multiplyScalar(.5)).addScalar(.0001),new Vector3(...back.center).sub(new Vector3(...part.center)).add(new Vector3(...back.size).multiplyScalar(.5)).addScalar(-.0001));
+   const point=(i:number)=>new Vector3().fromBufferAttribute(positions,index?index.getX(i):i);
+   for(let i=0;i<(index?.count??positions.count);i+=3)assert.equal(wood.intersectsTriangle(new Triangle(point(i),point(i+1),point(i+2))),false,`${kind} ${side} bracket intersects the wooden back`);
+   // The bracket's rear lip covers the manufacturer's existing back screw line.
+   const screwX=side==='left'?drawer.allocation.origin[0]+36.5:drawer.allocation.origin[0]+drawer.allocation.size[0]-36.5;
+   assert.ok(screwX>part.center[0]-part.size[0]/2&&screwX<part.center[0]+part.size[0]/2);
+   const screws=model.drilling.filter(h=>h.panelId===back.id&&Math.abs(h.point[0]-screwX)<.0001);assert.equal(screws.length,kind==='m'?2:4);
+   assert.ok(screws.every(h=>Math.abs(h.point[2]-(part.center[2]-part.size[2]/2+1.5))<.0001));
+   geometry.dispose();
+  }
+  assert.deepEqual(deserialize(serialize(after)),after);const store=new CabinetStore(before);assert.ok(store.commit(after));store.undo();assert.deepEqual(store.getSnapshot().committed,before);store.redo();assert.deepEqual(store.getSnapshot().committed,after);
+ }
+});

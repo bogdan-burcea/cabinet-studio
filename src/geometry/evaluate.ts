@@ -1,3 +1,4 @@
+import {resolveShaker} from '../rules/shaker';
 import {placeSideBackFasteners} from '../rules/side-back-fasteners';
 import {dividerRailNotches} from '../rules/divider-rail-notches';
 import {cnc} from '../rules/cnc';
@@ -29,12 +30,13 @@ import { resolveMounting } from '../rules/mounting';
 import { resolveInstallation } from '../rules/installation';
 import { resolveConstruction } from '../rules/construction';
 import { resolveInteriors, type Division, type Opening } from '../rules/interiors';
-export const EVALUATOR_REVISION = 'merivobox-58';
+export const EVALUATOR_REVISION = 'shaker-elements-61';
 export interface Panel extends ReturnType<typeof panelMaterials> {
   id: string; role: PanelRole; label: string; size: Vec3; center: Vec3; materialRole: MaterialRole;
   provenance: string; orientation: 'yz' | 'xz' | 'xy'; constructionPart?: 'top' | 'back'; installationPart?: 'plinth';
 }
 export interface EvaluatedCabinet {
+  shaker:ReturnType<typeof resolveShaker>;
   doorHardware:ReturnType<typeof doorHardware>;
   drilling:CabineoBore[];
   backFasteners:ReturnType<typeof resolveBackFasteners>;
@@ -75,7 +77,7 @@ export function evaluate(c: Cabinet): EvaluatedCabinet {
   installation.feet.forEach(name);
   basePanels.push(...installation.panels.map(panel => ({ ...panel, materialRole: 'plinth' as const, installationPart: 'plinth' as const, provenance: `${c.id}/installation/support-1` })));
   const fronts = resolveFronts(c,basePanels);
-  fronts.doors.forEach(name);
+  fronts.doors.forEach((door,i)=>{if(c.fronts.find(d=>d.id===door.id)?.style?.startsWith('shaker'))door.label=`Shaker door ${i+1}`;name(door);});
   basePanels.push(...fronts.doors);
   const drawers=resolveDrawers(c);
   const profiles=frontProfileCuts(c,fronts.doors,drawers.drawers);
@@ -88,7 +90,10 @@ export function evaluate(c: Cabinet): EvaluatedCabinet {
   const nominalBackFasteners=resolveBackFasteners(c),cabineo=oneFaceBores(c,panels,resolveCabineo(c,interiorsWithFingers.panels,[...nominalBackFasteners,...drilling]),[...nominalBackFasteners,...drilling],pockets);
   drilling=placeRailScrewPilots(c,panels,cabineo,drilling,pockets);
   const reviewPanels=[...panels,...drawerBoardPanels(drawers.drawers,panels.find(p=>p.role==='bottom')!)],backFasteners=placeSideBackFasteners(c,reviewPanels,cabineo,drilling,pockets,nominalBackFasteners);
-  issues.push(...machiningReview(reviewPanels,cabineo,[...backFasteners,...drilling],pockets));
-  return { doorHardware:hardware, drilling, backFasteners, pockets, cabineo, revision: EVALUATOR_REVISION, cabinetId: c.id, issues, drawers, fronts, adjustable, installation, mounting: resolveMounting(c), panels, opening: interiors.root, openings: interiors.openings, divisions: interiors.divisions,
+  const shaker=resolveShaker(c,fronts.doors,[...cabineo.flatMap(j=>j.bores),...backFasteners,...drilling],pockets);
+  pockets.push(...shaker.pockets.filter(p=>!shaker.owners.some(id=>p.panelId.startsWith(id+'/shaker/'))));
+  const actualPanels=[...reviewPanels.filter(p=>!shaker.owners.includes(p.id)),...shaker.panels],actualCuts=[...pockets.filter(p=>!shaker.owners.includes(p.panelId)),...shaker.pockets.filter(p=>shaker.owners.some(id=>p.panelId.startsWith(id+'/shaker/')))];
+  issues.push(...machiningReview(actualPanels,cabineo,shaker.bores.filter(b=>!cabineo.some(j=>j.bores.some(v=>v.id===b.id))),actualCuts));
+  return { shaker, doorHardware:hardware, drilling, backFasteners, pockets, cabineo, revision: EVALUATOR_REVISION, cabinetId: c.id, issues, drawers, fronts, adjustable, installation, mounting: resolveMounting(c), panels, opening: interiors.root, openings: interiors.openings, divisions: interiors.divisions,
     construction: { rearSetback: construction.rearSetback, topGap: construction.topGap, backGap: construction.backGap } };
 }

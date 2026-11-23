@@ -96,7 +96,7 @@ test('schema 21 round trips mounting modes including retained foot/plinth/materi
   for (const mode of ['none', 'restraint-concept', 'suspended-concept'] as const) {
     const next = changeMounting(c, { ...defaultMounting(), mode });
     const serialized = serialize(next), result = deserializeWithInfo(serialized);
-    assert.equal(JSON.parse(serialized).schemaVersion, 58); assert.equal(JSON.parse(serialized).evaluatorRevision, 'merivobox-58'); assert.equal(result.migrated, false);
+    assert.equal(JSON.parse(serialized).schemaVersion, 61); assert.equal(JSON.parse(serialized).evaluatorRevision, 'shaker-elements-61'); assert.equal(result.migrated, false);
     assert.deepEqual(result.cabinet, next); assert.deepEqual(evaluate(result.cabinet), evaluate(next));
   }
 });
@@ -105,7 +105,7 @@ test('schema 5 migration copies all feet, plinth, construction, interiors, mater
   const text = JSON.stringify({ format: 'cabinet-studio', schemaVersion: 5, evaluatorRevision: 'installation-5', cabinet: old });
   const result = deserializeWithInfo(text); assert.equal(result.migrated, true); assert.deepEqual(result.cabinet, expected);
   assert.deepEqual(evaluate(result.cabinet).panels, evaluate(expected).panels); assert.deepEqual(evaluate(result.cabinet).installation, evaluate(expected).installation);
-  assert.equal(JSON.parse(text).cabinet.installation.mounting, undefined); assert.ok(PREVIOUS_AUTOSAVE_KEYS.includes('cabinet-studio.autosave.v5')); assert.equal(AUTOSAVE_KEY, 'cabinet-studio.autosave.v58');
+  assert.equal(JSON.parse(text).cabinet.installation.mounting, undefined); assert.ok(PREVIOUS_AUTOSAVE_KEYS.includes('cabinet-studio.autosave.v5')); assert.equal(AUTOSAVE_KEY, 'cabinet-studio.autosave.v61');
 });
 test('unknown mounting revisions, malformed data, invented hardware and reserved part identities fail without replacing current state', () => {
   const c = furnished(), store = new CabinetStore(c);

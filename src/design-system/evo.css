@@ -442,3 +442,13 @@ button:not(:disabled):not([aria-disabled=true]):active{background-color:var(--co
 .cost-dialog .lightbox-dialog__window{overflow:hidden}
 
 .back-with-panel{display:flex;align-items:center;gap:var(--spacing-100)}
+
+.custom-hinge-fields{min-width:0}
+.custom-hinge-reference>.textbox{display:flex;width:100%;min-width:0;margin-top:var(--spacing-100)}
+.custom-hinge-reference .textbox__control{width:100%;min-width:0;box-sizing:border-box}
+.custom-hinge-advanced{margin-bottom:var(--spacing-200)}
+.custom-hinge-advanced>.field-pair{margin-top:var(--spacing-200)}
+.hinge-mounting-drawing{margin:var(--spacing-200) 0;color:var(--color-foreground-secondary)}
+.hinge-mounting-drawing svg{display:block;width:100%;height:auto;overflow:visible}
+.hinge-mounting-drawing .hinge-datum{stroke-dasharray:3 3;opacity:.5}
+.custom-hinge-apply{display:flex;width:100%;justify-content:center}

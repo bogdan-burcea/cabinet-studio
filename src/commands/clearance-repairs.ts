@@ -1,3 +1,4 @@
+import {fitMetallaHinges} from './metalla-hinges';
 import type {Cabinet} from '../domain/cabinet';
 import type {EditRepair} from './edit-repairs';
 import {evaluate} from '../geometry/evaluate';
@@ -70,16 +71,22 @@ export function innerDrawerOpeningRepairs(c:Cabinet):EditRepair[]{
   if(doors.blocked)return false;
   return !safeInnerDrawerExtensions(model,{}, {...doors.angles,...Object.fromEntries(model.drawers.drawers.map(d=>[d.id,100]))}).blocked&&[...machiningCollisionKeys(model.issues)].every(key=>existing.has(key));
  };
+ const metallaOptions:EditRepair[]=[];
+ if(c.fronts.some(d=>d.placement==='inset')&&c.drawers?.some(d=>d.internal))try{
+  const fitted=fitMetallaHinges(c,ids),candidates=evaluate(fitted).issues.some(i=>i.code==='machining-hinge-plate')?hingePlateRepairs(fitted).map(r=>r.cabinet):[fitted];
+  const clear=candidates.find(candidate=>!evaluate(candidate).issues.some(i=>i.code==='machining-hinge-plate')&&check(candidate));
+  if(clear&&JSON.stringify(clear.fronts)!==JSON.stringify(c.fronts))metallaOptions.push({label:'Use soft-close Häfele Metalla hinges; retain inset doors and internal drawers (provisional clearance study)',cabinet:clear});
+ }catch{/* Only complete, evaluated fits are offered. */}
  const opened=safeDoorAngles(initial,{},ids,Math.max(0,...ids.map(id=>doorAngleLimit(initial,id))));
  const blocked=safeInnerDrawerExtensions(initial,{}, {...opened.angles,...Object.fromEntries(initial.drawers.drawers.map(d=>[d.id,100]))});
- if(opened.blocked||!blocked.blocked)return [];
+ if(opened.blocked||!blocked.blocked)return metallaOptions;
  const door=initial.fronts.doors.find(d=>d.id===blocked.otherId),overlay=door?.placement==='inset';
- if(!overlay&&!initial.doorHardware.hinges.some(h=>h.id===blocked.otherId))return [];
+ if(!overlay&&!initial.doorHardware.hinges.some(h=>h.id===blocked.otherId))return metallaOptions;
  try{
   const candidate=overlay?editSimpleDoors(c,[door.id],{placement:'overlay'}):c;
-  if(overlay&&check(candidate))return [{label:'Change to overlay doors to clear the internal drawers',cabinet:candidate}];
-  return hingePlateRepairs(candidate).filter(option=>check(option.cabinet)).map(option=>({...option,label:overlay?'Change to overlay doors and reposition obstructed hinges to clear all internal drawers':option.label}));
- }catch{return [];}
+  if(overlay&&check(candidate))return [...metallaOptions,{label:'Change to overlay doors to clear the internal drawers',cabinet:candidate}];
+  return [...metallaOptions,...hingePlateRepairs(candidate).filter(option=>check(option.cabinet)).map(option=>({...option,label:overlay?'Change to overlay doors and reposition obstructed hinges to clear all internal drawers':option.label}))];
+ }catch{return metallaOptions;}
 
 }
 export function doorOpeningRepairs(c:Cabinet,ids:string[],target:number):EditRepair[]{

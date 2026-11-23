@@ -84,7 +84,9 @@ export function resolveDrawers(c:Cabinet){
     const left=side==='left';
     add(`side-${side}`,`${side} MERIVOBOX M base side`,[25.5,91,pack.nominalLength],[left?x:x+w-25.5,low+12,frontZ-pack.nominalLength],'steel',pack.components[1].article);
     add(`runner-${side}`,`${side} MERIVOBOX BLUMOTION runner`,[25.5,54,pack.nominalLength],[left?x:x+w-25.5,low,frontZ-pack.nominalLength],'steel',pack.components[0].article,false);
-    add(`back-fixing-${side}`,`${side} MERIVOBOX back fixing`,[14,pack.backHeight,12],[left?x+14:x+w-28,baseY,frontZ-bottom[2]-14],'steel',pack.components[2].article);
+    // Schematic edge bracket wraps the 16 mm back; its void is rendered below.
+    // Keep the published board deductions and screw locations unchanged.
+    add(`back-fixing-${side}`,`${side} MERIVOBOX back fixing`,[25.5,pack.backHeight,19],[left?x+12:x+w-37.5,baseY,frontZ-bottom[2]-17.5],'steel',pack.components[2].article);
     add(`front-fixing-${side}`,`${side} ${inner?'inner':'screw-on'} front fixing`,[inner?51:14,inner&&tall?184:83,12],[left?x+12:x+w-(inner?63:26),low+20,frontZ-2],'steel',components.find(p=>p.article.startsWith(inner?'ZI4.':'ZF4.1'))!.article);
     if(tall){
      const gallery=pack.configuration==='e-gallery';

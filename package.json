@@ -9,7 +9,9 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
     "build": "tsc --noEmit && vite build",
-    "test": "node --import tsx --test tests/*.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts",
+    "scope": "node scripts/change-scope.mjs",
+    "test:pinned": "node --import tsx --test tests/pinned-contracts.test.ts"
   },
   "dependencies": {
     "@ebay/skin": "19.39.0",

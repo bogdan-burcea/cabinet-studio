@@ -92,7 +92,7 @@ const cabinetToStep=([x,y,z]:Vec3):Vec3=>[x,-z,y];
 
 // Return the flattened cut geometry to its evaluated closed assembly pose.
 export function cabinetForExport(cabinet:EvaluatedCabinet,name:string):ExportModel {
-  const parts=flattenParts(cabinet).map(part=>{
+  const parts=flattenParts(cabinet,{includeGlass:true}).map(part=>{
     const {width,height,panel,u,v,normal,thickness,face}=part;
     const across=acrossSign(panel,face);
     const local=placedPart({part,rotated:false,x:0,y:0,width,height},height);

@@ -41,7 +41,7 @@ test('back-seat T-bones run along the slot walls, stay tangent to the ends and r
    assert.ok(Math.abs(relief.center[1]-cut.origin[1]-relief.radius)<1e-6||Math.abs(relief.center[1]-(cut.origin[1]+cut.size[1]-relief.radius))<1e-6);
    assert.ok(Math.abs(relief.center[2]-cut.origin[2])<1e-6||Math.abs(relief.center[2]-cut.origin[2]-cut.size[2])<1e-6);
   }
-  const doc=JSON.parse(serialize(c));assert.equal(doc.schemaVersion,58);doc.schemaVersion=40;doc.evaluatorRevision='wall-rail-notch-40';assert.equal(deserializeWithInfo(JSON.stringify(doc)).migrated,true);
+  const doc=JSON.parse(serialize(c));assert.equal(doc.schemaVersion,61);doc.schemaVersion=40;doc.evaluatorRevision='wall-rail-notch-40';assert.equal(deserializeWithInfo(JSON.stringify(doc)).migrated,true);
  }
  const thin=setBackPanel(createCabinet(),{mode:'groove',thickness:3});assert.ok(evaluate(thin).issues.some(i=>i.code==='machining-tool-width'));
 });

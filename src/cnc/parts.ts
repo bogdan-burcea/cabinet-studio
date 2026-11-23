@@ -1,3 +1,4 @@
+import {physicalPanels,physicalPockets,type ShakerPanel} from '../rules/shaker';
 import {drawerBoardPanels} from '../geometry/drawer-panels';
 import {material} from '../catalogue/materials';
 import type {EvaluatedCabinet, Panel} from '../geometry/evaluate';
@@ -8,13 +9,14 @@ import {machiningFaces} from '../rules/machining-review';
 
 export type FaceSign = 1 | -1;
 
-export function flattenParts(cabinet: EvaluatedCabinet) {
-  const bores = [...cabinet.cabineo.flatMap(joint => joint.bores), ...cabinet.backFasteners, ...cabinet.drilling];
+export function flattenParts(cabinet: EvaluatedCabinet, {includeGlass=false}:{includeGlass?:boolean}={}) {
+  const bores = cabinet.shaker?.bores??[...cabinet.cabineo.flatMap(joint => joint.bores), ...cabinet.backFasteners, ...cabinet.drilling];
   const drawerBoards=drawerBoardPanels(cabinet.drawers.drawers,cabinet.panels.find(p=>p.role==='bottom')!);
-  return [...cabinet.panels,...drawerBoards].map(panel => {
+  const pockets=physicalPockets(cabinet);
+  return [...physicalPanels(cabinet),...drawerBoards].filter(panel=>includeGlass||!(panel as ShakerPanel).glass).map(panel => {
     const [u, v] = faceAxes[panel.orientation];
     const normal = (3 - u - v) as 0 | 1 | 2;
-    const cuts = cabinet.pockets.filter(cut => cut.panelId === panel.id);
+    const cuts = pockets.filter(cut => cut.panelId === panel.id);
     const holes = bores.filter(bore => bore.panelId === panel.id);
     const faces = [...machiningFaces(panel, holes, cuts)] as FaceSign[];
     const preferred = preferredFace(panel, holes.filter(bore => bore.axis === normal));

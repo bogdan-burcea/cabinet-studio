@@ -54,7 +54,7 @@ test('wall hanging works with rear rails alone in either edit order, without orp
 });
 
 
-test('active wall side notch insets rails, back, seating and matched hardware by its 8 mm depth',()=>{
+test('side notch preserves back, flush rails, seating and matched hardware datums',()=>{
  for(const mode of ['groove','rail-screws'] as const)for(const backMode of ['rails-panel','rails','full'] as const){
   if(backMode==='full'&&mode==='rail-screws')continue;
   let c=setConstructionMode(fixture().cabinet,'back',backMode);c=setWallHanging(c,true);
@@ -63,10 +63,13 @@ test('active wall side notch insets rails, back, seating and matched hardware by
   const before=evaluate(c),notched={...c,installation:{...c.installation,mounting:{...c.installation.mounting,sideNotch:60}}},after=evaluate(notched);
   for(const role of ['back-upper-rail','back-lower-rail','back']){
    const a=before.panels.find(p=>p.role===role),b=after.panels.find(p=>p.role===role);if(!a)continue;
-   assert.deepEqual(b!.size,a.size);assert.equal(b!.center[2],a.center[2]+8);
+   assert.deepEqual(b!.size,a.size);assert.equal(b!.center[2],a.center[2]);
   }
-  for(const bore of after.drilling.filter(b=>b.id.includes('/installation/mounting/')||b.id.includes('/rail-screw-receiver/')||b.id.includes('/back-pilot/'))){const old=before.drilling.find(b=>b.id===bore.id)!;assert.equal(bore.point[2],old.point[2]+8);}
-  for(const pocket of after.pockets.filter(p=>p.id.includes('/back-seat/')||p.id.endsWith('/back-notch')||p.id.endsWith('/back-upper-rail-notch'))){const old=before.pockets.find(p=>p.id===pocket.id)!;assert.equal(pocket.origin[2],old.origin[2]+8);}
+  for(const bore of after.drilling.filter(b=>b.id.includes('/installation/mounting/')||b.id.includes('/rail-screw-receiver/')||b.id.includes('/back-pilot/'))){const old=before.drilling.find(b=>b.id===bore.id)!;assert.equal(bore.point[2],old.point[2]);}
+  for(const pocket of after.pockets.filter(p=>p.id.includes('/back-seat/')||p.id.endsWith('/back-notch')||p.id.endsWith('/back-upper-rail-notch'))){const old=before.pockets.find(p=>p.id===pocket.id)!;assert.equal(pocket.origin[2],old.origin[2]);}
+  assert.equal(after.pockets.filter(p=>p.id.endsWith('/side-notch')).length,2);
+  assert.ok(after.pockets.filter(p=>p.id.endsWith('/side-notch')).every(p=>p.size[2]===8));
+  assert.equal(after.construction.rearSetback,before.construction.rearSetback);
   assert.ok(!after.issues.some(i=>['machining-collision','machining-hole-collision'].includes(i.code)));
   assert.deepEqual(deserializeWithInfo(serialize(notched)).cabinet,notched);
   const store=new CabinetStore(c);assert.ok(store.commit(notched));store.undo();assert.deepEqual(store.getSnapshot().committed,c);store.redo();assert.deepEqual(store.getSnapshot().committed,notched);

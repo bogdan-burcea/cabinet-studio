@@ -58,7 +58,7 @@ test('removing nested fixed interiors also removes adjustable contents and their
  const base=createCabinet(),parent=addDivision(base,base.compartments.id,'horizontal',342),shelf=addAdjustable(parent.cabinet,evaluate(parent.cabinet).openings[0].id,{holes:3}),store=new CabinetStore(shelf.cabinet),removed=removeDivisionTree(shelf.cabinet,parent.featureId);assert.equal(removed.contents.length,0);assert.equal(evaluate(removed).drilling.length,0);assert.ok(store.commit(removed));store.undo();assert.deepEqual(store.getSnapshot().committed,shelf.cabinet);
 });
 test('native drilling intent is strict, versioned and older files remain unchanged',()=>{
- const base=createCabinet(),added=addAdjustable(setBackPanel(base,{mode:'applied'}),base.compartments.id,{holes:5}),doc=JSON.parse(serialize(added.cabinet));assert.equal(doc.schemaVersion,58);assert.deepEqual(readSimpleCabinet(JSON.stringify(doc)),added.cabinet);
+ const base=createCabinet(),added=addAdjustable(setBackPanel(base,{mode:'applied'}),base.compartments.id,{holes:5}),doc=JSON.parse(serialize(added.cabinet));assert.equal(doc.schemaVersion,61);assert.deepEqual(readSimpleCabinet(JSON.stringify(doc)),added.cabinet);
  for(const mutate of [(d:any)=>d.cabinet.contents[0].drilling.count=0,(d:any)=>d.cabinet.contents[0].drilling.extra=true,(d:any)=>d.cabinet.carcass.back.joint.pilots.diameter=99,(d:any)=>d.cabinet.carcass.back.joint.pilots.extra=true,(d:any)=>{d.schemaVersion=18;d.evaluatorRevision='fit-18';}]){const bad=structuredClone(doc);mutate(bad);assert.throws(()=>readSimpleCabinet(JSON.stringify(bad)));}
  const old=JSON.parse(serialize(base));old.schemaVersion=18;old.evaluatorRevision='fit-18';assert.deepEqual(deserializeWithInfo(JSON.stringify(old)),{cabinet:base,migrated:true});
 });

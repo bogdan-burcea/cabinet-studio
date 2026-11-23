@@ -66,6 +66,11 @@ export function explodedCabinetLayout(model:EvaluatedCabinet,amount:number):Map<
   const target=part.id.endsWith('/inner-handle')||part.id.endsWith('/front-gallery')||part.id.includes('/handle/')||part.id.includes('front-fixing-')?offsets.get(drawer.id+'/front')!:part.id.includes('/runner-')?sideOffset:part.id.includes('/back-fixing-')?offsets.get(drawer.id+'/back')!:part.id.includes('/gallery-')||part.id.includes('/cover-')?offsets.get(drawer.id+'/side-'+side)??body:body;
   offsets.set(part.id,amount?target:zero);
  }
+ for(const part of model.shaker?.panels??[]){
+  const base=offsets.get(part.doorOwnerId)??zero,key=part.id.split('/').at(-1);
+  const spread:Vec3=key==='left-stile'?[-amount,0,0]:key==='right-stile'?[amount,0,0]:key==='bottom-rail'?[0,-amount,0]:key==='top-rail'?[0,amount,0]:part.infill?[0,0,amount]:zero;
+  offsets.set(part.id,base.map((n,i)=>n+spread[i]) as Vec3);
+ }
  for(const pad of model.adjustable.supports){const receiver=support(pad.center);offsets.set(pad.id,receiver?offsets.get(receiver.id)!:zero);}
  for(const part of model.mounting.parts)offsets.set(part.id,[0,0,-amount]);
  return offsets;

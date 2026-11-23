@@ -50,6 +50,14 @@ export function drawerDisplayGeometry(part:DrawerPart){
  }
  if(part.system==='merivobox'){
   // MERIVOBOX-only schematic sections; never reuse TANDEMBOX fitting CAD.
+  if(back){
+   // Open toward the board: two 1.5 mm lips around its 16 mm thickness.
+   // A solid bounding box falsely embeds the bracket in the wooden back.
+   const [w,h,d]=part.size,t=1.5,edge=.75,shape=new THREE.Shape();
+   const points=[[-w/2,-d/2],[w/2,-d/2],[w/2,-d/2+t],[edge,-d/2+t],[edge,d/2-t],[w/2,d/2-t],[w/2,d/2],[-w/2,d/2]];
+   shape.moveTo(...points[0] as [number,number]);for(const point of points.slice(1))shape.lineTo(...point as [number,number]);shape.closePath();
+   const g=new THREE.ExtrudeGeometry(shape,{depth:h,bevelEnabled:false,steps:1});g.rotateX(Math.PI/2);g.translate(0,h/2,0);if(!left)g.scale(-1,1,1);return g;
+  }
   if(wall||runner){
    const [w,h,length]=part.size,t=1.5,shape=new THREE.Shape();
    const points=runner?[[-w/2,-h/2],[w/2,-h/2],[w/2,-h/2+t],[-w/2+t,-h/2+t],[-w/2+t,h/2],[-w/2,h/2]]:
