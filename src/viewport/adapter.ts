@@ -11,8 +11,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { Axis, Cabinet, Vec3 } from '../domain/cabinet';
 import type { EvaluatedCabinet } from '../geometry/evaluate';
-import { inspectionRotation } from './front-pose';
-import {doorAngleLimit,openingPivot} from '../rules/door-motion';
+import {doorAngleLimit,doorOpeningPose} from '../rules/door-motion';
 import { pickCabinetElement } from './picking';
 import {drawCncScene,type CncScene} from './cnc-scene';
 import { TouchZoom } from './touch-zoom';
@@ -53,8 +52,8 @@ export class CabinetViewport {
   private drag: { pointerId: number; axis: Axis; x: number; y: number; initial: number; px: number; py: number; featureId?: string; centre?: number } | null = null;
   private disposed = false;
   private presentationKey='';
-  private drawerGroups=new Map<string,{group:THREE.Group;target:number;travel:number}>();
-  private doorGroups=new Map<string,{group:THREE.Group;handing:'left'|'right';target:number;limit:number}>();
+  private drawerGroups=new Map<string,{group:THREE.Group;target:number;travel:number;internal:boolean}>();
+  private doorGroups=new Map<string,{group:THREE.Group;handing:'left'|'right';target:number;limit:number;pivot:Vec3;pose:(angle:number)=>ReturnType<typeof doorOpeningPose>}>();
   private displayedAngles=new Map<string,number>();
   private frameTime=0;
   constructor(private host: HTMLElement, private callbacks: Callbacks) {
@@ -88,7 +87,7 @@ export class CabinetViewport {
     host.addEventListener('click', this.suppressPinchClick, true);
     this.resizeObserver = new ResizeObserver(() => this.resize()); this.resizeObserver.observe(host);
     this.resize();
-    this.renderer.setAnimationLoop((time) => { if (this.disposed || !this.drawable) return; const delta=Math.min(.05,Math.max(0,(time-this.frameTime)/1000));this.frameTime=time;for(const [id,entry] of this.doorGroups){const current=this.displayedAngles.get(id)??0,next=current+Math.sign(entry.target-current)*Math.min(Math.abs(entry.target-current),260*delta);this.displayedAngles.set(id,next);entry.group.rotation.y=inspectionRotation(entry.handing,next,entry.limit);} for(const [id,entry] of this.drawerGroups){const current=this.displayedAngles.get(id)??0,next=current+Math.sign(entry.target-current)*Math.min(Math.abs(entry.target-current),240*delta);this.displayedAngles.set(id,next);entry.group.position.z=next*entry.travel/100;} this.controls.update(); this.renderer.render(this.scene, this.camera); this.updateAnchors(); });
+    this.renderer.setAnimationLoop((time) => { if (this.disposed || !this.drawable) return; const delta=Math.min(.05,Math.max(0,(time-this.frameTime)/1000));this.frameTime=time;const retracting=[...this.drawerGroups].some(([id,entry])=>entry.internal&&(this.displayedAngles.get(id)??0)>entry.target+.001);for(const [id,entry] of this.doorGroups){const current=this.displayedAngles.get(id)??0,target=retracting&&entry.target<current?current:entry.target,next=current+Math.sign(target-current)*Math.min(Math.abs(target-current),260*delta);this.displayedAngles.set(id,next);const pose=entry.pose(next);entry.group.rotation.y=pose.angle;entry.group.position.set(...pose.origin);} const doorsMoving=[...this.doorGroups].some(([id,entry])=>Math.abs((this.displayedAngles.get(id)??0)-entry.target)>.001);for(const [id,entry] of this.drawerGroups){const current=this.displayedAngles.get(id)??0,target=entry.internal&&doorsMoving&&entry.target>current?current:entry.target,next=current+Math.sign(target-current)*Math.min(Math.abs(target-current),240*delta);this.displayedAngles.set(id,next);entry.group.position.z=next*entry.travel/100;} this.controls.update(); this.renderer.render(this.scene, this.camera); this.updateAnchors(); });
   }
   private resize() {
     const { width, height } = this.host.getBoundingClientRect();
@@ -129,9 +128,9 @@ export class CabinetViewport {
     (this.grid.material as THREE.Material).depthWrite = false;
     this.clear(this.model); this.clear(this.handles); this.clear(this.dimensions);
     const frontGroups=new Map<string,THREE.Group>();this.doorGroups.clear();this.drawerGroups.clear();
-    if(frontsVisible)for(const door of geometry.fronts.doors.filter(d=>!hiddenIds.includes(d.id))){const group=new THREE.Group();group.position.set(...openingPivot(door));const limit=doorAngleLimit(geometry,door.id),target=explosion?0:Math.min(limit,doorAngles[door.id]??0);if(explosion)this.displayedAngles.set(door.id,0);group.rotation.y=inspectionRotation(door.handing,this.displayedAngles.get(door.id)??0,limit);this.doorGroups.set(door.id,{group,handing:door.handing,target,limit});frontGroups.set(door.id,group);this.model.add(group);}
+    if(frontsVisible)for(const door of geometry.fronts.doors.filter(d=>!hiddenIds.includes(d.id))){const group=new THREE.Group();const pose=(angle:number)=>doorOpeningPose(geometry,door,angle);const initial=pose(explosion?0:this.displayedAngles.get(door.id)??0);group.position.set(...initial.origin);const limit=doorAngleLimit(geometry,door.id),target=explosion?0:Math.min(limit,doorAngles[door.id]??0);if(explosion)this.displayedAngles.set(door.id,0);group.rotation.y=initial.angle;this.doorGroups.set(door.id,{group,handing:door.handing,target,limit,pivot:initial.pivot,pose});frontGroups.set(door.id,group);this.model.add(group);}
     const offsets=explodedCabinetLayout(geometry,explosion);
-    const attach=(mesh:THREE.Object3D,center:Vec3,id:string)=>{const group=frontGroups.get(id);mesh.position.set(...center);const panel=geometry.panels.find(p=>p.id===id);if(panel&&explosion)mesh.position.add(new THREE.Vector3(...offsets.get(panel.id)!));if(group){mesh.position.sub(group.position);group.add(mesh);}else this.model.add(mesh);};
+    const attach=(mesh:THREE.Object3D,center:Vec3,id:string)=>{const group=frontGroups.get(id);mesh.position.set(...center);const panel=geometry.panels.find(p=>p.id===id);if(panel&&explosion)mesh.position.add(new THREE.Vector3(...offsets.get(panel.id)!));if(group){mesh.position.sub(new THREE.Vector3(...this.doorGroups.get(id)!.pivot));group.add(mesh);}else this.model.add(mesh);};
     const bores=[...geometry.cabineo.flatMap(j=>j.bores),...geometry.backFasteners,...geometry.drilling];
     for (const panel of geometry.panels) {
       if(hiddenIds.includes(panel.id)||hiddenIds.includes(constructionOwner(cabinet,panel.id)))continue;
@@ -161,7 +160,7 @@ export class CabinetViewport {
      const travel=drawerPack(drawer.intent.pack).nominalLength;
      if(explosion)this.displayedAngles.set(drawer.id,0);
      group.position.z=(this.displayedAngles.get(drawer.id)??0)*travel/100;
-     this.drawerGroups.set(drawer.id,{group,target:explosion?0:doorAngles[drawer.id]??0,travel});
+     this.drawerGroups.set(drawer.id,{group,target:explosion?0:doorAngles[drawer.id]??0,travel,internal:!!drawer.intent.internal});
      this.model.add(group);
     }
     const drawerBoards=new Map(flattenParts(geometry).map(p=>[p.id,p]));

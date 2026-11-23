@@ -14,6 +14,12 @@ export function holesOverlap(a:CabineoBore,b:CabineoBore){
 export function intentionalHoleUnion(a:CabineoBore,b:CabineoBore){
  // The pinned Cabineo housing/pilot pattern is one intentional compound cut.
  if(a.group===b.group&&[a.kind,b.kind].every(k=>k==='housing'||k==='pilot'))return true;
+ // Aligned opposed Cabineo receivers share one physical pilot after one-face
+ // conversion. Only an exactly coaxial, equal-diameter contained cut is shared.
+ if(a.kind==='receiver'&&b.kind==='receiver'&&a.panelId===b.panelId&&a.axis===b.axis&&Math.abs(a.diameter-b.diameter)<.001&&a.point.every((n,i)=>i===a.axis||Math.abs(n-b.point[i])<.001)){
+  const span=(h:CabineoBore)=>{const end=h.point[h.axis]+h.sign*h.depth;return [Math.min(h.point[h.axis],end),Math.max(h.point[h.axis],end)];},sa=span(a),sb=span(b);
+  if(a.through&&sa[0]<=sb[0]+.001&&sa[1]>=sb[1]-.001||b.through&&sb[0]<=sa[0]+.001&&sb[1]>=sa[1]-.001)return true;
+ }
  // Shared opposed shelf rows represent the same physical through bore.
  return a.kind==='shelf-support'&&b.kind==='shelf-support'&&a.through&&b.through&&a.axis===b.axis&&Math.abs(a.diameter-b.diameter)<.001&&a.point.every((n,i)=>i===a.axis||Math.abs(n-b.point[i])<.001);
 }

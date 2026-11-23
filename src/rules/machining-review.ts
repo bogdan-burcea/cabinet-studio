@@ -18,7 +18,7 @@ export function machiningReview(panels:JoineryPanel[],joints:CabineoJoint[],back
  const warn=(code:string,id:string,message:string,relatedIds:string[]=[],operationIds:string[]=[])=>{const key=code+id+message+(code==='machining-hole-collision'||relatedIds.length?JSON.stringify([relatedIds,operationIds]):'');if(!dedup.has(key)){dedup.add(key);issues.push({code,featureId:id,message,severity:'notice',relatedIds,operationIds});}};
  for(let i=0;i<bores.length;i++)for(let j=i+1;j<bores.length;j++){
   const a=bores[i],b=bores[j];if(a.panelId!==b.panelId||intentionalHoleUnion(a,b)||!holesOverlap(a,b)&&!footHoleSafetyConflict(a,b))continue;
-  const label=(hole:CabineoBore)=>hole.kind==='foot-pilot'?'Foot hole':hole.kind==='housing'?'Cabineo housing':hole.kind==='hinge-pilot'?'Hinge screw hole':hole.kind==='hinge-cup'?'Hinge cup':hole.kind==='shelf-support'?'Shelf hole':hole.kind==='back-fixing'?'Back fixing':'Drilled hole';
+  const label=(hole:CabineoBore)=>hole.kind==='foot-pilot'?'Foot hole':hole.kind==='housing'?'Cabineo housing':hole.kind==='hinge-pilot'?(hole.id.includes('/expando/')?'EXPANDO T anchor hole':'Hinge screw hole'):hole.kind==='hinge-cup'?'Hinge cup':hole.kind==='shelf-support'?'Shelf hole':hole.kind==='back-fixing'?'Back fixing':'Drilled hole';
   warn('machining-hole-collision',a.panelId,`${label(a)} ${holesOverlap(a,b)?'overlaps':'needs 4 mm clearance from'} ${label(b).toLowerCase()} on ${panels.find(p=>p.id===a.panelId)?.role??'part'}. Change the hole placement or fitting layout.`,[...new Set([a,b].filter(h=>h.kind==='foot-pilot').map(h=>h.group))],[a.id,b.id]);
  }
  for(const panel of panels){

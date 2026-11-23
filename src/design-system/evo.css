@@ -255,7 +255,8 @@ button.add-adjustable-shelf{margin-top:var(--spacing-200)}
 .cnc-rotate{display:flex;align-items:center;gap:var(--spacing-100);min-height:32px;font-size:var(--font-size-body)}
 .cnc-offcut-key{display:inline-block;width:20px;border-top:2px dashed var(--color-foreground-accent);margin-inline-end:var(--spacing-100);vertical-align:middle}
 .cnc-offcuts{list-style:none;padding:0;margin:var(--spacing-100) 0 0}
-.cnc-rotate input{width:18px;height:18px;accent-color:var(--color-foreground-accent)}
+.app-checkbox{display:flex;align-items:center;gap:var(--spacing-100)}
+.app-checkbox .checkbox{flex-shrink:0}
 .inspector .field-note+.full-width-button{margin-top:var(--spacing-200)}
 @media(max-width:600px){
   .simple-workspace .workspace-tabs{order:3;width:100%}

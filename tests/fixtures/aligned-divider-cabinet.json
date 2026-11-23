@@ -1,0 +1,271 @@
+{
+  "format": "cabinet-studio",
+  "schemaVersion": 56,
+  "evaluatorRevision": "rail-hanger-access-56",
+  "cabinet": {
+    "id": "4b168629-d737-42fb-95b2-4da633fc1d58",
+    "name": "Cabinet",
+    "envelope": {
+      "width": 600,
+      "height": 2100,
+      "depth": 180,
+      "origin": [
+        0,
+        0,
+        0
+      ]
+    },
+    "carcass": {
+      "construction": "rectangular-butt",
+      "policyRevision": "construction-1",
+      "top": {
+        "mode": "full",
+        "frontDepth": 80,
+        "rearDepth": 80
+      },
+      "back": {
+        "mode": "full",
+        "upperHeight": 80,
+        "lowerHeight": 80,
+        "joint": {
+          "revision": "back-1",
+          "mode": "groove",
+          "inset": 25,
+          "depth": 6,
+          "clearance": 0.2,
+          "fastener": {
+            "id": "hafele-26009765",
+            "revision": "rpc-1",
+            "perSide": 3
+          }
+        }
+      },
+      "machining": {
+        "revision": "cnc-1",
+        "tolerance": 0.2,
+        "bitDiameter": 3,
+        "dogbones": false,
+        "throughOpposed": true,
+        "cabineoPerSide": 0,
+        "bottomFace": "inside",
+        "bottomFastenersThrough": false
+      }
+    },
+    "compartments": {
+      "id": "4b168629-d737-42fb-95b2-4da633fc1d58/opening",
+      "kind": "split",
+      "featureId": "4f19c91c-6c19-432f-9527-d808bca025ab",
+      "axis": "horizontal",
+      "position": 407.4,
+      "policyRevision": "fixed-1",
+      "children": [
+        {
+          "id": "d656d8d6-e62f-4229-8812-36607f723584",
+          "kind": "split",
+          "featureId": "b0c9eef3-dcfc-40cb-b03f-550ae66a8cad",
+          "axis": "vertical",
+          "position": 282,
+          "policyRevision": "fixed-1",
+          "children": [
+            {
+              "id": "82fc7eef-af09-4d95-9e24-e75f0fae5c7f",
+              "kind": "opening",
+              "children": []
+            },
+            {
+              "id": "1404f211-69b2-498b-bba7-2a54fdad398e",
+              "kind": "opening",
+              "children": []
+            }
+          ],
+          "anchor": "centre"
+        },
+        {
+          "id": "58b6be78-c246-4559-9370-a0eb373b0175",
+          "kind": "split",
+          "featureId": "c43a452a-e80c-4c02-9035-6dbdf7ce5f42",
+          "axis": "horizontal",
+          "position": 407.4,
+          "policyRevision": "fixed-1",
+          "children": [
+            {
+              "id": "5da89e9f-c371-491d-a54f-2561766ad6ac",
+              "kind": "split",
+              "featureId": "d019a6a9-d603-415a-8666-fee2a810bd76",
+              "axis": "vertical",
+              "position": 282,
+              "policyRevision": "fixed-1",
+              "children": [
+                {
+                  "id": "09a80480-7e09-48bd-9db1-2ac5f682af88",
+                  "kind": "opening",
+                  "children": []
+                },
+                {
+                  "id": "4ad23d37-70de-4e1c-9020-7af4ac5a5d77",
+                  "kind": "opening",
+                  "children": []
+                }
+              ],
+              "anchor": "centre"
+            },
+            {
+              "id": "afa940ca-73f0-4a9d-ba49-f227a5d6ba53",
+              "kind": "split",
+              "featureId": "a2fdfc21-a6b7-4c17-b704-57115b27f94d",
+              "axis": "horizontal",
+              "position": 407.4,
+              "policyRevision": "fixed-1",
+              "children": [
+                {
+                  "id": "89f29327-5983-4a34-a1c4-cfe8c7ba1f4f",
+                  "kind": "split",
+                  "featureId": "f67a412a-b6a0-4ab0-8c56-7b0e1a0e597a",
+                  "axis": "vertical",
+                  "position": 282,
+                  "policyRevision": "fixed-1",
+                  "children": [
+                    {
+                      "id": "54295f38-5635-4a3e-9c0a-6411223d9543",
+                      "kind": "opening",
+                      "children": []
+                    },
+                    {
+                      "id": "6b88782c-211e-48ae-b330-8525145f8a6d",
+                      "kind": "opening",
+                      "children": []
+                    }
+                  ],
+                  "anchor": "centre"
+                },
+                {
+                  "id": "19a7ccbc-c179-4625-b484-a0da8054e25d",
+                  "kind": "split",
+                  "featureId": "1031b893-9feb-48be-989e-ec7d35202fa5",
+                  "axis": "horizontal",
+                  "position": 407.4,
+                  "policyRevision": "fixed-1",
+                  "children": [
+                    {
+                      "id": "1e686197-bd22-4e17-9526-8fbf46c23e1b",
+                      "kind": "split",
+                      "featureId": "96543e81-4522-4941-a0b7-067fc4f583ec",
+                      "axis": "vertical",
+                      "position": 282,
+                      "policyRevision": "fixed-1",
+                      "children": [
+                        {
+                          "id": "0fad1061-40b9-4210-87da-19e482788ece",
+                          "kind": "opening",
+                          "children": []
+                        },
+                        {
+                          "id": "d4138597-cc82-46dc-899a-93d207a188c1",
+                          "kind": "opening",
+                          "children": []
+                        }
+                      ],
+                      "anchor": "centre"
+                    },
+                    {
+                      "id": "3d7c0c31-d1f0-4086-b700-9db4345b7012",
+                      "kind": "split",
+                      "featureId": "2bea3a35-191d-40e9-b33e-2e766ea34b15",
+                      "axis": "vertical",
+                      "position": 282,
+                      "policyRevision": "fixed-1",
+                      "children": [
+                        {
+                          "id": "479ee4d6-d6fc-419e-8260-61f1c722e380",
+                          "kind": "opening",
+                          "children": []
+                        },
+                        {
+                          "id": "89d72b41-dbad-4c67-a7d7-7d5fc10fedf7",
+                          "kind": "opening",
+                          "children": []
+                        }
+                      ],
+                      "anchor": "centre"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "contents": [],
+    "fronts": [],
+    "installation": {
+      "type": "unassigned",
+      "policyRevision": "support-1",
+      "mounting": {
+        "mode": "none",
+        "policyRevision": "mounting-1",
+        "geometry": {
+          "id": "blum-48n0510",
+          "revision": "1"
+        },
+        "wallGap": 30,
+        "topOffset": 33,
+        "sideInset": 60,
+        "floorClearance": 300
+      },
+      "feet": {
+        "geometry": {
+          "id": "concept-foot-60",
+          "revision": "1"
+        },
+        "height": 100,
+        "sideInset": 60,
+        "frontInset": 120,
+        "rearInset": 60
+      },
+      "plinth": {
+        "enabled": false,
+        "leftReturn": false,
+        "rightReturn": false,
+        "frontSetback": 60,
+        "topGap": 5,
+        "bottomGap": 0,
+        "material": null
+      }
+    },
+    "materials": {
+      "carcass": {
+        "stock": {
+          "id": "generic-panel-18",
+          "revision": "1"
+        },
+        "finish": {
+          "id": "unspecified",
+          "revision": "1"
+        },
+        "grain": "none"
+      },
+      "back": {
+        "stock": {
+          "id": "generic-back-3",
+          "revision": "1"
+        },
+        "finish": {
+          "id": "unspecified",
+          "revision": "1"
+        },
+        "grain": "none"
+      },
+      "interior": null
+    },
+    "banding": {},
+    "hardware": [
+      {
+        "id": "cabineo-8",
+        "revision": "surface-1"
+      }
+    ],
+    "cabinetType": "tall",
+    "drawers": []
+  }
+}

@@ -1,10 +1,13 @@
 import {createPortal} from 'react-dom';
-import {createContext,useContext,useId,useState,useEffect,useRef,useLayoutEffect,type ButtonHTMLAttributes,type ReactNode} from 'react';
+import {createContext,useContext,useId,useState,useEffect,useRef,useLayoutEffect,type ButtonHTMLAttributes,type InputHTMLAttributes,type ReactNode} from 'react';
 import {Icon,type IconName} from '../design-system/Icon';
 /** eBay Skin owns control styling; application components only adapt our API. */
 export function Button({icon,children,className='',...props}:ButtonHTMLAttributes<HTMLButtonElement>&{icon?:IconName}){
  const variant=className.includes('primary-button')?'btn--primary':'btn--secondary';
  return <button {...props} className={`btn ${variant} ${className.includes('destructive-button')?'btn--destructive':''} ${className}`}>{icon&&<Icon name={icon}/>}<span className="btn__cell">{children}</span></button>;
+}
+export function Checkbox({children,className='',...props}:Omit<InputHTMLAttributes<HTMLInputElement>,'type'|'className'>&{children:ReactNode;className?:string}){
+ return <label className={`app-checkbox ${className}`}><span className="checkbox checkbox--large"><input {...props} className="checkbox__control" type="checkbox"/><span className="checkbox__icon" hidden><svg className="checkbox__checked" viewBox="0 0 24 24" aria-hidden="true"><use href={`${import.meta.env.BASE_URL}assets/evo-icons.svg#icon-checkbox-checked-24`}/></svg><svg className="checkbox__unchecked" viewBox="0 0 24 24" aria-hidden="true"><use href={`${import.meta.env.BASE_URL}assets/evo-icons.svg#icon-checkbox-unchecked-24`}/></svg></span></span><span>{children}</span></label>;
 }
 export function IconButton({icon,label,className='',onFocus,onBlur,onPointerEnter,onPointerLeave,onKeyDown,onPointerDown,tooltip=true,...props}:ButtonHTMLAttributes<HTMLButtonElement>&{icon:IconName;label:string;tooltip?:boolean}){
  const id=useId(),[show,setShow]=useState(false),button=useRef<HTMLButtonElement>(null),tip=useRef<HTMLSpanElement>(null),timer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined),[position,setPosition]=useState({left:0,top:0,pointer:16,below:true});
@@ -27,7 +30,7 @@ export function Section({title,aside,children,className=''}:{title:string;aside?
  return <li className={className}><details className="details inspector-details" open={open} onToggle={e=>setOpen(e.currentTarget.open)}><summary className="details__summary"><h3 className="details__label">{title}</h3><span className="accordion-heading-aside">{aside}</span><span className="details__icon" hidden><Icon name="chevron" size={16}/></span></summary><div className="details__content inspector-section">{children}</div></details></li>;
 }
 
-export function Notice({message,error=false,onDismiss,onAction}:{message:string;error?:boolean;onDismiss():void;onAction?():void}){
+export function Notice({message,error=false,persistent=false,onDismiss,onAction}:{message:string;error?:boolean;persistent?:boolean;onDismiss():void;onAction?():void}){
  const callback=useRef(onDismiss);callback.current=onDismiss;
  const [paused,setPaused]=useState(false),[leaving,setLeaving]=useState(false),[details,setDetails]=useState(false);
  const ending=useRef<ReturnType<typeof setTimeout>|undefined>(undefined),closing=useRef(false);
@@ -38,7 +41,7 @@ export function Notice({message,error=false,onDismiss,onAction}:{message:string;
  const resolve=()=>{onAction?.();dismiss();};
  // Focus and the details dialog pause expiry. Dismissal has its own timer.
  useEffect(()=>{closing.current=false;setLeaving(false);setDetails(false);clearTimeout(ending.current);},[message]);
- useEffect(()=>{if(paused||leaving||details)return;const timer=setTimeout(dismiss,6000);return()=>clearTimeout(timer);},[message,paused,leaving,details]);
+ useEffect(()=>{if(persistent||paused||leaving||details)return;const timer=setTimeout(dismiss,6000);return()=>clearTimeout(timer);},[message,persistent,paused,leaving,details]);
  useEffect(()=>()=>clearTimeout(ending.current),[]);
  useEffect(()=>{if(details)dialog.current?.showModal();},[details]);
  return <>

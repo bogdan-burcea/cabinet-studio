@@ -4,7 +4,7 @@ import type {Cabinet,SlabDoor,Vec3} from '../domain/cabinet';
 import type {FrontBody} from './fronts';
 import {frontStructure} from './fronts';
 import {effectiveDoor} from './front-links';
-import {blumClip155,hingeProfiles,cupSetbackMax} from '../catalogue/hinges';
+import {blumClip155,isThinHinge,thinPlateHeight,hingeProfiles,cupSetbackMax} from '../catalogue/hinges';
 import {conceptHandle} from '../catalogue/fronts';
 import type {CabineoBore} from './cabineo';
 export interface DoorHinge {id:string;ownerId:string;supportId:string;article:string;plate:string;y:number;cup:Vec3;softClose:boolean;maxAngle:number;mountingZone:{center:Vec3;size:Vec3}}
@@ -26,10 +26,10 @@ export function doorHardware(c:Cabinet,doors:FrontBody[]){
   if(h){
    const profile=Object.hasOwn(hingeProfiles,h.id)?hingeProfiles[h.id]:undefined;
    if(!profile||h.revision!==profile.revision||!Number.isInteger(h.count)||h.count<2||h.count>6||!precise(h.endOffset,35,300))throw Error('Unsupported Blum hinge settings or revision.');
-   const cupMax=cupSetbackMax(h.id,front.placement==='inset');
-   if(!precise(h.cupDistance,3,cupMax))throw Error(`Blum ${profile.maxAngle}° cup setback must be 3–${cupMax} mm in 0.1 mm steps.`);
-   const wide=profile.id===blumClip155.id,maxStock=wide?31:26;
-   if(body.size[2]<16||body.size[2]>maxStock)throw Error(`Blum ${profile.maxAngle}° hinges require 16–${maxStock} mm door stock for this application.`);
+   const thin=isThinHinge(h.id),cupMin=thin?23.5:3,cupMax=cupSetbackMax(h.id,front.placement==='inset');
+   if(!precise(h.cupDistance,cupMin,cupMax))throw Error(`Blum ${profile.maxAngle}° fixing distance must be ${cupMin}–${cupMax} mm in 0.1 mm steps.`);
+   const wide=profile.id===blumClip155.id,minStock=thin?8:16,maxStock=thin?14:wide?31:26;
+   if(body.size[2]<minStock||body.size[2]>maxStock)throw Error(`Blum ${profile.maxAngle}°${thin?' EXPANDO T':''} hinges require ${minStock}–${maxStock} mm door stock for this application.`);
    if(body.size[1]-2*h.endOffset<45*(h.count-1))throw Error('Hinge positions need at least 45 mm separation. Reduce the end offset or hinge count.');
    if(h.offsets!==undefined&&(!Array.isArray(h.offsets)||h.offsets.length!==h.count||!h.offsets.every(n=>precise(n,-3000,3000))))throw Error('Hinge offsets must match the hinge count, in 0.1 mm steps.');
    const levels=Array.from({length:h.count},(_,i)=>low+h.endOffset+i*(body.size[1]-2*h.endOffset)/(h.count-1)+(h.offsets?.[i]??0));
@@ -44,17 +44,18 @@ export function doorHardware(c:Cabinet,doors:FrontBody[]){
     });
     const inset=front.placement==='inset'&&(outer||support&&support.origin[2]+support.size[2]>rear+.001);
     const article=inset?profile.inset:outer?profile.overlay:profile.dual;
-    const plate=wide&&inset?blumClip155.insetPlate:profile.plate;
+    let plate:string=wide&&inset?blumClip155.insetPlate:profile.plate;
     if(!support)throw Error('A hinge mounting plate needs a real side panel or divider at every hinge position.');
-    const supportId='id' in support?support.id as string:`${c.id}/panel/${support.role}`,face=side===-1?support.origin[0]+support.size[0]:support.origin[0],plateZ=c.envelope.origin[2]+c.envelope.depth-profile.plateLine-(wide?(inset?body.size[2]+1.5:0):(front.placement==='inset'?body.size[2]+front.clearance:0));
+    const supportId='id' in support?support.id as string:`${c.id}/panel/${support.role}`,face=side===-1?support.origin[0]+support.size[0]:support.origin[0],plateZ=c.envelope.origin[2]+c.envelope.depth-profile.plateLine-(wide||thin?(inset?body.size[2]+1.5:0):(front.placement==='inset'?body.size[2]+front.clearance:0));
+    if(thin){const height=thinPlateHeight(support.size[0],body.size[2]);if(height===6)throw Error('This thin-front combination requires a 6 mm plate; the EXPANDO T pack currently supports 0 or 3 mm cam plates.');plate=height===3?'173H7130':'173H7100';const expected=27+height-side*(face-edge);if(Math.abs(h.cupDistance-expected)>2.001)throw Error(`EXPANDO T fixing distance B must match this front overlay/reveal: ${+expected.toFixed(1)} mm nominal (±2 mm side adjustment).`);}
     const extra=wide?blumClip155.extraPlateSetback:0;
     if(plateZ-extra-1.5<support.origin[2]||plateZ+1.5>support.origin[2]+support.size[2])throw Error('The hinge plate line falls outside its support. Reduce the support front inset.');
     if(support.size[0]<9)throw Error('Hinge mounting supports need at least 9 mm stock for the selected pilot depth.');
-    const plateDepth=wide?46:24,reach=wide&&inset?17.5:8;
+    const plateDepth=wide?46:24,reach=thin?(plate==='173H7130'?11:8):wide&&inset?17.5:8;
     hinges.push({id:key,ownerId:body.id,supportId,article,plate,y,cup:[cupX,y,rear],softClose:profile.softClose,maxAngle:profile.maxAngle,mountingZone:{center:[face-side*reach/2,y,plateZ-extra/2],size:[reach,48,plateDepth]}});
-    add(`${key}/cup`,body.id,'hinge-cup',[cupX,y,rear],2,1,profile.cupDiameter,profile.cupDepth);
+    if(!thin)add(`${key}/cup`,body.id,'hinge-cup',[cupX,y,rear],2,1,profile.cupDiameter,profile.cupDepth);
     if(wide)add(`${key}/plate-screw/extra`,supportId,'hinge-pilot',[face,y,plateZ-extra],0,side,pilotDiameter(c),8);
-    for(const sign of [-1,1]){add(`${key}/cup-screw/${sign}`,body.id,'hinge-pilot',[cupX+side*profile.screwOffset,y+sign*profile.screwPitch/2,rear],2,1,pilotDiameter(c),10);add(`${key}/plate-screw/${sign}`,supportId,'hinge-pilot',[face,y+sign*profile.platePitch/2,plateZ],0,side,pilotDiameter(c),8);}
+    for(const sign of [-1,1]){add(`${key}/${thin?'expando':'cup-screw'}/${sign}`,body.id,'hinge-pilot',[cupX+side*profile.screwOffset,y+sign*profile.screwPitch/2,rear],2,1,thin?10:pilotDiameter(c),thin?6:10);add(`${key}/plate-screw/${sign}`,supportId,'hinge-pilot',[face,y+sign*profile.platePitch/2,plateZ],0,side,pilotDiameter(c),8);}
    }
   }
   bores.push(...resolveHandle(front.handle,body).bores);

@@ -55,13 +55,14 @@ export interface SlabDoor {
   material: MaterialBinding | null;
   handle: { geometry: ProductPin; kind: 'none' | 'knob' | 'pull' | 'hole' | 'notch'; pitch: number; orientation: 'vertical' | 'horizontal'; edgeOffset: number; height: 'top' | 'centre' | 'bottom'; endOffset: number; horizontal?: 'latch'|'left'|'centre'|'right'; diameter?: number; projection?: number; drillDiameter?: number;notchWidth?:number;notchDepth?:number;cornerDiameter?:number;outsideRadius?:number;notchEdge?:'left'|'right'|'top'|'bottom' };
   cornerRadius?:number;
-  hinge?: {id:'blum-clip-110'|'blum-clip-155'; revision:'blum-1'; count:number; endOffset:number; cupDistance:number;offsets?:number[]};
+  hinge?: {id:'blum-clip-110'|'blum-clip-155'|'blum-thin-110'; revision:'blum-1'; count:number; endOffset:number; cupDistance:number;offsets?:number[]};
 }
 export interface MetalDrawer {
   id:string; kind:'metal-drawer'; policyRevision:'antaro-external-1'; pack:ProductPin;
   openingId:string; offset:number; frontHeight:number;
   cornerRadius?:number;
   manualRail?:boolean;
+  internal?:{revision:'antaro-inner-1'|'merivobox-inner-1';setback:number};
   handle?:SlabDoor['handle'];
   stack?:{groupId:string;order:number;height:number};
   front?:{placement:'inset'|'overlay';gap:number;clearance:number;left:number;right:number;top:number;bottom:number};

@@ -2,7 +2,7 @@ import type {Cabinet,SlabDoor} from '../domain/cabinet';
 import {editSimpleDoors} from './simple-doors';
 import {setDrawerPlacement} from './drawers';
 export function frontTargets(c:Cabinet,ids:readonly string[]){
- return [...new Set(ids.flatMap(id=>c.fronts.some(d=>d.id===id)?[id]:c.drawers?.some(d=>d.id===id||id===d.id+'/front')?[c.drawers.find(d=>d.id===id||id===d.id+'/front')!.id]:[]))];
+ return [...new Set(ids.flatMap(id=>c.fronts.some(d=>d.id===id)?[id]:c.drawers?.some(d=>!d.internal&&(d.id===id||id===d.id+'/front'))?[c.drawers.find(d=>!d.internal&&(d.id===id||id===d.id+'/front'))!.id]:[]))];
 }
 export function editFrontFeatures(c:Cabinet,ids:string[],patch:{edgeGap?:number;frontGap?:number;cornerRadius?:number;placement?:'overlay'|'inset';handle?:Partial<SlabDoor['handle']>},cabinetScope=false):Cabinet{
  const targets=new Set(frontTargets(c,ids)),doors=c.fronts.filter(d=>targets.has(d.id)),drawerIds=(c.drawers??[]).filter(d=>targets.has(d.id)).map(d=>d.id);

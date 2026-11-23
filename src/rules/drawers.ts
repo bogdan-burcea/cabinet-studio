@@ -1,14 +1,14 @@
 import {resolveHandle} from './handles';
-import {layoutDrawerIntents} from './drawer-layout';
+import {drawerFrontSetback,layoutDrawerIntents} from './drawer-layout';
 import type {Cabinet,MetalDrawer,Vec3} from '../domain/cabinet';
-import {drawerPack} from '../catalogue/drawers';
+import {innerDrawerSpec,drawerPack,drawerComponents} from '../catalogue/drawers';
 import {stock} from '../catalogue/materials';
 import {resolveConstruction} from './construction';
 import {resolveInteriors} from './interiors';
 import {resolveAdjustable} from './adjustable';
 import {resolveFronts} from './fronts';
 import type {Issue} from './validate';
-export interface DrawerPart {id:string;ownerId:string;label:string;article:string|null;material:'chipboard-16'|'front-stock'|'steel';size:Vec3;center:Vec3;moving:boolean;shape?:'box'|'cylinder';fidelity:'board'|'envelope'}
+export interface DrawerPart {id:string;ownerId:string;label:string;article:string|null;material:'chipboard-16'|'front-stock'|'steel';size:Vec3;center:Vec3;moving:boolean;system?:'merivobox';shape?:'box'|'cylinder';fidelity:'board'|'envelope'}
 export interface EvaluatedDrawer {id:string;label:string;intent:MetalDrawer;parts:DrawerPart[];bottom:Vec3;back:Vec3;front:Vec3;allocation:{origin:Vec3;size:Vec3};requiredDepth:number}
 const overlap=(a:{origin:Vec3;size:Vec3},b:{origin:Vec3;size:Vec3})=>a.size.every((v,i)=>Math.min(a.origin[i]+v,b.origin[i]+b.size[i])-Math.max(a.origin[i],b.origin[i])>1e-6);
 export function resolveDrawers(c:Cabinet){
@@ -25,19 +25,23 @@ export function resolveDrawers(c:Cabinet){
   if(d.manualRail!==undefined&&typeof d.manualRail!=='boolean'){fail('choose automatic or manual rails.');continue;}
   let pack;try{pack=drawerPack(d.pack);}catch(e){fail((e as Error).message);continue;}
   if(d.kind!=='metal-drawer'||d.policyRevision!=='antaro-external-1'){fail('unsupported drawer policy.');continue;}
+  const inner=!!d.internal,merivo=pack.family==='merivobox',innerSpec=innerDrawerSpec(pack);
+  if(inner&&(d.internal!.revision!==innerSpec.revision||!Number.isFinite(d.internal!.setback)||d.internal!.setback<55||d.internal!.setback>150||Math.abs(d.internal!.setback*10-Math.round(d.internal!.setback*10))>1e-6||!merivo&&pack.sideHeight!==83.6)){fail('internal drawers need a matched inner-front kit and a 55–150 mm front setback, in 0.1 mm steps.');continue;}
+  if(inner&&(d.handle&&d.handle.kind!=='none'||(d.cornerRadius??0)!==0)){fail('the aluminium inner front uses its matching Blum handle and square profile.');continue;}
+  const minimumHeight=inner?innerSpec.minimumHeight:pack.minimumHeight;
   const opening=interiors.openings.find(o=>o.id===d.openingId);
   if(!opening){fail('its supporting opening no longer exists. Remove or relocate the drawer before dividing that opening.');continue;}
-  if(![d.offset,d.frontHeight].every(v=>Number.isFinite(v)&&(!!d.stack||Math.abs(v*10-Math.round(v*10))<1e-6))||d.offset<0||d.frontHeight<pack.minimumHeight||d.offset+d.frontHeight>opening.size[1]+1e-6){fail(`allocate at least ${pack.minimumHeight} mm height within the opening, in 0.1 mm steps.`);continue;}
+  if(![d.offset,d.frontHeight].every(v=>Number.isFinite(v)&&(!!d.stack||Math.abs(v*10-Math.round(v*10))<1e-6))||d.offset<0||d.frontHeight<minimumHeight||d.offset+d.frontHeight>opening.size[1]+1e-6){fail(`allocate at least ${minimumHeight} mm height within the opening, in 0.1 mm steps. Reduce the drawer count, choose a lower construction, or increase the opening height.`);continue;}
   const f=d.front??{placement:'overlay',gap:2,clearance:2,left:0,right:0,top:0,bottom:0};
   if(!['inset','overlay'].includes(f.placement)||!['gap','clearance','left','right','top','bottom'].every(key=>{
    const value=f[key as 'gap'];return Number.isFinite(value)&&value>=0&&value<=(key==='gap'||key==='clearance'?10:50)&&Math.abs(value*10-Math.round(value*10))<1e-6;
   })){fail('front gaps must be 0–10 mm and overlaps 0–50 mm, in 0.1 mm steps.');continue;}
   const frontThickness=stock(c,'carcass').thickness;
-  const insetDepth=f.placement==='inset'?frontThickness+f.clearance:0;
-  if(opening.size[2]<pack.minimumDepth+insetDepth){fail(`${pack.nominalLength} mm runners and this front need ${pack.minimumDepth+insetDepth} mm clear depth; this opening has ${opening.size[2]} mm.`);continue;}
+  const insetDepth=drawerFrontSetback(c,d);
+  if(opening.size[2]<pack.minimumDepth+insetDepth){fail(`${pack.nominalLength} mm runners and this front need ${pack.minimumDepth+insetDepth} mm clear depth; this opening has ${opening.size[2]} mm. Choose shorter rails, reduce the front setback, or increase cabinet depth.`);continue;}
   // Deliberately narrower than the manufacturer range until wide-drawer stabilisers are verified.
-  if(opening.size[0]<240||opening.size[0]>900){fail('this first pack supports 240–900 mm clear width (application policy).');continue;}
-  if(t<16){fail('runner attachment needs at least 16 mm side stock in this application.');continue;}
+  if(opening.size[0]<240||opening.size[0]>900){fail('use 240–900 mm clear opening width (application policy). Resize the cabinet or add a divider.');continue;}
+  if(t<16){fail('runner attachment needs at least 16 mm side stock in this application. Increase the carcass stock thickness.');continue;}
   const [x,y,z]=opening.origin,[w]=opening.size,faceZ=c.envelope.origin[2]+c.envelope.depth,frontZ=faceZ-insetDepth,low=y+d.offset;
   const allocation={origin:[x,low,frontZ-pack.minimumDepth] as Vec3,size:[w,d.frontHeight,pack.minimumDepth] as Vec3};
   const sidePanels=[...construction.panels,...interiors.divisions.map(v=>({...v,role:v.axis==='vertical'?'divider':'shelf'}))].filter(p=>['left','right','divider'].includes(p.role));
@@ -46,11 +50,13 @@ export function resolveDrawers(c:Cabinet){
   }
   if(drawers.some(other=>overlap(other.allocation,allocation)))fail('drawer allocations overlap. Move it above the existing drawer.');
   if(shelves.shelves.some(s=>overlap({origin:s.origin,size:s.size},allocation)))fail('an adjustable shelf occupies this allocation. Move the shelf or drawer.');
-  const overlay=f.placement==='overlay';
+  if(inner&&w-innerSpec.frontWidthDeduction>innerSpec.frontStockLength){fail('the inner aluminium front exceeds its available stock length.');continue;}
+  const overlay=!inner&&f.placement==='overlay';
   const left=overlay?f.left:0,right=overlay?f.right:0;
   const bottomOverlap=overlay?f.bottom:0,top=overlay?f.top:0;
   const frontBounds={origin:[x+f.gap-left,low+f.gap-bottomOverlap,overlay?faceZ+f.clearance:faceZ-frontThickness-f.clearance] as Vec3,
    size:[w-2*f.gap+left+right,d.frontHeight-2*f.gap+bottomOverlap+top,frontThickness] as Vec3};
+  if(inner){frontBounds.origin=[x+innerSpec.frontWidthDeduction/2,low+(merivo?20:9),frontZ];frontBounds.size=[w-innerSpec.frontWidthDeduction,merivo?83:83.6,12];}
   const envelope=c.envelope;
   if(frontBounds.origin[0]<envelope.origin[0]-1e-6||frontBounds.origin[0]+frontBounds.size[0]>envelope.origin[0]+envelope.width+1e-6||
     frontBounds.origin[1]<envelope.origin[1]-1e-6||frontBounds.origin[1]+frontBounds.size[1]>envelope.origin[1]+envelope.height+1e-6){
@@ -61,16 +67,33 @@ export function resolveDrawers(c:Cabinet){
    const part=other.parts.find(p=>p.id===other.id+'/front')!;
    return overlap(frontBounds,{origin:part.center.map((n,i)=>n-part.size[i]/2) as Vec3,size:part.size});
   })){fail('drawer fronts overlap. Reduce the overlaps or increase their gap.');continue;}
-  if(doors.some(door=>overlap({origin:[door.center[0]-door.size[0]/2,door.center[1]-door.size[1]/2,0],size:[door.size[0],door.size[1],1]}, {origin:[frontBounds.origin[0],frontBounds.origin[1],0],size:[frontBounds.size[0],frontBounds.size[1],1]})))fail('a slab door covers this drawer front. Remove or reallocate that door first.');
+  if(!inner&&doors.some(door=>overlap({origin:[door.center[0]-door.size[0]/2,door.center[1]-door.size[1]/2,0],size:[door.size[0],door.size[1],1]}, {origin:[frontBounds.origin[0],frontBounds.origin[1],0],size:[frontBounds.size[0],frontBounds.size[1],1]})))fail('a slab door covers this drawer front. Remove or reallocate that door first.');
+  if(inner&&doors.some(door=>overlap(frontBounds,{origin:door.center.map((v,i)=>v-door.size[i]/2) as Vec3,size:door.size}))){fail('the inner front meets a closed cabinet door. Increase its setback.');continue;}
   const parts:DrawerPart[]=[];
-  const add=(key:string,label:string,size:Vec3,origin:Vec3,material:DrawerPart['material'],article:string|null,moving=true)=>parts.push({id:`${d.id}/${key}`,ownerId:d.id,label,size,center:origin.map((n,i)=>n+size[i]/2) as Vec3,material,article,moving,fidelity:material==='steel'?'envelope':'board'});
+  const add=(key:string,label:string,size:Vec3,origin:Vec3,material:DrawerPart['material'],article:string|null,moving=true)=>parts.push({id:`${d.id}/${key}`,ownerId:d.id,label,size,center:origin.map((n,i)=>n+size[i]/2) as Vec3,material,article,moving,...merivo?{system:'merivobox' as const}:{},fidelity:material==='steel'?'envelope':'board'});
   const bottom:Vec3=[w-pack.bottomWidthDeduction,16,pack.nominalLength-pack.bottomLengthDeduction],back:Vec3=[w-pack.backWidthDeduction,pack.backHeight,16];
   // Board and hardware datums checked against the supplied assembled K550 STEP.
-  const boardFront=frontZ,baseY=low+9;
-  add('bottom','16 mm drawer bottom',bottom,[x+37.5,baseY,boardFront-bottom[2]],'chipboard-16',null);
-  add('back','16 mm drawer back',back,[x+43.5,baseY,boardFront-bottom[2]-16],'chipboard-16',null);
-  add('front','Drawer slab front',frontBounds.size,frontBounds.origin,'front-stock',null);
-  for(const side of ['left','right'] as const){
+  const boardFront=frontZ,baseY=low+(merivo?20:9);
+  add('bottom','16 mm drawer bottom',bottom,[x+pack.bottomWidthDeduction/2,baseY,boardFront-bottom[2]],'chipboard-16',null);
+  add('back','16 mm drawer back',back,[x+pack.backWidthDeduction/2,baseY,boardFront-bottom[2]-16],'chipboard-16',null);
+  add('front',inner?'Aluminium inner front':'Drawer slab front',frontBounds.size,frontBounds.origin,inner?'steel':'front-stock',inner?(merivo?'ZV4.1042M':'Z31L1036A'):null);
+  if(inner&&!merivo)add('inner-handle','Inner drawer handle',[100,16,18],[x+w/2-50,low+90,frontZ+8],'steel','ZIF.80M5');
+  if(merivo){
+   const tall=pack.configuration!=='m',components=drawerComponents(d);
+   for(const side of ['left','right'] as const){
+    const left=side==='left';
+    add(`side-${side}`,`${side} MERIVOBOX M base side`,[25.5,91,pack.nominalLength],[left?x:x+w-25.5,low+12,frontZ-pack.nominalLength],'steel',pack.components[1].article);
+    add(`runner-${side}`,`${side} MERIVOBOX BLUMOTION runner`,[25.5,54,pack.nominalLength],[left?x:x+w-25.5,low,frontZ-pack.nominalLength],'steel',pack.components[0].article,false);
+    add(`back-fixing-${side}`,`${side} MERIVOBOX back fixing`,[14,pack.backHeight,12],[left?x+14:x+w-28,baseY,frontZ-bottom[2]-14],'steel',pack.components[2].article);
+    add(`front-fixing-${side}`,`${side} ${inner?'inner':'screw-on'} front fixing`,[inner?51:14,inner&&tall?184:83,12],[left?x+12:x+w-(inner?63:26),low+20,frontZ-2],'steel',components.find(p=>p.article.startsWith(inner?'ZI4.':'ZF4.1'))!.article);
+    if(tall){
+     const gallery=pack.configuration==='e-gallery';
+     add(`${gallery?'gallery':'cover'}-${side}`,`${side} MERIVOBOX E ${gallery?'gallery rail':'BOXCAP'}`,[gallery?12:2,gallery?12:101,pack.nominalLength-26],[left?x+12:x+w-(gallery?24:14),low+(gallery?192:103),frontZ-pack.nominalLength+13],'steel',components.find(p=>p.article.startsWith(gallery?'ZR4.':'ZL4.'))!.article);
+     if(!inner)add(`upper-front-fixing-${side}`,`${side} upper front fixing`,[14,20,12],[left?x+12:x+w-26,low+184,frontZ-2],'steel','ZF4.5002');
+    }
+   }
+   if(inner&&tall)add('front-gallery','Inner front cross gallery',[w-111,12,12],[x+55.5,low+192,frontZ],'steel','ZR4.1059U');
+  }else for(const side of ['left','right'] as const){
    const k=pack.sideHeight>100,short=pack.nominalLength<=300,wallLow=short?5:2.44317,wallHeight=(short?121.5:124.05683)-(k?0:32);
    add(`side-${side}`,`${side} ${k?'K':'M'} side`,[48.60054,wallHeight,pack.nominalLength],
     [side==='left'?x+5.39946:x+w-54,low+wallLow,frontZ-pack.nominalLength],'steel',pack.components[1].article);
@@ -80,11 +103,13 @@ export function resolveDrawers(c:Cabinet){
     [side==='left'?x+14.1:x+w-61.5,low+25.4,frontZ-pack.nominalLength+5.9],'steel',pack.components[2].article);
    // Screw-on ZSF.35A2 is deliberately schematic: the supplied INSERTA
    // ZSF.39A2 is a different article and must not be substituted for it.
-   add(`front-fixing-${side}`,`${side} screw-on front bracket`,[12,44,8],
+   if(inner)add(`front-fixing-${side}`,`${side} inner front fixing`,[60,84,18],
+    [side==='left'?x+6:x+w-66,low+9,frontZ-3],'steel','ZIF.71M0');
+   else add(`front-fixing-${side}`,`${side} screw-on front bracket`,[12,44,8],
     [side==='left'?x+9.5:x+w-21.5,low+10.5,frontZ-6],'steel','ZSF.35A2');
   }
-  if(d.handle){try{const front=parts.find(p=>p.id===d.id+'/front')!;parts.push(...resolveHandle(d.handle,front).parts.map(p=>({...p,ownerId:d.id,label:'Drawer handle',material:'steel' as const,article:null,moving:true,fidelity:'envelope' as const})));}catch(error){fail((error as Error).message);continue;}}
-  drawers.push({id:d.id,label:c.names?.[d.id]??`Drawer ${index+1}`,intent:d,parts,bottom,back,front:frontBounds.size,allocation,requiredDepth:pack.minimumDepth+insetDepth});
+  if(!inner&&d.handle){try{const front=parts.find(p=>p.id===d.id+'/front')!;parts.push(...resolveHandle(d.handle,front).parts.map(p=>({...p,ownerId:d.id,label:'Drawer handle',material:'steel' as const,article:null,moving:true,fidelity:'envelope' as const})));}catch(error){fail((error as Error).message);continue;}}
+  drawers.push({id:d.id,label:c.names?.[d.id]??`${inner?'Internal drawer':'Drawer'} ${index+1}`,intent:d,parts,bottom,back,front:frontBounds.size,allocation,requiredDepth:pack.minimumDepth+insetDepth});
  }
  return {drawers,issues};
 }

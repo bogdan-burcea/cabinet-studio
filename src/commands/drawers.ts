@@ -1,7 +1,7 @@
 import {fitDrawerRails} from '../rules/drawer-rails';
 import {drawerOpenings,layoutDrawerIntents,recommendedDrawerFront} from '../rules/drawer-layout';
 import type {Cabinet,MetalDrawer} from '../domain/cabinet';
-import {antaroPin,antaroM500,drawerPack} from '../catalogue/drawers';
+import {antaroPin,antaroM500,drawerPack,innerDrawerSpec,chooseDrawerPack} from '../catalogue/drawers';
 import {resolveInteriors} from '../rules/interiors';
 import {stock} from '../catalogue/materials';
 import {evaluate} from '../geometry/evaluate';
@@ -13,12 +13,12 @@ export function addMetalDrawer(c:Cabinet,openingId:string,packPin=antaroPin){
  let offset=0;
  for(const existing of allocations){if(existing.offset-offset>=pack.minimumHeight)break;offset=existing.offset+existing.frontHeight;}
  const upper=allocations.find(d=>d.offset>=offset)?.offset??opening.size[1];
- const height=Math.min(160,upper-offset);
+ const height=Math.min(Math.max(160,pack.minimumHeight),upper-offset);
  if(height<pack.minimumHeight)throw new Error('No free allocation remains for this drawer height.');
  const id=crypto.randomUUID(),drawer:MetalDrawer={id,kind:'metal-drawer',policyRevision:'antaro-external-1',pack:{...packPin},openingId,offset,frontHeight:height};
  const cabinet={...c,drawers:[...(c.drawers??[]),drawer]};evaluate(cabinet);return {cabinet,featureId:id};
 }
-export function updateMetalDrawer(c:Cabinet,id:string,patch:Partial<Pick<MetalDrawer,'offset'|'frontHeight'|'front'|'pack'|'manualRail'>>){if(!c.drawers?.some(d=>d.id===id))throw new Error('Select an existing drawer.');const next={...c,drawers:c.drawers.map(d=>d.id===id?{...d,...patch}:d)};evaluate(next);return next;}
+export function updateMetalDrawer(c:Cabinet,id:string,patch:Partial<Pick<MetalDrawer,'offset'|'frontHeight'|'front'|'pack'|'manualRail'|'internal'>>){if(!c.drawers?.some(d=>d.id===id))throw new Error('Select an existing drawer.');const next={...c,drawers:c.drawers.map(d=>d.id===id?{...d,...patch,...patch.pack&&d.internal?{internal:{...d.internal,revision:innerDrawerSpec(drawerPack(patch.pack)).revision}}:{}}:d)};evaluate(next);return next;}
 export function removeMetalDrawer(c:Cabinet,id:string){
  const removed=c.drawers?.find(d=>d.id===id),drawers=(c.drawers??[]).filter(d=>d.id!==id).map(d=>structuredClone(d));
  for(const groupId of new Set(drawers.flatMap(d=>d.stack?[d.stack.groupId]:[]))){
@@ -31,12 +31,12 @@ export function removeMetalDrawer(c:Cabinet,id:string){
  const next={...c,drawers:layoutDrawerIntents({...c,drawers})};evaluate(next);return next;
 }
 
-type DrawerPatch=Partial<Pick<MetalDrawer,'offset'|'frontHeight'|'front'|'pack'|'manualRail'>>;
+type DrawerPatch=Partial<Pick<MetalDrawer,'offset'|'frontHeight'|'front'|'pack'|'manualRail'|'internal'>>;
 export function editDrawerGroup(c:Cabinet,ids:string[],patch:DrawerPatch){
  const chosen=new Set(ids);
  if(!ids.length||ids.some(id=>!c.drawers?.some(d=>d.id===id)))throw Error('Select existing drawers.');
  if(c.drawers!.some(d=>chosen.has(d.id)&&d.stack)){
-  let next:Cabinet={...c,drawers:c.drawers!.map(d=>chosen.has(d.id)?{...d,...patch,frontHeight:d.frontHeight}:d)};
+  let next:Cabinet={...c,drawers:c.drawers!.map(d=>chosen.has(d.id)?{...d,...patch,...patch.pack&&d.internal?{internal:{...d.internal,revision:innerDrawerSpec(drawerPack(patch.pack)).revision}}:{},frontHeight:d.frontHeight}:d)};
   if(patch.frontHeight!==undefined)next=setDrawerFrontHeight(next,ids,patch.frontHeight);
   return {...next,drawers:layoutDrawerIntents(next)};
  }
@@ -51,7 +51,7 @@ export function editDrawerGroup(c:Cabinet,ids:string[],patch:DrawerPatch){
   }
  }
  const next={...c,drawers:c.drawers!.map(d=>chosen.has(d.id)?{
-  ...d,...patch,offset:d.offset+delta+(shifts.get(d.id)??0),
+  ...d,...patch,...patch.pack&&d.internal?{internal:{...d.internal,revision:innerDrawerSpec(drawerPack(patch.pack)).revision}}:{},offset:d.offset+delta+(shifts.get(d.id)??0),
   ...(patch.front?{front:{...(d.front??{placement:'overlay',gap:2,clearance:2,left:0,right:0,top:0,bottom:0}),...patch.front}}:{}),
  }:{...d,offset:d.offset+(shifts.get(d.id)??0)})};
  return next;
@@ -90,21 +90,21 @@ export function duplicateDrawers(c:Cabinet,ids:string[]){
    const trial={...next,drawers:[...(next.drawers??[]),...copies]};
    try{evaluate(trial);result=trial;idsForGroup=copies.map(d=>d.id);break;}catch{/* Try the next clear allocation. */}
   }
-  if(!result)throw Error('The selected drawer group has no free space for a duplicate in this opening.');
+  if(!result)throw Error('The selected drawer group has no free space for a duplicate in this opening. Reduce drawer spacing or increase the opening height.');
   next=result;added.push(...idsForGroup);
  }
  return {cabinet:next,featureIds:added};
 }
 
 /** Fill one opening in a single transaction; front height zero means automatic. */
-export function addDrawerStack(c:Cabinet,openingId:string,count:number,packPin=antaroPin,manualRail=false){
+export function addDrawerStack(c:Cabinet,openingId:string,count:number,packPin=antaroPin,manualRail=false,internal=false){
  if(!Number.isInteger(count)||count<1||count>16)throw Error('Choose 1–16 drawers.');
  const opening=drawerOpenings(c).find(o=>o.id===openingId);if(!opening)throw Error('Choose an opening.');
  if(c.drawers?.some(d=>d.openingId===openingId))throw Error('This opening already has drawers. Duplicate an existing drawer to add to its stack.');
  const groupId=crypto.randomUUID(),featureIds:string[]=Array.from({length:count},()=>crypto.randomUUID());
- let cabinet:Cabinet={...c,drawers:[...(c.drawers??[]),...featureIds.map((id,order)=>({id,kind:'metal-drawer' as const,policyRevision:'antaro-external-1' as const,pack:{...packPin},...manualRail?{manualRail:true}:{},openingId,offset:0,frontHeight:0,stack:{groupId,order,height:0}}))]};
+ let cabinet:Cabinet={...c,drawers:[...(c.drawers??[]),...featureIds.map((id,order)=>({id,kind:'metal-drawer' as const,policyRevision:'antaro-external-1' as const,pack:{...packPin},...internal?{internal:{revision:innerDrawerSpec(drawerPack(packPin)).revision,setback:60}}:{},...manualRail?{manualRail:true}:{},openingId,offset:0,frontHeight:0,stack:{groupId,order,height:0}}))]};
  cabinet={...cabinet,drawers:layoutDrawerIntents(cabinet)};
- cabinet={...cabinet,drawers:cabinet.drawers!.map(d=>featureIds.includes(d.id)?{...d,...c.frontDefaults?{cornerRadius:c.frontDefaults.cornerRadius}:{},front:{...recommendedDrawerFront(cabinet,d,'overlay'),gap:c.frontDefaults?.edgeGap??2,clearance:c.frontDefaults?.frontGap??2}}:d)};
+ cabinet={...cabinet,drawers:cabinet.drawers!.map(d=>featureIds.includes(d.id)&&!internal?{...d,...c.frontDefaults?{cornerRadius:c.frontDefaults.cornerRadius}:{},front:{...recommendedDrawerFront(cabinet,d,'overlay'),gap:c.frontDefaults?.edgeGap??2,clearance:c.frontDefaults?.frontGap??2}}:d)};
  return {cabinet:fitDrawerRails({...cabinet,drawers:layoutDrawerIntents(cabinet)}),featureIds};
 }
 export function setDrawerFrontHeight(c:Cabinet,ids:string[],height:number){
@@ -122,4 +122,19 @@ export function setDrawerPlacement(c:Cabinet,ids:string[],placement:'inset'|'ove
  const openings=new Set(c.drawers?.filter(d=>ids.includes(d.id)).map(d=>d.openingId));
  const drawers=(c.drawers??[]).map(d=>openings.has(d.openingId)?{...d,front:recommendedDrawerFront(c,d,placement)}:d);
  return fitDrawerRails({...c,drawers:layoutDrawerIntents({...c,drawers})});
+}
+
+/** Explicit type conversion preserves drawer and stack identities. */
+export function setDrawerInternal(c:Cabinet,ids:string[],internal:boolean){
+ if(!ids.length||ids.some(id=>!c.drawers?.some(d=>d.id===id)))throw Error('Select existing drawers.');
+ const groups=new Set(c.drawers!.filter(d=>ids.includes(d.id)).flatMap(d=>d.stack?[d.stack.groupId]:[]));
+ const drawers=c.drawers!.map(d=>{
+  if(!ids.includes(d.id)&&!groups.has(d.stack?.groupId??''))return d;
+  if(!!d.internal===internal)return d;
+  const {internal:old,handle,cornerRadius,...rest}=d;
+  if(!internal)return rest;
+  const pack=drawerPack(d.pack),pin=pack.family==='merivobox'?d.pack:chooseDrawerPack(d.pack,{configuration:'m'});
+  return {...rest,front:{placement:'overlay' as const,gap:2,clearance:2,left:0,right:0,top:0,bottom:0},pack:pin,internal:{revision:innerDrawerSpec(drawerPack(pin)).revision,setback:old?.setback??60}};
+ });
+ const next=fitDrawerRails({...c,drawers:layoutDrawerIntents({...c,drawers})});evaluate(next);return next;
 }

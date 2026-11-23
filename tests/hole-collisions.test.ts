@@ -25,3 +25,28 @@ test('actual foot/Cabineo hole overlap is visible and has a minimal evaluated pl
 test('legacy blind foot pilots migrate to through holes and current geometry always passes through bottom stock',()=>{
  const c=setSimpleSupport(createCabinet(),'feet-concept'),doc=JSON.parse(serialize(c));doc.schemaVersion=27;doc.evaluatorRevision='support-drilling-27';doc.cabinet.installation.feet.drilling.through=false;const loaded=deserialize(JSON.stringify(doc));assert.equal(loaded.installation.feet.drilling!.through,true);assert.ok(evaluate(loaded).drilling.filter(b=>b.kind==='foot-pilot').every(b=>b.through&&b.depth===18));
 });
+
+test('aligned stacked divider receivers share through pilots without false collisions',async()=>{
+ const fs=await import('node:fs');
+ const c=deserialize(fs.readFileSync(new URL('./fixtures/aligned-divider-cabinet.json',import.meta.url),'utf8')),m=evaluate(c);
+ assert.equal(m.divisions.filter(d=>d.axis==='vertical').length,5);
+ assert.ok(!m.issues.some(i=>i.code==='machining-hole-collision'));
+ assert.deepEqual(evaluate(deserialize(serialize(c))).cabineo,m.cabineo);
+ const {setCnc}=await import('../src/commands/cnc.ts');
+ const blind=evaluate(setCnc(c,{throughOpposed:false}));
+ assert.ok(!blind.issues.some(i=>i.code==='machining-hole-collision'));
+ assert.ok(blind.issues.some(i=>i.code==='machining-faces'));
+ const {CabinetStore}=await import('../src/commands/store.ts');
+ const store=new CabinetStore(c),next=setCnc(c,{cabineoPerSide:1});
+ assert.ok(store.commit(next));store.undo();assert.deepEqual(store.getSnapshot().committed,c);store.redo();assert.deepEqual(store.getSnapshot().committed,next);
+});
+test('shared receiving pilots require exact coaxial containment and keep real collisions visible',()=>{
+ const panels=[{id:'panel',role:'shelf',orientation:'xz' as const,center:[0,9,0] as [number,number,number],size:[100,18,100] as [number,number,number]}];
+ const a={...bore('a',[0,0,0],1,5,18),kind:'receiver' as const,through:true},b={...bore('b',[0,18,0],1,5,8),kind:'receiver' as const,sign:-1 as const};
+ const collision=(other:CabineoBore)=>machiningReview(panels,[],[a,other],[]).some(i=>i.code==='machining-hole-collision');
+ assert.ok(!collision(b));
+ assert.ok(collision({...b,point:[1,18,0]}));
+ assert.ok(collision({...b,diameter:6}));
+ assert.ok(collision({...b,kind:'shelf-support'}));
+ assert.ok(collision({...b,point:[0,20,0],depth:10}));
+});

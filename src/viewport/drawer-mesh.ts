@@ -9,7 +9,7 @@ import type {DrawerPart} from '../rules/drawers';
 
 type Point=[number,number,number];
 const meshCache=new Map<string,THREE.BufferGeometry>(),edgeCache=new Map<string,THREE.BufferGeometry>();
-const keyOf=(part:DrawerPart)=>`${part.id.slice(part.id.indexOf('/')+1)}:${part.size.join(',')}`;
+const keyOf=(part:DrawerPart)=>`${part.system??'antaro'}:${part.id.slice(part.id.indexOf('/')+1)}:${part.size.join(',')}`;
 function remember(cache:Map<string,THREE.BufferGeometry>,key:string,geometry:THREE.BufferGeometry){
  cache.set(key,geometry.clone());if(cache.size>96){const key=cache.keys().next().value!;cache.get(key)!.dispose();cache.delete(key);}
 }
@@ -40,6 +40,26 @@ function removeStrip(triangles:Point[][],axis:1|2,lo:number,hi:number):Point[][]
 // are display adaptations of plain strips; they are not manufacturer M/500 CAD.
 export function drawerDisplayGeometry(part:DrawerPart){
  const left=part.id.endsWith('-left'),wall=part.id.includes('/side-'),runner=part.id.includes('/runner-'),back=part.id.includes('/back-fixing-');
+ if(part.article==='Z31L1036A'||part.article==='ZV4.1042M'){
+  // Schematic open channel; purchased profile is not represented as a solid slab.
+  const [w,h,d]=part.size,t=1.5,shape=new THREE.Shape();
+  shape.moveTo(-d/2,-h/2);shape.lineTo(d/2,-h/2);shape.lineTo(d/2,h/2);shape.lineTo(-d/2,h/2);shape.lineTo(-d/2,h/2-t);shape.lineTo(d/2-t,h/2-t);shape.lineTo(d/2-t,-h/2+t);shape.lineTo(-d/2,-h/2+t);shape.closePath();
+  const g=new THREE.ExtrudeGeometry(shape,{depth:w,bevelEnabled:false,steps:1});
+  // Extrusion along local Z becomes the cross-cabinet X axis.
+  g.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.PI/2));g.translate(-w/2,0,0);return g;
+ }
+ if(part.system==='merivobox'){
+  // MERIVOBOX-only schematic sections; never reuse TANDEMBOX fitting CAD.
+  if(wall||runner){
+   const [w,h,length]=part.size,t=1.5,shape=new THREE.Shape();
+   const points=runner?[[-w/2,-h/2],[w/2,-h/2],[w/2,-h/2+t],[-w/2+t,-h/2+t],[-w/2+t,h/2],[-w/2,h/2]]:
+    [[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[w/2-5,h/2],[-w/2,-h/2+22]];
+   shape.moveTo(...points[0] as [number,number]);for(const point of points.slice(1))shape.lineTo(...point as [number,number]);shape.closePath();
+   if(wall){const hole=new THREE.Path();hole.moveTo(w/2-t,-h/2+t);hole.lineTo(w/2-t,h/2-t);hole.lineTo(w/2-4,h/2-t);hole.lineTo(-w/2+t,-h/2+20);hole.lineTo(-w/2+t,-h/2+t);hole.closePath();shape.holes.push(hole);}
+   const g=new THREE.ExtrudeGeometry(shape,{depth:length,bevelEnabled:false,steps:1});g.translate(0,0,-length/2);if(!left)g.scale(-1,1,1);return g;
+  }
+  return new THREE.BoxGeometry(...part.size);
+ }
  if(!wall&&!runner&&!back)return part.shape==='cylinder'?new THREE.CylinderGeometry(part.size[0]/2,part.size[0]/2,part.size[2],24).rotateX(Math.PI/2):new THREE.BoxGeometry(...part.size);
  const key=keyOf(part),cached=meshCache.get(key);if(cached)return cached.clone();
  const source=wall?(left?leftWall:rightWall):runner?(left?leftRunner:rightRunner):(left?leftBack:rightBack);

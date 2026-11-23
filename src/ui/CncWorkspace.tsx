@@ -13,7 +13,7 @@ import {CncViewport} from '../viewport/CncViewport';
 import type {CncScene} from '../viewport/cnc-scene';
 import {sheetsForExport} from '../cnc/sheet-export';
 import {downloadSheetStep,requestSheetStep} from '../cnc/step-download';
-import {Button,FieldPair,IconButton,Section} from './components';
+import {Checkbox,Button,FieldPair,IconButton,Section} from './components';
 import {DimensionField} from './DimensionField';
 import {StructureGroup} from './Structure';
 import {elementIcon} from './element-icons';
@@ -146,13 +146,13 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
       <option value="">Custom size</option></select><Icon name="chevron" size={12}/></span></label>
      <FieldPair>{field('width','Sheet width')}{field('height','Sheet height')}</FieldPair>
      <FieldPair>{field('margin','Edge margin')}{field('gap','Part gap')}</FieldPair>
-     <label className="cnc-rotate"><input type="checkbox" checked={options.rotate} onChange={e=>changeStock({rotate:e.target.checked})}/> Rotate parts without grain</label>
+     <Checkbox className="cnc-rotate" checked={options.rotate} onChange={e=>changeStock({rotate:e.target.checked})}>Rotate parts without grain</Checkbox>
      <div className="data-row"><span>Effective part gap</span><strong>{rounded(options.gap+allowance)} mm</strong></div>
      <div className="data-row"><span>Fit allowance included</span><strong>{allowance} mm</strong></div>
      <div className="data-row"><span>Sheet utilization</span><strong>{Math.round((entry?.sheet.utilization??0)*100)}%</strong></div>
     </Section>
     <Section title="Reusable offcuts">
-     <label className="cnc-rotate"><input type="checkbox" checked={keepOffcuts} onChange={e=>setKeepOffcuts(e.target.checked)}/> Mark offcut cuts</label>
+     <Checkbox className="cnc-rotate" checked={keepOffcuts} onChange={e=>setKeepOffcuts(e.target.checked)}>Mark offcut cuts</Checkbox>
      {keepOffcuts&&<>
       <DimensionField plain stacked label="Minimum side (mm)" value={minimum} cancelValue={minimum} limits={{min:25,max:10000}}
        onPreview={()=>{}} onCommit={n=>{setMinimum(n);return true;}} onCancel={()=>{}}/>
@@ -160,7 +160,7 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
      </>}
     </Section>
     <Section title={shared?`Export ${selectedSheets.length} sheets`:"Export sheet"}>
-     <label className="cnc-rotate"><input type="checkbox" checked={includeStock} onChange={e=>setIncludeStock(e.target.checked)}/> Include stock body</label>
+     <Checkbox className="cnc-rotate" checked={includeStock} onChange={e=>setIncludeStock(e.target.checked)}>Include stock body</Checkbox>
      <Button className="full-width-button" disabled={!entry||!!progress} onClick={exportStep}>Export STEP</Button>
      {progress&&<p className="field-note" role="status">{progress}</p>}
     </Section></>}

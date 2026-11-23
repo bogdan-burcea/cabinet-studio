@@ -6,7 +6,7 @@ import {cnc} from './cnc';
 /** Through profiles are shared by assembly, face previews, nesting and STEP. */
 export function frontProfileCuts(c:Cabinet,doors:FrontBody[],drawers:EvaluatedDrawer[]):BackPocket[]{
  const cuts:BackPocket[]=[];
- const fronts=[...doors.map(body=>({body,radius:c.fronts.find(d=>d.id===body.id)?.cornerRadius??0,handle:c.fronts.find(d=>d.id===body.id)!.handle})),...drawers.map(d=>({body:d.parts.find(p=>p.id===d.id+'/front')!,radius:d.intent.cornerRadius??0,handle:d.intent.handle}))];
+ const fronts=[...doors.map(body=>({body,radius:c.fronts.find(d=>d.id===body.id)?.cornerRadius??0,handle:c.fronts.find(d=>d.id===body.id)!.handle})),...drawers.filter(d=>!d.intent.internal).map(d=>({body:d.parts.find(p=>p.id===d.id+'/front')!,radius:d.intent.cornerRadius??0,handle:d.intent.handle}))];
  for(const {body,radius,handle:h} of fronts){
   const [w,hh,t]=body.size,[cx,cy,cz]=body.center,x=cx-w/2,y=cy-hh/2,z=cz-t/2;
   const add=(key:string,points:[number,number][])=>{

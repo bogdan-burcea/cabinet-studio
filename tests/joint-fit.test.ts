@@ -26,5 +26,5 @@ test('matched fitting bore dimensions never inherit the wooden fit allowance',()
  const c=setCabineo(createCabinet(),'cabineo-8'),sizes=(tolerance:number)=>evaluate(setCnc(c,{tolerance})).cabineo.flatMap(j=>j.bores).map(b=>[b.diameter,b.depth]);assert.deepEqual(sizes(0),sizes(.2));
 });
 test('native 21 round trips and version 17 retains explicit saved fit values and part identities',()=>{
- const c=setCnc(setPuzzleCorners(createCabinet(),true),{tolerance:2}),doc=JSON.parse(serialize(c));assert.equal(doc.schemaVersion,56);assert.deepEqual(deserializeWithInfo(JSON.stringify(doc)),{cabinet:c,migrated:false});doc.schemaVersion=17;doc.evaluatorRevision='cnc-17';assert.deepEqual(deserializeWithInfo(JSON.stringify(doc)),{cabinet:c,migrated:true});assert.equal(cnc(createCabinet()).tolerance,.2);
+ const c=setCnc(setPuzzleCorners(createCabinet(),true),{tolerance:2}),doc=JSON.parse(serialize(c));assert.equal(doc.schemaVersion,58);assert.deepEqual(deserializeWithInfo(JSON.stringify(doc)),{cabinet:c,migrated:false});doc.schemaVersion=17;doc.evaluatorRevision='cnc-17';assert.deepEqual(deserializeWithInfo(JSON.stringify(doc)),{cabinet:c,migrated:true});assert.equal(cnc(createCabinet()).tolerance,.2);
 });

@@ -4,7 +4,7 @@ import {evaluate} from '../geometry/evaluate';
 import {cnc} from '../rules/cnc';
 import {setCnc} from './cnc';
 import {setSimpleFeet} from './simple-supports';
-import {safeDoorAngles} from '../rules/door-motion';
+import {safeDoorAngles,safeInnerDrawerExtensions,doorAngleLimit} from '../rules/door-motion';
 import {backFixingRepairs} from './machining-repairs';
 import {editSimpleDoors} from './simple-doors';
 type MachiningIssue=ReturnType<typeof evaluate>['issues'][number];
@@ -61,6 +61,26 @@ export function hingePlateRepairs(c:Cabinet):EditRepair[]{
  }
  const movement=(candidate:Cabinet)=>candidate.fronts.reduce((total,d)=>total+(d.hinge?.offsets??[]).reduce((sum,n,i)=>sum+Math.abs(n-(c.fronts.find(f=>f.id===d.id)?.hinge?.offsets?.[i]??0)),0),0);
  return options.sort((a,b)=>movement(a.cabinet)-movement(b.cabinet));
+}
+/** Check the complete opening, including the next tray and every hinge obstruction. Never offer a partial correction. */
+export function innerDrawerOpeningRepairs(c:Cabinet):EditRepair[]{
+ const initial=evaluate(c),ids=c.fronts.map(d=>d.id),existing=machiningCollisionKeys(initial.issues);
+ const check=(candidate:Cabinet)=>{
+  const model=evaluate(candidate),target=Math.max(0,...ids.map(id=>doorAngleLimit(model,id))),doors=safeDoorAngles(model,{},ids,target);
+  if(doors.blocked)return false;
+  return !safeInnerDrawerExtensions(model,{}, {...doors.angles,...Object.fromEntries(model.drawers.drawers.map(d=>[d.id,100]))}).blocked&&[...machiningCollisionKeys(model.issues)].every(key=>existing.has(key));
+ };
+ const opened=safeDoorAngles(initial,{},ids,Math.max(0,...ids.map(id=>doorAngleLimit(initial,id))));
+ const blocked=safeInnerDrawerExtensions(initial,{}, {...opened.angles,...Object.fromEntries(initial.drawers.drawers.map(d=>[d.id,100]))});
+ if(opened.blocked||!blocked.blocked)return [];
+ const door=initial.fronts.doors.find(d=>d.id===blocked.otherId),overlay=door?.placement==='inset';
+ if(!overlay&&!initial.doorHardware.hinges.some(h=>h.id===blocked.otherId))return [];
+ try{
+  const candidate=overlay?editSimpleDoors(c,[door.id],{placement:'overlay'}):c;
+  if(overlay&&check(candidate))return [{label:'Change to overlay doors to clear the internal drawers',cabinet:candidate}];
+  return hingePlateRepairs(candidate).filter(option=>check(option.cabinet)).map(option=>({...option,label:overlay?'Change to overlay doors and reposition obstructed hinges to clear all internal drawers':option.label}));
+ }catch{return [];}
+
 }
 export function doorOpeningRepairs(c:Cabinet,ids:string[],target:number):EditRepair[]{
  for(let reveal=Math.floor(Math.max(...c.fronts.filter(d=>ids.includes(d.id)).map(d=>d.reveal)))+1;reveal<=10;reveal++){

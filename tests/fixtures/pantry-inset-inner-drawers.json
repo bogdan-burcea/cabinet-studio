@@ -1,0 +1,410 @@
+{
+  "format": "cabinet-studio",
+  "schemaVersion": 58,
+  "evaluatorRevision": "merivobox-58",
+  "cabinet": {
+    "id": "1284de23-52bd-4fd6-88f8-f9e0d328e431",
+    "name": "Cabinet",
+    "envelope": {
+      "width": 600,
+      "height": 2100,
+      "depth": 560,
+      "origin": [
+        0,
+        0,
+        0
+      ]
+    },
+    "carcass": {
+      "construction": "rectangular-butt",
+      "policyRevision": "construction-1",
+      "top": {
+        "mode": "full",
+        "frontDepth": 80,
+        "rearDepth": 80
+      },
+      "back": {
+        "mode": "full",
+        "upperHeight": 80,
+        "lowerHeight": 80,
+        "joint": {
+          "revision": "back-1",
+          "mode": "groove",
+          "inset": 10,
+          "depth": 6,
+          "clearance": 0.2
+        }
+      },
+      "machining": {
+        "revision": "cnc-1",
+        "tolerance": 0.2,
+        "bitDiameter": 6,
+        "dogbones": true,
+        "throughOpposed": true,
+        "cabineoPerSide": 0
+      },
+      "corner": {
+        "mode": "puzzle",
+        "revision": "puzzle-1",
+        "pitch": 80
+      }
+    },
+    "compartments": {
+      "id": "1284de23-52bd-4fd6-88f8-f9e0d328e431/opening",
+      "kind": "split",
+      "featureId": "0f79c03e-a673-4bbd-bb89-367f21019cdd",
+      "axis": "horizontal",
+      "position": 1032,
+      "policyRevision": "fixed-1",
+      "children": [
+        {
+          "id": "a1a3785b-b0e5-4027-be35-9eda18c7be20",
+          "kind": "opening",
+          "children": []
+        },
+        {
+          "id": "df954380-c8d0-4a0d-8ea0-349066140d5f",
+          "kind": "split",
+          "featureId": "22946600-ac7c-48b4-9249-7948542d8f97",
+          "axis": "horizontal",
+          "position": 329,
+          "policyRevision": "fixed-2",
+          "children": [
+            {
+              "id": "f19b8e1d-b125-4be8-9bec-4b320bb42ae9",
+              "kind": "opening",
+              "children": []
+            },
+            {
+              "id": "9940155c-eb8b-402b-9b1c-b4138ad593bb",
+              "kind": "opening",
+              "children": []
+            }
+          ],
+          "frontSetback": 21
+        }
+      ],
+      "anchor": "centre"
+    },
+    "contents": [
+      {
+        "id": "f969837d-2f51-4a41-b193-e7cc4b67d55b",
+        "kind": "adjustable-shelf",
+        "openingId": "9940155c-eb8b-402b-9b1c-b4138ad593bb",
+        "level": 2,
+        "frontSetback": 21,
+        "policyRevision": "adjustable-1",
+        "support": {
+          "id": "concept-shelf-support",
+          "revision": "1"
+        },
+        "drilling": {
+          "revision": "shelf-holes-1",
+          "count": 5,
+          "firstLevel": 0,
+          "anchor": "centre",
+          "center": 342.5
+        }
+      }
+    ],
+    "fronts": [
+      {
+        "id": "d716e026-59fb-47bc-8946-1c291d2fd97b",
+        "kind": "slab-door",
+        "policyRevision": "slab-1",
+        "region": {
+          "left": 0,
+          "right": 0.5,
+          "bottom": 0.5,
+          "top": 1
+        },
+        "placement": "inset",
+        "handing": "left",
+        "reveal": 2,
+        "clearance": 2,
+        "material": null,
+        "handle": {
+          "geometry": {
+            "id": "concept-slab-handle",
+            "revision": "1"
+          },
+          "kind": "none",
+          "pitch": 128,
+          "orientation": "vertical",
+          "edgeOffset": 40,
+          "height": "centre",
+          "endOffset": 60
+        },
+        "boundaryLinks": {
+          "bottom": "0f79c03e-a673-4bbd-bb89-367f21019cdd"
+        },
+        "hinge": {
+          "id": "blum-clip-155",
+          "revision": "blum-1",
+          "count": 3,
+          "endOffset": 100,
+          "cupDistance": 5,
+          "offsets": [
+            18,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "bed7d732-8a1f-43dc-9d62-5999d4613bea",
+        "kind": "slab-door",
+        "policyRevision": "slab-1",
+        "region": {
+          "left": 0.5,
+          "right": 1,
+          "bottom": 0.5,
+          "top": 1
+        },
+        "placement": "inset",
+        "handing": "right",
+        "reveal": 2,
+        "clearance": 2,
+        "material": null,
+        "handle": {
+          "geometry": {
+            "id": "concept-slab-handle",
+            "revision": "1"
+          },
+          "kind": "none",
+          "pitch": 128,
+          "orientation": "vertical",
+          "edgeOffset": 40,
+          "height": "centre",
+          "endOffset": 60
+        },
+        "boundaryLinks": {
+          "bottom": "0f79c03e-a673-4bbd-bb89-367f21019cdd"
+        },
+        "hinge": {
+          "id": "blum-clip-155",
+          "revision": "blum-1",
+          "count": 3,
+          "endOffset": 100,
+          "cupDistance": 5,
+          "offsets": [
+            18,
+            0,
+            0
+          ]
+        }
+      }
+    ],
+    "installation": {
+      "type": "unassigned",
+      "policyRevision": "support-1",
+      "mounting": {
+        "mode": "none",
+        "policyRevision": "mounting-1",
+        "geometry": {
+          "id": "concept-wall-layout",
+          "revision": "1"
+        },
+        "wallGap": 30,
+        "topOffset": 60,
+        "sideInset": 60,
+        "floorClearance": 300
+      },
+      "feet": {
+        "geometry": {
+          "id": "concept-foot-60",
+          "revision": "1"
+        },
+        "height": 100,
+        "sideInset": 60,
+        "frontInset": 120,
+        "rearInset": 60
+      },
+      "plinth": {
+        "enabled": false,
+        "leftReturn": false,
+        "rightReturn": false,
+        "frontSetback": 60,
+        "topGap": 5,
+        "bottomGap": 0,
+        "material": null
+      }
+    },
+    "materials": {
+      "carcass": {
+        "stock": {
+          "id": "generic-panel-18",
+          "revision": "1"
+        },
+        "finish": {
+          "id": "unspecified",
+          "revision": "1"
+        },
+        "grain": "none"
+      },
+      "back": {
+        "stock": {
+          "id": "generic-back-6",
+          "revision": "1"
+        },
+        "finish": {
+          "id": "unspecified",
+          "revision": "1"
+        },
+        "grain": "none"
+      },
+      "interior": null
+    },
+    "banding": {},
+    "hardware": [],
+    "cabinetType": "tall",
+    "drawers": [
+      {
+        "id": "685f3f4b-391d-4de3-8a0f-7ca92ba53809",
+        "kind": "metal-drawer",
+        "policyRevision": "antaro-external-1",
+        "pack": {
+          "id": "blum-antaro-m-500-blumotion-sw",
+          "revision": "catalogue-2024-1"
+        },
+        "openingId": "a1a3785b-b0e5-4027-be35-9eda18c7be20",
+        "offset": 767.3,
+        "frontHeight": 255.7,
+        "stack": {
+          "groupId": "0964be94-de6d-4276-9428-a366d18576a5",
+          "order": 0,
+          "height": 0
+        },
+        "front": {
+          "placement": "inset",
+          "gap": 2,
+          "clearance": 2,
+          "left": 18,
+          "right": 18,
+          "top": 9,
+          "bottom": 0
+        }
+      },
+      {
+        "id": "c53cb830-f0cd-4c2c-a158-883bd86da4ec",
+        "kind": "metal-drawer",
+        "policyRevision": "antaro-external-1",
+        "pack": {
+          "id": "blum-antaro-m-500-blumotion-sw",
+          "revision": "catalogue-2024-1"
+        },
+        "openingId": "a1a3785b-b0e5-4027-be35-9eda18c7be20",
+        "offset": 511.6,
+        "frontHeight": 255.7,
+        "stack": {
+          "groupId": "0964be94-de6d-4276-9428-a366d18576a5",
+          "order": 1,
+          "height": 0
+        },
+        "front": {
+          "placement": "inset",
+          "gap": 2,
+          "clearance": 2,
+          "left": 18,
+          "right": 18,
+          "top": 0,
+          "bottom": 0
+        }
+      },
+      {
+        "id": "f2d2092b-decf-4aa7-9f94-2c2ca1c50fa1",
+        "kind": "metal-drawer",
+        "policyRevision": "antaro-external-1",
+        "pack": {
+          "id": "blum-antaro-m-500-blumotion-sw",
+          "revision": "catalogue-2024-1"
+        },
+        "openingId": "a1a3785b-b0e5-4027-be35-9eda18c7be20",
+        "offset": 255.9,
+        "frontHeight": 255.7,
+        "stack": {
+          "groupId": "0964be94-de6d-4276-9428-a366d18576a5",
+          "order": 2,
+          "height": 0
+        },
+        "front": {
+          "placement": "inset",
+          "gap": 2,
+          "clearance": 2,
+          "left": 18,
+          "right": 18,
+          "top": 0,
+          "bottom": 0
+        }
+      },
+      {
+        "id": "369082c7-bd5f-40bf-934c-c24d80ef8901",
+        "kind": "metal-drawer",
+        "policyRevision": "antaro-external-1",
+        "pack": {
+          "id": "blum-antaro-m-500-blumotion-sw",
+          "revision": "catalogue-2024-1"
+        },
+        "openingId": "a1a3785b-b0e5-4027-be35-9eda18c7be20",
+        "offset": 0,
+        "frontHeight": 255.9,
+        "stack": {
+          "groupId": "0964be94-de6d-4276-9428-a366d18576a5",
+          "order": 3,
+          "height": 0
+        },
+        "front": {
+          "placement": "inset",
+          "gap": 2,
+          "clearance": 2,
+          "left": 18,
+          "right": 18,
+          "top": 0,
+          "bottom": 18
+        }
+      },
+      {
+        "id": "901cb4b9-509b-45a9-978e-5402ddcd8c17",
+        "kind": "metal-drawer",
+        "policyRevision": "antaro-external-1",
+        "pack": {
+          "id": "blum-antaro-m-450-blumotion-sw",
+          "revision": "catalogue-2024-1"
+        },
+        "internal": {
+          "revision": "antaro-inner-1",
+          "setback": 60
+        },
+        "openingId": "f19b8e1d-b125-4be8-9bec-4b320bb42ae9",
+        "offset": 160,
+        "frontHeight": 160,
+        "stack": {
+          "groupId": "f4da8989-8c03-4371-8958-1ec3d9c544c1",
+          "order": 0,
+          "height": 0
+        }
+      },
+      {
+        "id": "22f7b4d5-cb38-42bf-bf68-26b915b5a11b",
+        "kind": "metal-drawer",
+        "policyRevision": "antaro-external-1",
+        "pack": {
+          "id": "blum-antaro-m-450-blumotion-sw",
+          "revision": "catalogue-2024-1"
+        },
+        "internal": {
+          "revision": "antaro-inner-1",
+          "setback": 60
+        },
+        "openingId": "f19b8e1d-b125-4be8-9bec-4b320bb42ae9",
+        "offset": 0,
+        "frontHeight": 160,
+        "stack": {
+          "groupId": "f4da8989-8c03-4371-8958-1ec3d9c544c1",
+          "order": 1,
+          "height": 0
+        }
+      }
+    ]
+  }
+}

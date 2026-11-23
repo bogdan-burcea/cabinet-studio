@@ -2,6 +2,7 @@ import type {Cabinet,MetalDrawer} from '../domain/cabinet';
 import {stock} from '../catalogue/materials';
 import {resolveInteriors} from './interiors';
 
+export const drawerFrontSetback=(c:Cabinet,d:MetalDrawer)=>d.internal?.setback??(d.front?.placement==='inset'?stock(c,'carcass').thickness+d.front.clearance:0);
 export const defaultDrawerFront=()=>({placement:'overlay' as const,gap:2,clearance:2,left:0,right:0,top:0,bottom:0});
 export function drawerOpenings(c:Cabinet){return resolveInteriors(c,stock(c,'carcass').thickness,stock(c,'back').thickness,stock(c,'interior').thickness).openings;}
 /** Store height intent independently of evaluated pitches. Order is top to bottom. */

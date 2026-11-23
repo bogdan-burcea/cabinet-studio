@@ -3,7 +3,7 @@ import type { Cabinet, EdgeKey, MaterialBinding, MaterialRole } from '../domain/
 import { binding, edgeProducts, finishes, materials, stock } from '../catalogue/materials';
 import { changeMaterial, setBanding } from '../commands/materials';
 import type { EvaluatedCabinet, Panel } from '../geometry/evaluate';
-import { Button, Section } from './components';
+import {Checkbox, Button, Section } from './components';
 interface Props {
   committed: Cabinet; preview: Cabinet | null; error: string | null; evaluated: EvaluatedCabinet; panel?: Panel;
   onPreview(c: Cabinet): boolean; onCommit(c: Cabinet): boolean; onCancel(): void;
@@ -24,7 +24,7 @@ export function MaterialsInspector(p: Props) {
   const inactive = Object.keys(model.banding).filter(id => !p.evaluated.panels.some(panel => panel.id === id)).length;
   return <div onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); cancel(); } }}><Section title="Materials & edge banding" aside={<span className="unit-badge">PINNED REVISIONS</span>}>
     <label className="construction-choice">Material role<select aria-label="Material role" value={role} onChange={e => setRole(e.target.value as MaterialRole)}><option value="carcass">Carcass & construction rails</option><option value="interior">Shelves & dividers</option><option value="back">Full back panel</option><option value="plinth">Plinth panels</option><option value="front" disabled={!model.fronts.length}>Slab doors</option></select></label>
-    {(role === 'interior' || role === 'plinth' || role==='front') && <label className="material-inheritance"><input type="checkbox" checked={inherited} onChange={e => materialChange(e.target.checked ? null : structuredClone(binding(model, 'carcass')))}/> Use carcass material, finish & grain</label>}
+    {(role === 'interior' || role === 'plinth' || role==='front') && <Checkbox className="material-inheritance" checked={inherited} onChange={e => materialChange(e.target.checked ? null : structuredClone(binding(model, 'carcass')))}>Use carcass material, finish & grain</Checkbox>}
     <label className="construction-choice">Stock<select aria-label="Material stock" disabled={inherited} value={selected.stock.id} onChange={e => materialChange({ ...selected, stock: { id: e.target.value, revision: '1' } })}>{Object.values(materials).filter(record => record.kind === (role === 'back' ? 'back' : 'panel')).map(record => <option key={record.id} value={record.id}>{record.name}</option>)}</select></label>
     <p className="field-note">{inherited ? 'Inherited from carcass.' : (role === 'interior' || role === 'plinth' || role==='front') ? `Explicit ${role} override.` : 'Applies to all panels using this role.'} {role==='front'?(frontId?' Selected slab door.':' Applies to all slab doors; the first door binding is shown.'):''} Actual thickness: {stock(model, role,frontId).thickness} mm. Generic stock is conceptual.</p>
     <details className="advanced-material"><summary>Finish & grain intent</summary>

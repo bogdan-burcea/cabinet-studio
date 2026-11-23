@@ -130,7 +130,7 @@ test('native schema 21 round trips every construction choice including dormant d
   for (const top of ['full', 'rails'] as const) for (const back of ['full', 'rails'] as const) {
     const config = modes(c, top, back); config.top.frontDepth = 90; config.back.lowerHeight = 95;
     const next = changeConstruction(c, config), json = serialize(next), doc = JSON.parse(json);
-    assert.equal(doc.schemaVersion, 56); assert.equal(doc.evaluatorRevision, 'rail-hanger-access-56');
+    assert.equal(doc.schemaVersion, 58); assert.equal(doc.evaluatorRevision, 'merivobox-58');
     assert.deepEqual(deserialize(json), next); assert.deepEqual(evaluate(deserialize(json)), evaluate(next));
   }
 });

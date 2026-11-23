@@ -19,13 +19,14 @@ import {CncWorkspace} from './CncWorkspace';
 import {WorkspaceTabs,type Workspace} from './WorkspaceTabs';
 import {backFastenerInteriorRepairs} from '../commands/machining-repairs';
 import {WallHangingInspector} from './WallHangingInspector';
-import {bottomFaceRepairs,hingePlateRepairs,doorOpeningRepairs,footHoleRepairs,oneFaceRepairs} from '../commands/clearance-repairs';
+import {bottomFaceRepairs,hingePlateRepairs,innerDrawerOpeningRepairs,doorOpeningRepairs,footHoleRepairs,oneFaceRepairs} from '../commands/clearance-repairs';
 import {BaseSupportInspector} from './BaseSupportInspector';
 import {renameItem} from '../commands/item-names';
 import {backFixingRepairs} from '../commands/machining-repairs';
 import {MachiningChecks,affectedItems} from './MachiningChecks';
 import {toolingRepairs} from '../commands/tooling-repairs';
-import {doorAngleLimit,safeDoorAngles} from '../rules/door-motion';
+import {drawerOpeningEditIssue} from '../commands/drawer-opening-preflight';
+import {drawerOpeningIssue,doorAngleLimit,safeDoorAngles,safeInnerDrawerExtensions} from '../rules/door-motion';
 import {SimpleDoorInspector} from './SimpleDoorInspector';
 import {removeDoor} from '../commands/fronts';
 import {elementIcon} from './element-icons';
@@ -78,7 +79,7 @@ export function App(){
  const undo=()=>workspace==='cnc'?cncHistory.current?.undo():store.undo(),redo=()=>workspace==='cnc'?cncHistory.current?.redo():store.redo();
  const [sheetSettings,setSheetSettings]=useState<SheetSettings>({});
  const snapshot=useSyncExternalStore(store.subscribe,store.getSnapshot),cabinet=snapshot.preview??snapshot.committed;
- const evaluated=useMemo(()=>evaluate(cabinet),[cabinet]);
+ const evaluated=useMemo(()=>{const model=evaluate(cabinet),issue=drawerOpeningIssue(model);return issue?{...model,issues:[...model.issues,issue]}:model;},[cabinet]);
  const [selectedIds,setSelectedIds]=useState([cabinet.id]),[theme,setTheme]=useState<ThemeName>('linen');
  const commonFrontIds=frontTargets(cabinet,selectedIds),mixedFronts=commonFrontIds.some(id=>cabinet.fronts.some(d=>d.id===id))&&commonFrontIds.some(id=>cabinet.drawers?.some(d=>d.id===id));
  const selectedDrawerPart=evaluated.drawers.drawers.flatMap(d=>d.parts).find(p=>p.id===selectedIds.at(-1));
@@ -95,9 +96,13 @@ export function App(){
   if(!kind||selectedIds.some(selected=>kindOf(selected)!==kind)){if(selectedIds.length===1&&selectedIds[0]===cabinet.id){setSelection(id);return;}setNotice('Select openings together, or select elements of the same kind using Shift, Cmd or Ctrl.');return;}
   setSelectedIds(ids=>ids.includes(id)?(ids.length>1?ids.filter(i=>i!==id):[cabinet.id]):[...ids,id]);
  }
- function commit(candidate=store.getSnapshot().preview,repairDialog=true):boolean {
+ function commit(candidate=store.getSnapshot().preview,repairDialog=true,checkOpening=true):boolean {
   if(!candidate)return false;
   candidate=fitDrawerRails(candidate);
+  try{
+   const issue=checkOpening?drawerOpeningEditIssue(candidate,store.getSnapshot().committed):null;
+   if(issue){store.cancel();setNotice('');setPendingEdit({title:'Internal drawer clearance',message:issue.message,options:innerDrawerOpeningRepairs(candidate),base:store.getSnapshot().committed});return false;}
+  }catch{/* Existing construction validation supplies its normal error/repairs. */}
   if(store.commit(candidate)){setPendingEdit(null);return true;}
   const error=store.getSnapshot().error;
   if(error&&!repairDialog){store.cancel();setPendingEdit(null);setNotice(error,true);return false;}
@@ -147,22 +152,39 @@ export function App(){
   const faceIssues=issues.filter(i=>i.code==='machining-faces'),faceIds=faceIssues.map(i=>i.featureId);
   const hole=issues.some(i=>i.code==='machining-hole-collision'||i.code==='machining-collision'&&i.operationIds?.some(id=>id.includes('/installation/foot/'))),collision=issues.some(i=>i.code==='machining-collision'),plate=issues.some(i=>i.code==='machining-hinge-plate'),faces=issues.some(i=>i.code==='machining-faces'&&i.featureId===`${cabinet.id}/panel/bottom`),tool=issues.some(i=>i.code==='machining-tool-width');
   const backIds=new Set(evaluated.backFasteners.map(b=>b.id)),backCollision=issues.some(i=>i.operationIds?.some(id=>backIds.has(id)));
-  const options=[...holeSpacingRepairs(snapshot.committed,issues),...railCollisionRepairs(snapshot.committed),...oneFaceRepairs(snapshot.committed,faceIds),...hole?footHoleRepairs(snapshot.committed):[],...plate?hingePlateRepairs(snapshot.committed):[],...faces?bottomFaceRepairs(snapshot.committed):[],...backCollision?[...backFastenerInteriorRepairs(snapshot.committed,issues),...backFixingRepairs(snapshot.committed)]:[],...tool?toolingRepairs(snapshot.committed):[]];
-  setPendingEdit({title:'Resolve machining check',message:faceIssues.length===issues.length&&faceIssues.length===1?faceIssues[0].message:hole?'Two drilled features overlap. Choose a clear placement or adjust their layout.':plate?'Move the obstructed hinge mounting zones to the nearest clear positions.':faceIds.length?'Some parts have blind cuts on both faces.':backCollision?'Choose a clear position for the affected part or back fixing, or cut the affected rear corner at 45° where it fits.':collision?'Adjust the connection layout.':issues[0]?.message??'Review the machining setup.',options,base:snapshot.committed});
+  const options=[...issues.some(i=>i.code==='machining-drawer-opening')?innerDrawerOpeningRepairs(snapshot.committed):[],...holeSpacingRepairs(snapshot.committed,issues),...railCollisionRepairs(snapshot.committed),...oneFaceRepairs(snapshot.committed,faceIds),...hole?footHoleRepairs(snapshot.committed):[],...plate?hingePlateRepairs(snapshot.committed):[],...faces?bottomFaceRepairs(snapshot.committed):[],...backCollision?[...backFastenerInteriorRepairs(snapshot.committed,issues),...backFixingRepairs(snapshot.committed)]:[],...tool?toolingRepairs(snapshot.committed):[]];
+  if(!options.length){setPendingEdit(null);setNotice(`${issues[0]?.message??'Review the machining setup.'} No automatic correction is available. Adjust the part or fastener settings.`,true);return;}
+  setPendingEdit({title:issues.some(i=>i.code==='machining-drawer-opening')?'Internal drawer clearance':'Resolve machining check',message:faceIssues.length===issues.length&&faceIssues.length===1?faceIssues[0].message:hole?'Two drilled features overlap. Choose a clear placement or adjust their layout.':plate?'Move the obstructed hinge mounting zones to the nearest clear positions.':faceIds.length?'Some parts have blind cuts on both faces.':backCollision?'Choose a clear position for the affected part or back fixing, or cut the affected rear corner at 45° where it fits.':collision?'Adjust the connection layout.':issues[0]?.message??'Review the machining setup.',options,base:snapshot.committed});
  }
  function operateDoors(ids:string[],angle:number){
   const result=safeDoorAngles(evaluated,doorAngles,ids,angle);setDoorAngles(result.angles);
   if(result.blocked){const hit=result.collision!,label=(id:string)=>evaluated.panels.find(p=>p.id===id)?.label??(id.includes('/handle/')?'handle':'part');setPendingEdit({title:'Door opening blocked',message:`${label(hit.movingId)} meets ${label(hit.otherId)} near ${Math.round(hit.angle)}°. This front-edge clearance study is not verified Blum linkage motion.`,options:doorOpeningRepairs(snapshot.committed,ids,angle),base:snapshot.committed,motion:{ids,target:angle}});}
  }
  const doorIds=cabinet.fronts.map(d=>d.id),drawerIds=(cabinet.drawers??[]).map(d=>d.id);
- const movableIds=[...doorIds,...drawerIds],doorsOpen=movableIds.length>0&&movableIds.every(id=>(doorAngles[id]??0)>0);
+ const movableIds=[...doorIds,...drawerIds],doorsOpen=movableIds.length>0&&(cabinet.drawers?.some(d=>d.internal)?movableIds.some(id=>(doorAngles[id]??0)>0):movableIds.every(id=>(doorAngles[id]??0)>0));
  function toggleFronts(){
   const opening=!doorsOpen;
-  if(doorIds.length)operateDoors(doorIds,opening?Math.max(...doorIds.map(id=>doorAngleLimit(evaluated,id))):0);
-  setDoorAngles(old=>({...old,...Object.fromEntries(drawerIds.map(id=>[id,opening?100:0]))}));
+  if(!cabinet.drawers?.some(d=>d.internal)){
+   if(doorIds.length)operateDoors(doorIds,opening?Math.max(...doorIds.map(id=>doorAngleLimit(evaluated,id))):0);
+   setDoorAngles(old=>({...old,...Object.fromEntries(drawerIds.map(id=>[id,opening?100:0]))}));return;
+  }
+  // Keep doors clear until the trays have retracted. Open doors to a checked
+  // pose before evaluating the inner-drawer extension.
+  if(!opening){const retracted={...doorAngles,...Object.fromEntries(drawerIds.map(id=>[id,0]))},doors=safeDoorAngles(evaluated,retracted,doorIds,0);setDoorAngles({...doors.angles,...Object.fromEntries(drawerIds.map(id=>[id,0]))});return;}
+  const doors=safeDoorAngles(evaluated,doorAngles,doorIds,Math.max(0,...doorIds.map(id=>doorAngleLimit(evaluated,id))));
+  const result=safeInnerDrawerExtensions(evaluated,doorAngles,{...doors.angles,...Object.fromEntries(drawerIds.map(id=>[id,100]))});
+  setDoorAngles(result.angles);
+  if(doors.blocked){const hit=doors.collision!,label=(id:string)=>evaluated.panels.find(p=>p.id===id)?.label??evaluated.drawers.drawers.find(d=>d.id===id)?.label??'part';setNotice(`${label(hit.movingOwner)} meets ${label(hit.otherOwner)} near ${Math.round(hit.angle)}°. The opening stopped at the last clear position.`,true);}
+  else if(result.blocked){
+   const drawer=evaluated.drawers.drawers.find(d=>d.id===result.drawerId)!,hinge=evaluated.doorHardware.hinges.find(h=>h.id===result.otherId),door=evaluated.fronts.doors.find(d=>d.id===hinge?.ownerId);
+   const obstacle=hinge?`hinge ${Number(hinge.id.split('/').at(-1))+1} on ${door?.label??'the door'} (mounting-clearance zone)`:evaluated.panels.find(p=>p.id===result.otherId)?.label??'another part';
+   const message=`${drawer.label} is blocked by ${obstacle}. The drawer stopped at the last clear position.`,options=innerDrawerOpeningRepairs(snapshot.committed);
+   if(options.length)setPendingEdit({title:'Internal drawer opening blocked',message:message+(hinge?'':' The simplified door-motion preview intersects the drawer fittings; this is not verified Blum linkage motion.'),options,base:snapshot.committed,motion:{ids:doorIds,target:Math.max(0,...doorIds.map(id=>doorAngleLimit(evaluated,id))),drawers:true}});
+   else setNotice(`${message} ${hinge?'Adjust the hinge position or drawer spacing.':'Check the selected hinge’s inward door protrusion and the drawer-side clearance. Intermediate hinge motion remains approximate.'}`,true);
+  }
  }
  const reviewKey=JSON.stringify(review),[dismissedReview,setDismissedReview]=useState('');
- const reviewNotice=review.length&&reviewKey!==dismissedReview?`${review.length} machining ${review.length===1?'check needs':'checks need'} review`:'';
+ const drawerOpeningReview=review.some(i=>i.code==='machining-drawer-opening'),reviewNotice=review.length&&reviewKey!==dismissedReview?(drawerOpeningReview?'Internal drawers cannot fully open':`${review.length} machining ${review.length===1?'check needs':'checks need'} review`):'';
  const fastenerParts=evaluated.panels.filter(p=>(selectedIds.includes(p.id)||(constructionPart&&p.role.startsWith(constructionPart+'-')))&&evaluated.cabineo.some(j=>j.hostId===p.id));
  const partFastenerFields=fastenerParts.length>0?<FieldPair>{fastenerParts.map(part=>{const override=cnc(cabinet).partCabineoCounts?.[part.id],joints=evaluated.cabineo.filter(j=>j.hostId===part.id&&/\/cabineo\/-?1\//.test(j.id)),count=override??Math.max(1,...[-1,1].map(side=>joints.filter(j=>j.id.includes(`/cabineo/${side}/`)).length));return <Fragment key={part.id}>{!constructionPart&&part.role!=='bottom'&&fastenerParts.length===1&&<DimensionField plain disabled label="Thickness" accessibleLabel={`${part.label} thickness`} value={part.size[part.orientation==='yz'?0:part.orientation==='xz'?1:2]} cancelValue={part.size[part.orientation==='yz'?0:part.orientation==='xz'?1:2]} limits={{min:3,max:24}} onPreview={()=>{}} onCommit={()=>false} onCancel={()=>{}}/>}<DimensionField plain label={constructionPart?(part.role==='back-upper-rail'?'Upper rail fasteners':part.role==='back-lower-rail'?'Lower rail fasteners':part.role==='top-front-rail'?'Front rail fasteners':'Rear rail fasteners'):'Cabineo per side'} accessibleLabel={`${part.label} Cabineo per side`} value={count} cancelValue={count} limits={{min:1,max:20}} onPreview={()=>{}} onCommit={value=>commitFasteners(setPartCabineoCount(snapshot.committed,part.id,value))} onCancel={store.cancel}/></Fragment>;})}</FieldPair>:null;
  const defaultCabineoCount=Math.max(1,Math.ceil(Math.max(0,cabinet.envelope.depth-(cabinet.carcass.back.joint?evaluated.opening.origin[2]-cabinet.envelope.origin[2]:0)-100)/300)+1);
@@ -173,7 +195,7 @@ export function App(){
    if(selected.size>2_000_000)throw new Error('Choose a cabinet file smaller than 2 MB.');
    const revision=store.getSnapshot().revision,next=named(readSimpleCabinet(await selected.text()));
    if(revision!==store.getSnapshot().revision)throw new Error('The cabinet changed while opening the file. Open it again.');
-   if(commit(next)){setSelection(next.id);setNotice(`Opened “${next.name}”. Undo returns to your previous cabinet.`);}
+   if(commit(next,true,false)){setSelection(next.id);setNotice(`Opened “${next.name}”. Undo returns to your previous cabinet.`);}
   }catch(error){setNotice((error as Error).message,true);}
  }
  async function exportCabinetStep(){
@@ -190,7 +212,7 @@ export function App(){
   }catch(error){setNotice((error as Error).message,true);}
   finally{exportingCabinet.current=false;setCabinetStepProgress('');}
  }
- const notification=(snapshot.error||notice||reviewNotice)&&<Notice message={snapshot.error||notice||reviewNotice} error={!!snapshot.error||!!notice&&noticeError||!notice&&!!reviewNotice} onAction={!snapshot.error&&!notice&&reviewNotice?()=>{if(workspace==='box')resolveMachining(review);else {setDismissedReview(reviewKey);setSelection(cabinet.id);setWorkspace('box');resolveMachining(review);}}:undefined} onDismiss={()=>{if(snapshot.error)store.cancel();setNotice('');setDismissedReview(reviewKey);}}/>;
+ const notification=(snapshot.error||notice||reviewNotice)&&<Notice message={snapshot.error||notice||reviewNotice} persistent={!snapshot.error&&!notice&&!!reviewNotice&&drawerOpeningReview} error={!!snapshot.error||!!notice&&noticeError||!notice&&!!reviewNotice} onAction={!snapshot.error&&!notice&&reviewNotice?()=>{if(workspace==='box')resolveMachining(review);else {setDismissedReview(reviewKey);setSelection(cabinet.id);setWorkspace('box');resolveMachining(review);}}:undefined} onDismiss={()=>{if(snapshot.error)store.cancel();setNotice('');setDismissedReview(reviewKey);}}/>;
  return <div className="app-shell simple-workspace">
   <header className="app-header"><div className="brand"><span className="brand-symbol"><Icon name="cabinet" size={23}/></span><span>Cabinet Studio</span></div><div className="workspace-navigation"><WorkspaceTabs value={workspace} onChange={next=>{store.cancel();setWorkspace(next);}}/></div><div className="document-actions"><div className="history-actions"><IconButton icon="undo" label="Undo (⌘Z)" disabled={!(workspace==='cnc'?cutHistory.canUndo:snapshot.canUndo)} onClick={undo}/><IconButton icon="redo" label="Redo (⇧⌘Z)" disabled={!(workspace==='cnc'?cutHistory.canRedo:snapshot.canRedo)} onClick={redo}/></div><span className="header-separator" aria-hidden="true"/><div ref={costTrigger}><IconButton icon="utilities" label="Utilities" aria-haspopup="dialog" aria-expanded={costsOpen} aria-controls="cost-estimate" onClick={()=>setCostsOpen(open=>!open)}/></div><span className="header-separator" aria-hidden="true"/><IconButton icon="new" label="New cabinet" onClick={()=>{commit({...createCabinet(),name:'Cabinet',cabinetType:'base'});setNotice('New cabinet. Undo returns to your previous cabinet.');}}/><IconButton icon="open" label="Open cabinet" onClick={()=>file.current?.click()}/><IconButton icon="save" label="Save cabinet" onClick={()=>{downloadCabinet({...snapshot.committed,name:snapshot.committed.name==='Untitled cabinet'?'Cabinet':snapshot.committed.name});setNotice('Saved a cabinet file.');}}/><span className="header-separator" aria-hidden="true"/><IconButton icon={theme==='graphite'?'sun':'moon'} label={`Switch to ${theme==='graphite'?'light':'dark'} mode`} onClick={()=>setTheme(theme==='graphite'?'linen':'graphite')}/><input ref={file} type="file" accept=".json,application/json" hidden onChange={load}/></div></header>
   <main className="workspace" id="workspace-box" role="tabpanel" aria-labelledby="workspace-tab-0" hidden={workspace!=='box'}>
@@ -242,6 +264,6 @@ export function App(){
 
 
  {costsOpen&&<CostPanel key={cabinet.id} cabinet={cabinet} model={evaluated} settings={sheetSettings} history={cncHistory.current} onClose={closeCosts} onNotice={setNotice} onReview={()=>{closeCosts();setWorkspace('cnc');}}/>}
- {pendingEdit&&<EditConflict key={snapshot.revision} edit={pendingEdit} onCancel={()=>setPendingEdit(null)} onApply={index=>{if(pendingEdit.base!==store.getSnapshot().committed){setPendingEdit(null);setNotice('The cabinet changed. Try the edit again.');return;}const option=pendingEdit.options[index];if(option){const motion=pendingEdit.motion;if(commit(option.cabinet)){if(motion)setDoorAngles(safeDoorAngles(evaluate(option.cabinet),{},motion.ids,motion.target).angles);else if(pendingEdit.title)setSelection(cabinet.id);}}}}/>}
+ {pendingEdit&&<EditConflict key={snapshot.revision} edit={pendingEdit} onCancel={()=>setPendingEdit(null)} onApply={index=>{if(pendingEdit.base!==store.getSnapshot().committed){setPendingEdit(null);setNotice('The cabinet changed. Try the edit again.');return;}const option=pendingEdit.options[index];if(option){const motion=pendingEdit.motion;if(commit(option.cabinet)){if(motion){const model=evaluate(option.cabinet),opened=safeDoorAngles(model,{},motion.ids,motion.target);setDoorAngles(motion.drawers?safeInnerDrawerExtensions(model,{}, {...opened.angles,...Object.fromEntries(model.drawers.drawers.map(d=>[d.id,100]))}).angles:opened.angles);}else if(pendingEdit.title)setSelection(cabinet.id);}}}}/>}
  </div>;
 }

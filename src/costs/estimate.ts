@@ -2,7 +2,7 @@ import type {Cabinet} from '../domain/cabinet';
 import type {EvaluatedCabinet} from '../geometry/evaluate';
 import {stockOffcuts,type planSheets} from '../cnc/layout';
 import {billOfMaterials} from '../docs/project';
-import {drawerPack} from '../catalogue/drawers';
+import {drawerComponents} from '../catalogue/drawers';
 export type CostLine={id:string;label:string;detail?:string;quantity:number;unit:string;sheetArea?:number;offcutArea?:number;paired?:boolean};
 export type StockBasis='sheet'|'area';
 export type CatalogueMeta={tags:Record<string,string>;stock:Record<string,{width:number;height:number}>};
@@ -35,8 +35,7 @@ export function costQuantities(c:Cabinet,model:EvaluatedCabinet,plan:ReturnType<
  for(const line of bill.hardware)add(line.id,line.label,line.count);
  // A matched pair/set is a single purchase unit, never two individual rails/sides.
  for(const d of model.drawers.drawers){
-  const pack=drawerPack(d.intent.pack);
-  for(const component of pack.components){const unit=component.unit.includes('pair')?'pair':component.unit.includes('set')?'set':'item';add(`blum/${component.article}/${unit}`,component.article,component.quantity,unit,component.description,component.unit.includes('left/right'));}
+  for(const component of drawerComponents(d.intent)){const unit=component.unit.includes('pair')?'pair':component.unit.includes('set')?'set':'item';add(`blum/${component.article}/${unit}`,component.article,component.quantity,unit,component.description,component.unit.includes('left/right'));}
   if(d.intent.handle?.kind==='knob')add('Knob','Knob',1);
   if(d.intent.handle?.kind==='pull'){const label=`Pull handle · ${d.intent.handle.pitch} mm`;add(label,label,1);}
  }

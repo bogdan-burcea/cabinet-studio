@@ -1,5 +1,6 @@
-import {drawerPack,drawerPacks} from '../catalogue/drawers';
+import {drawerPack,matchingDrawerPacks,innerDrawerSpec} from '../catalogue/drawers';
 import type {Cabinet,Compartment} from '../domain/cabinet';
+import {layoutDrawerIntents,defaultDrawerFront,drawerFrontSetback} from '../rules/drawer-layout';
 import {stock} from '../catalogue/materials';
 import {resolveInteriors} from '../rules/interiors';
 import {evaluate} from '../geometry/evaluate';
@@ -30,6 +31,26 @@ export function drawerRepairs(candidate:Cabinet,previous:Cabinet):EditRepair[]{
  }
  add('Keep drawers in the clear opening around the new shelf',rebound(candidate));
  const current=layout(candidate);
+ // A taller construction may need more height even when the old allocations
+ // still fit inside the cabinet. Offer an explicit automatic-height correction.
+ const minimum=(d:NonNullable<Cabinet['drawers']>[number])=>{const p=drawerPack(d.pack);return d.internal?innerDrawerSpec(p).minimumHeight:p.minimumHeight;};
+ let resolved=candidate.drawers;try{resolved=layoutDrawerIntents(candidate);}catch{}
+ const groups=new Set(resolved.filter(d=>d.stack&&d.frontHeight<minimum(d)-.001).map(d=>d.stack!.groupId));
+ if(groups.size){
+  const automatic={...candidate,drawers:candidate.drawers.map(d=>d.stack&&groups.has(d.stack.groupId)?{...d,stack:{...d.stack,height:0}}:d)};
+  let deficit=0;
+  for(const groupId of groups){
+   const group=automatic.drawers.filter(d=>d.stack?.groupId===groupId),opening=current.openings.find(o=>o.id===group[0].openingId);if(!opening)continue;
+   const adjustment=(d:typeof group[number])=>{const f=d.front??defaultDrawerFront();return 2*f.gap-(f.placement==='overlay'?f.top+f.bottom:0);};
+   const height=Math.max(...group.map(d=>minimum(d)-adjustment(d)));
+   deficit=Math.max(deficit,Math.ceil(group.reduce((sum,d)=>sum+height+adjustment(d),0)-opening.size[1]-.00001));
+  }
+  try{
+   const height=candidate.envelope.height+deficit;
+   if(height<=3000){const sized=deficit?resizeCabinet(automatic,'height',height):automatic;add(`Use automatic drawer heights${deficit?` and increase cabinet height to ${height} mm`:''}`,{...sized,drawers:layoutDrawerIntents(sized)});}
+  }catch{/* Structural or front constraints still apply to this correction. */}
+ }
+
  const orphaned=candidate.drawers.filter(d=>!current.openings.some(o=>o.id===d.openingId));
  if(candidate.contents.length){
   try{
@@ -59,9 +80,9 @@ export function drawerRepairs(candidate:Cabinet,previous:Cabinet):EditRepair[]{
  const shorter={...candidate,drawers:candidate.drawers.map(d=>{
   const pack=drawerPack(d.pack),opening=current.openings.find(o=>o.id===d.openingId);
   if(!opening)return d;
-  const inset=d.front?.placement==='inset'?stock(candidate,'carcass').thickness+d.front.clearance:0;
+  const inset=drawerFrontSetback(candidate,d);
   if(opening.size[2]>=pack.minimumDepth+inset)return d;
-  const match=drawerPacks.filter(p=>p.sideHeight===pack.sideHeight&&p.minimumDepth+inset<=opening.size[2]).sort((a,b)=>b.nominalLength-a.nominalLength)[0];
+  const match=matchingDrawerPacks(pack).filter(p=>p.minimumDepth+inset<=opening.size[2]).sort((a,b)=>b.nominalLength-a.nominalLength)[0];
   return match?{...d,pack:{id:match.id,revision:match.revision}}:d;
  })};
  const changed=shorter.drawers.filter((d,i)=>d.pack.id!==candidate.drawers![i].pack.id);
@@ -69,7 +90,7 @@ export function drawerRepairs(candidate:Cabinet,previous:Cabinet):EditRepair[]{
  const depth=Math.ceil(Math.max(candidate.envelope.depth,...candidate.drawers.map(d=>{
   const pack=drawerPack(d.pack),opening=current.openings.find(o=>o.id===d.openingId);
   const rear=opening?opening.origin[2]-candidate.envelope.origin[2]:stock(candidate,'back').thickness;
-  const inset=d.front?.placement==='inset'?stock(candidate,'carcass').thickness+d.front.clearance:0;
+  const inset=drawerFrontSetback(candidate,d);
   return rear+pack.minimumDepth+inset;
  })));
  if(depth>candidate.envelope.depth&&depth<=1200)add(`Increase cabinet depth to ${depth} mm for the drawer runners`,rebound(resizeCabinet(candidate,'depth',depth)));

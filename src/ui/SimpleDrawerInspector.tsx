@@ -1,3 +1,5 @@
+import {DrawerTypeField} from './DrawerTypeField';
+import {setDrawerInternal} from '../commands/drawers';
 import {recommendedDrawerFront} from '../rules/drawer-layout';
 import {HandleFields} from './HandleFields';
 import {defaultDrawerHandle} from '../rules/handles';
@@ -11,7 +13,7 @@ import type {Cabinet,MetalDrawer} from '../domain/cabinet';
 import type {EvaluatedCabinet} from '../geometry/evaluate';
 import {stock} from '../catalogue/materials';
 import {editDrawerGroup,duplicateDrawers} from '../commands/drawers';
-import {drawerPack} from '../catalogue/drawers';
+import {drawerComponents,drawerPack,innerDrawerSpec} from '../catalogue/drawers';
 import {Button,Section,FieldPair} from './components';
 import {Icon} from '../design-system/Icon';
 import {DimensionField} from './DimensionField';
@@ -24,12 +26,12 @@ export function SimpleDrawerInspector({cabinet,model,id,ids,partId,onSelectMany,
  const anchor=ids[0]??id;
  const drawer=model.drawers.drawers.find(d=>d.id===anchor),intent=cabinet.drawers?.find(d=>d.id===anchor);
  if(!drawer||!intent)return null;
- const pack=drawerPack(intent.pack);
+ const pack=drawerPack(intent.pack),internal=!!intent.internal;
  const bottom=!!intent.stack&&intent.stack.order===Math.max(...cabinet.drawers!.filter(d=>d.stack?.groupId===intent.stack!.groupId).map(d=>d.stack!.order));
- const board=flatParts.find(p=>p.id===partId)??flatParts.find(p=>p.id===`${anchor}/front`);
+ const board=flatParts.find(p=>p.id===partId)??flatParts.find(p=>p.id===`${anchor}/${internal?'bottom':'front'}`);
  const opening=model.openings.find(o=>o.id===intent.openingId)!;
  const front=intent.front??{placement:'overlay',gap:2,clearance:2,left:0,right:0,top:0,bottom:0};
- function edit(patch:Partial<Pick<MetalDrawer,'offset'|'frontHeight'|'front'|'pack'|'manualRail'>>){
+ function edit(patch:Partial<Pick<MetalDrawer,'offset'|'frontHeight'|'front'|'pack'|'manualRail'|'internal'>>){
   try{return commit(editDrawerGroup(cabinet,ids,patch));}catch(e){notice((e as Error).message);return false;}
  }
  const editableHeights=ids.some(id=>{const d=cabinet.drawers?.find(d=>d.id===id);return d?.stack&&d.stack.order<Math.max(...cabinet.drawers!.filter(v=>v.stack?.groupId===d.stack!.groupId).map(v=>v.stack!.order));});
@@ -46,7 +48,7 @@ export function SimpleDrawerInspector({cabinet,model,id,ids,partId,onSelectMany,
   });return commit({...next,drawers});}catch(error){notice((error as Error).message);return false;}})()} onCancel={()=>{}}/>;
  const signature=(d:MetalDrawer)=>{
   const f=d.front??front;
-  return JSON.stringify([f.placement,f.gap,f.clearance,f.left,f.right,d.pack.id,d.stack?.height??d.frontHeight,...!d.stack?[f.top,f.bottom]:[]]);
+  return JSON.stringify([!!d.internal,d.internal?.setback,f.placement,f.gap,f.clearance,f.left,f.right,d.pack.id,d.stack?.height??d.frontHeight,...!d.stack?[f.top,f.bottom]:[]]);
  };
  const mixed=ids.length>1&&cabinet.drawers!.filter(d=>ids.includes(d.id)).some(d=>signature(d)!==signature(intent));
  function heightEdit(height:number){try{return intent!.stack?commit(setDrawerFrontHeight(cabinet,ids,height)):edit({frontHeight:intent!.frontHeight+height-drawer!.front[1]});}catch(e){notice((e as Error).message);return false;}}
@@ -54,7 +56,8 @@ export function SimpleDrawerInspector({cabinet,model,id,ids,partId,onSelectMany,
  return <>
   <Section title={ids.length>1?'Shared drawer settings':'Drawer'}>
   {mixed&&<p className="field-note">Selected drawers have different settings. Changing a field sets that value for the selection.</p>}
-   <DrawerPackFields automatic={!intent.manualRail} value={intent.pack} onChange={(pin,manual)=>{
+   <DrawerTypeField internal={internal} onChange={value=>{try{commit(setDrawerInternal(cabinet,ids,value));}catch(error){notice((error as Error).message);}}}/>
+   <DrawerPackFields internal={internal} automatic={!intent.manualRail} value={intent.pack} onChange={(pin,manual)=>{
     const selected=drawerPack(pin);
     edit({pack:pin,...manual!==undefined?{manualRail:manual}:{},...!intent.stack?{frontHeight:Math.max(intent.frontHeight,selected.minimumHeight)}:{}});
    }}/>
@@ -64,7 +67,12 @@ export function SimpleDrawerInspector({cabinet,model,id,ids,partId,onSelectMany,
     onPreview={()=>{}} onCommit={n=>edit({[key]:n})} onCancel={()=>{}}/>)}</FieldPair>
 </>}
   </Section>
-  <Section title={ids.length>1?'Shared front features':'Drawer front'}>
+  {internal?<Section title="Inner front">
+   <FieldPair>{intent.stack&&<DimensionField plain label={bottom?'Spacing · auto':'Spacing'} disabled={bottom} value={+drawer.allocation.size[1].toFixed(1)} cancelValue={+drawer.allocation.size[1].toFixed(1)} limits={{min:innerDrawerSpec(pack).minimumHeight,max:opening.size[1]}} onPreview={()=>{}} onCommit={n=>{try{return commit(setDrawerFrontHeight(cabinet,ids,n-4));}catch(error){notice((error as Error).message);return false;}}} onCancel={()=>{}}/>}
+   <DimensionField plain label="Front setback" value={intent.internal!.setback} cancelValue={intent.internal!.setback} limits={{min:55,max:150}} onPreview={()=>{}} onCommit={setback=>edit({internal:{revision:innerDrawerSpec(pack).revision,setback}})} onCancel={()=>{}}/></FieldPair>
+   <div className="data-row"><span>Aluminium front · cut length</span><strong>{+drawer.front[0].toFixed(1)} mm</strong></div>
+   <p className="field-note">{pack.family==='merivobox'?(pack.configuration==='m'?'Integrated inner-front grip.':'Inner front with cross gallery.'):'Matching Blum inner handle.'} Open the cabinet doors fully before extending drawers.</p>
+  </Section>:<><Section title={ids.length>1?'Shared front features':'Drawer front'}>
    {ids.length===1&&<FieldPair>
     <DimensionField plain hideControls label={bottom?'Height · auto':'Height'} accessibleLabel="Drawer front height" disabled={bottom} value={bottom?drawer.front[1]:intent.stack?.height??drawer.front[1]} cancelValue={bottom?drawer.front[1]:intent.stack?.height??drawer.front[1]} limits={{min:intent.stack?0:98.5,max:opening.size[1]+50}} onPreview={()=>{}} onCommit={heightEdit} onCancel={()=>{}}/>
     <DimensionField plain label="Width" accessibleLabel="Drawer front width" disabled hideControls value={drawer.front[0]} cancelValue={drawer.front[0]} limits={{min:drawer.front[0],max:drawer.front[0]}} onPreview={()=>{}} onCommit={()=>false} onCancel={()=>{}}/>
@@ -88,14 +96,16 @@ export function SimpleDrawerInspector({cabinet,model,id,ids,partId,onSelectMany,
   </Section>
 
   <HandleFields drawer handle={intent.handle??defaultDrawerHandle()} onCancel={()=>{}} onChange={patch=>{try{return commit({...cabinet,drawers:cabinet.drawers!.map(d=>ids.includes(d.id)?{...d,handle:{...(d.handle??defaultDrawerHandle()),...patch}}:d)});}catch(error){notice((error as Error).message);return false;}}}/>
+  </>}
   <Section title="Duplicate">   <div className="interior-actions"><Button onClick={()=>{try{const next=duplicateDrawers(cabinet,ids);if(commit(next.cabinet))onSelectMany(next.featureIds);}catch(error){notice((error as Error).message);}}}>Duplicate {ids.length>1?'group':'drawer'}</Button>
 </div></Section>
 
   <Section title="Drawer fittings">
    <div className="table table--density-compact machining-table"><table aria-label="Drawer fittings"><thead><tr><th>Article</th><th>Quantity</th></tr></thead><tbody>
-    {pack.components.map(item=><tr key={item.article}><th scope="row">{item.article}</th><td>{item.quantity} {item.unit}</td></tr>)}
+    {drawerComponents(intent).map(item=><tr key={item.article}><th scope="row">{item.article}</th><td>{item.quantity} {item.unit}</td></tr>)}
    </tbody></table></div>
-   <p className="field-note">K · 550 mm uses supplied CAD. Other sizes adapt the profiles; 650 mm uses the 65 kg runner family. Front/back pilots follow Blum’s drawing. Bottom pilots use the reference side slots; verify these against the bought side profile before manufacture.</p>
+   {internal&&pack.family==='antaro'&&<p className="field-note">ANTARO M inner drawer · ZIF.71M0 fixings, Z31L1036A aluminium front and ZIF.80M5 handle. Front fittings are schematic; use the matching Blum assembly instructions.</p>}
+   <p className="field-note">{pack.family==='merivobox'?'MERIVOBOX uses 16 mm bottom/back stock and matched screw-on fittings. Metal profiles are schematic. Pilot sizes are application choices; trial-fit the purchased fittings before manufacture.':'K · 550 mm uses supplied CAD. Other sizes adapt the profiles; 650 mm uses the 65 kg runner family. Front/back pilots follow Blum’s drawing. Bottom pilots use the reference side slots; verify these against the bought side profile before manufacture.'}</p>
   </Section>
   <Section title="Cut parts">
    {board&&<PartDrawing label={board.label} preview={partPreview(board.panel,board.holes,board.cuts,board.face)}/>}
