@@ -90,3 +90,17 @@ test('either shelf can be converted repeatedly and deleted without cascading int
   }
  }
 });
+
+test('pantry drawers beside close fixed shelves stay in their column with aligned backs and symmetric sides',()=>{
+ const c=deserializeWithInfo(fs.readFileSync(new URL('./fixtures/pantry-inset-inner-drawers.json',import.meta.url),'utf8')).cabinet,before=serialize(c),m=evaluate(c),offsets=explodedCabinetLayout(m,80);
+ const left=offsets.get(c.id+'/panel/left')!,right=offsets.get(c.id+'/panel/right')!;assert.equal(left[0],-80);assert.equal(right[0],80);
+ for(const drawer of m.drawers.drawers){const bottom=offsets.get(drawer.id+'/bottom')!,back=offsets.get(drawer.id+'/back')!,front=offsets.get(drawer.id+'/front')!;
+ assert.equal(bottom[0],0,'drawer must not jump sideways to clear an adjacent shelf');assert.deepEqual(back.slice(0,2),bottom.slice(0,2));assert.deepEqual(front.slice(0,2),bottom.slice(0,2));
+ const l=offsets.get(drawer.id+'/side-left')!,r=offsets.get(drawer.id+'/side-right')!;assert.equal(l[0],-r[0]);assert.equal(l[1],bottom[1]);assert.equal(r[1],bottom[1]);
+ for(const side of ['left','right']){assert.deepEqual(offsets.get(drawer.id+'/back-fixing-'+side),back);assert.deepEqual(offsets.get(drawer.id+'/front-fixing-'+side),front);assert.deepEqual(offsets.get(drawer.id+'/runner-'+side),offsets.get(c.id+'/panel/'+side));}
+ }
+ const pieces=[...m.panels,...m.drawers.drawers.flatMap(d=>d.parts.filter(p=>p.material!=='steel'||p.id.endsWith('/front')))];
+ for(let i=0;i<pieces.length;i++)for(let j=i+1;j<pieces.length;j++){const a=pieces[i],b=pieces[j],oa=offsets.get(a.id)!,ob=offsets.get(b.id)!;assert.ok(!a.size.every((n,k)=>Math.min(a.center[k]+oa[k]+n/2,b.center[k]+ob[k]+b.size[k]/2)-Math.max(a.center[k]+oa[k]-n/2,b.center[k]+ob[k]-b.size[k]/2)>.001),`${a.label} / ${b.label}`);}
+ const reversed=explodedCabinetLayout({...m,drawers:{...m.drawers,drawers:[...m.drawers.drawers].reverse()}},80);for(const [id,offset] of offsets)assert.deepEqual(reversed.get(id),offset);
+ for(const offset of explodedCabinetLayout(m,0).values())assert.deepEqual(offset,[0,0,0]);assert.equal(serialize(c),before);
+});

@@ -5,9 +5,9 @@ import {fitCamera} from '../src/viewport/camera-fit';
 
 const bounds = new THREE.Box3(new THREE.Vector3(-80, -100, -80), new THREE.Vector3(680, 800, 640));
 for (const area of [{width:704,height:656,usableHeight:500},{width:391,height:480,usableHeight:340}]) {
-  for (const mode of ['3D','front','side','top','rear'] as const) test(`${mode} fits above toolbar at ${area.width}px`, () => {
+  for (const mode of ['3D','front','left','right','top','rear'] as const) test(`${mode} fits above toolbar at ${area.width}px`, () => {
     const camera = mode === '3D' ? new THREE.PerspectiveCamera(36, 1, 1, 50000) : new THREE.OrthographicCamera(-500,500,500,-500,1,50000);
-    const directions = {'3D':[1.25,.8,1.8],front:[0,0,1],side:[1,0,0],top:[0,1,0],rear:[0,0,-1]};
+    const directions = {'3D':[1.25,.8,1.8],front:[0,0,1],left:[-1,0,0],right:[1,0,0],top:[0,1,0],rear:[0,0,-1]};
     if (mode === 'top') camera.up.set(0,0,-1);
     fitCamera(camera,bounds,new THREE.Vector3(...directions[mode]),area);
     const center = bounds.getCenter(new THREE.Vector3()).project(camera);

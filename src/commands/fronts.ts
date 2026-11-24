@@ -1,3 +1,4 @@
+import {cornerAccessRegion} from '../rules/kitchen-corner';
 import type { Cabinet, SlabDoor } from '../domain/cabinet';
 import { defaultDoor } from '../catalogue/fronts';
 import { evaluate } from '../geometry/evaluate';
@@ -25,6 +26,7 @@ export function addDoor(c:Cabinet,openingId?:string) {
     const edge=(n:number,origin:number,span:number,upper:boolean)=>Math.abs(n-origin-(upper?span-t:t))<1e-6?(upper?1:0):(n-origin+(upper?interior/2:-interior/2))/span;
     region={left:edge(o.origin[0],ox,w,false),right:edge(o.origin[0]+o.size[0],ox,w,true),bottom:edge(o.origin[1],oy,h,false),top:edge(o.origin[1]+o.size[1],oy,h,true)};
   }
+  if(c.cabinetType==='corner'){const access=cornerAccessRegion(c);region={...region,left:Math.max(region.left,access.left),right:Math.min(region.right,access.right)};if(region.left>=region.right)throw Error('This opening is behind the corner filler. Choose the accessible opening.');}
   const door=defaultDoor(region);return {cabinet:attachFrontBoundaries({...c,fronts:[...c.fronts,door]}),featureId:door.id};
 }
 export function splitDoor(c:Cabinet,id:string,axis:'vertical'|'horizontal',ratio=0.5) {

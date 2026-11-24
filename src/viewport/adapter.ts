@@ -20,6 +20,7 @@ import { finishColor, type ViewportTheme } from '../design-system/themes';
 export interface CncAnchor {id:string;x:number;y:number}
 export interface DimensionAnchor { axis: Axis; x: number; y: number; handleX: number; handleY: number }
 interface Callbacks {
+  viewChanged?(view:ViewName):void;
   usableHeight?(): number; editDivision?():void;
   cncPartAnchor?(point:{x:number;y:number}|null):void;
   cncAnchors?(anchors:CncAnchor[]):void;
@@ -353,6 +354,7 @@ export class CabinetViewport {
   private pointerMove = (event: PointerEvent) => {
     if (this.touchZoom.blocksSinglePointer) return;
 
+    if(!this.drag&&!this.cncScene&&this.camera instanceof THREE.OrthographicCamera&&this.down?.pointerId===event.pointerId&&(event.buttons===1||event.pointerType==='touch')&&Math.hypot(event.clientX-this.down.x,event.clientY-this.down.y)>=5)this.view('perspective');
     if (this.drag) {
       if (this.drag.pointerId !== event.pointerId) return;
       const { axis, x, y, initial, px, py, featureId, centre } = this.drag, denominator = px * px + py * py;
@@ -410,6 +412,7 @@ export class CabinetViewport {
     this.controls.target.copy(this.displayBounds().getCenter(new THREE.Vector3()));
     fitCamera(this.camera, this.displayBounds(), new THREE.Vector3(...viewDirection(name)), this.area());
     this.controls.update(); this.controls.enableDamping = true;
+    this.callbacks.viewChanged?.(name);
   }
   fit() {
     if (!this.cabinet && !this.cncScene) return;
@@ -420,6 +423,7 @@ export class CabinetViewport {
     this.controls.update(); this.controls.enableDamping = true;
   }
   orbit(theta: number, phi: number) {
+    if(!this.cncScene&&this.camera instanceof THREE.OrthographicCamera)this.view('perspective');
     const offset = this.camera.position.clone().sub(this.controls.target), spherical = new THREE.Spherical().setFromVector3(offset);
     spherical.theta += theta; spherical.phi = Math.max(0.02, Math.min(Math.PI - 0.02, spherical.phi + phi));
     this.camera.position.copy(this.controls.target).add(new THREE.Vector3().setFromSpherical(spherical)); this.controls.update();

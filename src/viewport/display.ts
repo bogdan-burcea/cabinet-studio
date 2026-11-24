@@ -1,5 +1,6 @@
 import type {EvaluatedCabinet} from '../geometry/evaluate';
 import type {Vec3} from '../domain/cabinet';
+export const EXPLODED_DISTANCE=120;
 export type RenderMode='solid'|'transparent'|'wireframe';
 // Presentation offsets only; canonical geometry and saved intent are never changed.
 export function explodedOffset(role:string,center:Vec3,bodyCenter:Vec3,amount:number):Vec3 {
@@ -8,7 +9,7 @@ export function explodedOffset(role:string,center:Vec3,bodyCenter:Vec3,amount:nu
  if(role==='bottom'||role==='foot')return [0,-amount,0];if(role==='top'||role.startsWith('top-'))return [0,amount,0];
  if(role==='back'||role.startsWith('back-')||role==='mounting')return [0,0,-amount];
  if(role.startsWith('plinth'))return [0,-amount,amount];
- if(role==='door'||role==='drawer-front')return [0,0,amount];
+ if(role==='door'||role==='corner-filler'||role==='drawer-front')return [0,0,amount];
  if(role.startsWith('front-'))return [0,role==='front-upper-rail'?amount*.35:-amount*.35,amount];
  if(role==='drawer-back')return [0,0,amount*.5];
  if(role==='divider')return [(center[0]>=bodyCenter[0]?1:-1)*amount*.6,0,amount*.3];
@@ -22,27 +23,34 @@ export function explodedLayout(parts:ExplodedPart[],amount:number):Map<string,Ve
  const result=new Map<string,Vec3>();if(!amount){parts.forEach(p=>result.set(p.id,[0,0,0]));return result;}
  const low=(p:ExplodedPart,a:number)=>p.center[a]-p.size[a]/2,high=(p:ExplodedPart,a:number)=>p.center[a]+p.size[a]/2;
  const center=parts.length?[0,1,2].map(a=>(Math.min(...parts.map(p=>low(p,a)))+Math.max(...parts.map(p=>high(p,a))))/2) as Vec3:[0,0,0] as Vec3;
- const shelf=(p:ExplodedPart)=>p.role==='shelf'||p.role==='drawer-bottom',frontPart=(p:ExplodedPart)=>p.role==='door'||p.role==='drawer-front';
+ const shelf=(p:ExplodedPart)=>p.role==='shelf'||p.role==='drawer-bottom',frontPart=(p:ExplodedPart)=>p.role==='door'||p.role==='corner-filler'||p.role==='drawer-front';
  const ordinary=parts.filter(p=>!shelf(p)&&p.role!=='divider');ordinary.forEach(p=>result.set(p.id,explodedOffset(p.role,p.center,center,amount)));
- const gap=Math.min(12,amount/4);
+ const gap=amount*.15;
  const span=([0,1] as const).map(a=>Math.max(1,Math.max(...parts.map(p=>high(p,a)))-Math.min(...parts.map(p=>low(p,a)))));
  const radial=(p:ExplodedPart):Vec3=>[(p.center[0]-center[0])*2*amount/span[0],(p.center[1]-center[1])*2*amount/span[1],0];
  for(const p of parts.filter(p=>p.role==='divider'))result.set(p.id,radial(p));
  const placed:ExplodedPart[]=[];
  for(const p of parts.filter(shelf).sort((a,b)=>a.center[1]-b.center[1]||a.center[0]-b.center[0]||a.id.localeCompare(b.id))){
-  const spread=radial(p);let x=low(p,0)+spread[0];for(const other of placed)if(Math.abs(other.center[1]-p.center[1])<(other.size[1]+p.size[1])/2+gap&&x<high(other,0)+gap&&x+p.size[0]>low(other,0)-gap)x=high(other,0)+gap;
-  const offset:Vec3=[x-low(p,0),spread[1],amount];result.set(p.id,offset);placed.push({...p,center:p.center.map((n,i)=>n+offset[i]) as Vec3});
+  const spread=radial(p),x=low(p,0)+spread[0];let y=low(p,1)+spread[1];
+  // Nearby drawer bottoms and shelves share a column. Separate their actual
+  // exploded heights rather than moving an entire drawer into another column.
+  for(const other of placed)if(x<high(other,0)+gap&&x+p.size[0]>low(other,0)-gap&&y<high(other,1)+gap&&y+p.size[1]>low(other,1)-gap)y=high(other,1)+gap;
+  const offset:Vec3=[spread[0],y-low(p,1),amount];result.set(p.id,offset);placed.push({...p,center:p.center.map((n,i)=>n+offset[i]) as Vec3});
  }
  // Give unusually wide shelf groups enough side room without pushing the
  // shelves a cabinet depth toward the camera.
  for(const p of ordinary.filter(p=>p.role==='left'||p.role==='right')){const offset=result.get(p.id)!;if(p.role==='right')offset[0]=Math.max(offset[0],Math.max(...placed.map(q=>high(q,0)),high(p,0))+gap-low(p,0));else offset[0]=Math.min(offset[0],Math.min(...placed.map(q=>low(q,0)),low(p,0))-gap-high(p,0));}
+ // Back boards belong to the same drawer column and exploded level.
+ for(const p of parts.filter(p=>p.role==='drawer-back'&&p.assemblyId)){
+  const bottom=result.get(p.assemblyId+'/bottom');if(bottom){const offset=result.get(p.id)!;result.set(p.id,[bottom[0],bottom[1],offset[2]]);}
+ }
  const nonDoors=parts.filter(p=>!frontPart(p)),front=Math.max(0,...nonDoors.map(p=>high(p,2)+result.get(p.id)![2]))+amount;
  // Drawer fronts stay at their drawer's exploded height. Doors occupy a
  // separate depth lane, so overlapping elevations never lift fronts above the box.
  const drawerFronts=parts.filter(p=>p.role==='drawer-front'),doorFront=front+(drawerFronts.length?Math.max(...drawerFronts.map(p=>p.size[2]))+amount:0);
  for(const p of parts.filter(frontPart)){
   const bottom=p.assemblyId?result.get(p.assemblyId+'/bottom'):undefined;
-  result.set(p.id,p.role==='door'?[Math.sign(p.center[0]-center[0])*amount,0,doorFront-low(p,2)]:[bottom?.[0]??0,bottom?.[1]??-amount*.5,front-low(p,2)]);
+  result.set(p.id,(p.role==='door'||p.role==='corner-filler')?[Math.sign(p.center[0]-center[0])*amount,0,doorFront-low(p,2)]:[bottom?.[0]??0,bottom?.[1]??-amount*.5,front-low(p,2)]);
  }
  // Also cover optional advanced panels: separate any residual collision in Y.
  const boxes:ExplodedPart[]=[];

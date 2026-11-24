@@ -151,3 +151,7 @@ function computeDrawerOpeningIssue(e:EvaluatedCabinet):import('./validate').Issu
  const other=hinge?`hinge ${Number(hinge.id.split('/').at(-1))+1} on ${door?.label??'the door'}`:e.panels.find(p=>p.id===result.otherId)?.label??'another part';
  return {code:'machining-drawer-opening',severity:'notice',featureId:drawer.id,relatedIds:[result.otherId!],message:`${drawer.label} cannot fully extend with the selected doors and hinges: it is blocked by ${other}. Review the door placement, hinge or drawer clearance before accepting this setup.`};
 }
+
+// Assembly reuses the same exact oriented-box SAT and modelling tolerance.
+export {collides as motionBoxesCollide};
+export type {Box as MotionBox};

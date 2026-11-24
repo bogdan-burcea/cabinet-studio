@@ -416,7 +416,8 @@ button.btn,.btn .btn__cell,.segmented-buttons__button{font-weight:400}
 button:not(.btn,.icon-btn,.icon-button,.segmented-buttons__button,.link-button,.fake-link):not(:disabled):not([aria-disabled=true]):active,[role=tab]:not([aria-disabled=true]):active{background-image:linear-gradient(var(--color-state-layer-pressed),var(--color-state-layer-pressed))}
 
 /* Press feedback applies to actions; persistent state belongs only to toggles. */
-button:not(:disabled):not([aria-disabled=true]):active{background-color:var(--color-foreground-primary);color:var(--color-foreground-on-inverse)}
+button:not(.app-icon-button):not(:disabled):not([aria-disabled=true]):active{background-color:var(--color-foreground-primary);color:var(--color-foreground-on-inverse)}
+button.app-icon-button:not(:disabled):not([aria-disabled=true]):not([aria-pressed='true']):active{background-color:var(--color-background-tertiary);color:var(--color-foreground-primary)}
 
 /* Education-notice surface only; preserve machining-check layout and controls. */
 .machining-checks-notice{margin:var(--spacing-200) var(--spacing-300);background-color:var(--education-notice-education-background-color,var(--color-background-education));border-radius:var(--education-notice-border-radius,var(--border-radius-100))}
@@ -452,3 +453,59 @@ button:not(:disabled):not([aria-disabled=true]):active{background-color:var(--co
 .hinge-mounting-drawing svg{display:block;width:100%;height:auto;overflow:visible}
 .hinge-mounting-drawing .hinge-datum{stroke-dasharray:3 3;opacity:.5}
 .custom-hinge-apply{display:flex;width:100%;justify-content:center}
+
+/* Library shares the Utilities window and existing Evo controls. */
+.library-entries{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:var(--spacing-300);row-gap:24px;padding:var(--spacing-300)}
+.library-card{display:grid;grid-template-rows:subgrid;grid-row:span 7;row-gap:0;min-width:0;border:1px solid var(--color-border-subtle);border-radius:var(--border-radius-150);overflow:hidden;background:var(--color-background-primary)}
+.library-thumbnail{position:relative;min-width:0;background:var(--color-background-secondary)}
+.library-thumbnail>img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;background:#f7f7f7}
+.library-card-info{display:grid;grid-template-rows:subgrid;grid-row:span 6;row-gap:4px;padding:var(--spacing-150);overflow-wrap:anywhere}
+.library-card-info .field-note{margin:0}
+.library-card-info h3{overflow-wrap:anywhere;font-size:var(--font-size-medium)}
+.library-actions,.library-undo{display:flex;align-items:center;gap:var(--spacing-100)}
+.library-actions{display:flex;gap:8px;align-self:end;margin-top:var(--spacing-200)}
+.library-actions>.btn{flex:1;min-width:0;padding-inline:var(--spacing-100)}
+.library-actions .app-icon-button{width:40px;height:40px}
+.library-actions>.btn{height:40px;min-height:40px}
+.library-dimensions{padding-bottom:var(--spacing-200)}
+.library-feedback,.library-undo{padding:var(--spacing-200) var(--spacing-300)}
+.library-feedback .notice{position:static;max-width:none;margin:0;transform:none}
+.library-dialog .construction-choice{display:grid;gap:var(--spacing-100);margin-bottom:var(--spacing-200)}
+.library-dialog .construction-choice .textbox,.library-dialog .construction-choice input{width:100%}
+@media(max-width:600px){.library-dialog .lightbox-dialog__window{width:100%;max-width:100%}.library-entries{column-gap:var(--spacing-100);row-gap:24px;padding:var(--spacing-200)}.library-card-info{padding:var(--spacing-100)}}
+
+.library-title-actions{display:flex;align-items:center;gap:var(--spacing-100);margin-left:auto}
+.library-save-dialog .lightbox-dialog__main{padding:var(--spacing-300)}
+.library-save-actions{display:flex;flex-wrap:wrap;gap:var(--spacing-100);margin-top:var(--spacing-300)}
+@media(max-width:600px){.library-dialog .cost-title>.library-title-actions{grid-column:2;grid-row:1}}
+
+.library-dialog .lightbox-dialog__window{min-height:min(528px,90dvh)}
+.library-dialog .cost-fields{display:flex;flex-direction:column}
+.library-dialog .library-entries{flex:1;align-content:start}
+.library-dialog .library-entries--empty{align-content:stretch}
+.library-card .library-card-info{align-content:start}
+.library-empty{grid-column:1/-1;display:flex;align-items:center;justify-content:center;text-align:center;margin:0}
+
+/* Assembly keeps the accepted three-column workspace and Evo inspector controls. */
+.assembly-workspace .canvas-area{min-width:0;position:relative}
+.assembly-viewport{height:100%;min-height:0}
+.assembly-add-actions{display:grid;gap:var(--spacing-100);padding:var(--spacing-200) 0}
+.assembly-list{display:grid;gap:var(--spacing-50)}
+.assembly-list .tree-item{width:100%;text-align:left}
+.assembly-empty{position:absolute;inset:40% 24px auto;text-align:center;color:var(--color-foreground-secondary);pointer-events:none}
+.assembly-issue{padding-block:var(--spacing-150);border-bottom:1px solid var(--color-border-subtle)}
+.assembly-issue p{margin-bottom:var(--spacing-100);font-size:var(--font-size-small)}
+.assembly-viewport .camera-toolbar .field-note{margin:0;max-width:240px}
+.assembly-workspace .inspector .full-width-button{margin-top:var(--spacing-150)}
+
+.assembly-workspace .inspector-section > .app-checkbox { margin-bottom: 16px; }
+.assembly-insert-actions{display:grid;grid-template-columns:1fr;gap:var(--spacing-100);margin-top:var(--spacing-100)}
+.assembly-workspace .interior-actions{margin-block:var(--spacing-150)}
+.assembly-dimension-lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;fill:none;stroke:var(--color-foreground-accent);stroke-width:1}
+.assembly-viewport>.viewport-pill{pointer-events:none}
+.assembly-viewport>.viewport-pill{pointer-events:auto}
+.assembly-dimension-value{border:0;background:transparent;color:inherit;font:inherit;padding:0;min-width:24px}
+.assembly-dimension-value:disabled{color:inherit;opacity:1}
+.assembly-dimension-input{width:80px;border:0;background:var(--color-background-elevated);color:var(--color-foreground-primary);font:inherit;outline:0}
+.assembly-rotate-field{display:flex;align-items:flex-end}
+.assembly-rotate-field>.btn{width:100%;height:40px;min-height:40px}

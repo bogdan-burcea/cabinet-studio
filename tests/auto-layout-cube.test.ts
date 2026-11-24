@@ -17,7 +17,7 @@ test('rotation-only layouts still run the complete optimiser and honour grain',(
 });
 test('3D uses perspective and elevation buttons automatically use parallel projection',()=>{
  assert.equal(perspectiveView('perspective'),true);assert.equal(perspectiveView('isometric'),true);
- for(const view of ['front','side','top','rear'] as const)assert.equal(perspectiveView(view),false);
+ for(const view of ['front','left','right','top','rear'] as const)assert.equal(perspectiveView(view),false);
  assert.equal(perspectiveView('top',true),false);assert.equal(perspectiveView('isometric',true),true);
  assert.deepEqual(viewDirection('isometric'),viewDirection('perspective'));assert.deepEqual(viewDirection('front'),[0,0,1]);
 });

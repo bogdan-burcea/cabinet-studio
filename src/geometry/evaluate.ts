@@ -1,3 +1,4 @@
+import {kitchenCornerFiller,KITCHEN_CORNER_REVISION} from '../rules/kitchen-corner';
 import {resolveShaker} from '../rules/shaker';
 import {placeSideBackFasteners} from '../rules/side-back-fasteners';
 import {dividerRailNotches} from '../rules/divider-rail-notches';
@@ -43,7 +44,7 @@ export interface EvaluatedCabinet {
   pockets:ReturnType<typeof resolveConstruction>['pockets'];
   cabineo:ReturnType<typeof resolveCabineo>;
   drawers:ReturnType<typeof resolveDrawers>;
-  revision: typeof EVALUATOR_REVISION; cabinetId: string; panels: Panel[]; opening: Opening; openings: Opening[]; divisions: Division[];
+  revision: typeof EVALUATOR_REVISION|typeof KITCHEN_CORNER_REVISION; cabinetId: string; panels: Panel[]; opening: Opening; openings: Opening[]; divisions: Division[];
   fronts: ReturnType<typeof resolveFronts>;
   adjustable: ReturnType<typeof resolveAdjustable>;
   mounting: ReturnType<typeof resolveMounting>;
@@ -84,6 +85,7 @@ export function evaluate(c: Cabinet): EvaluatedCabinet {
   const interiorsWithFingers=fingerInteriors(c,basePanels,construction.pockets),fingerCuts=addDogbones(c,interiorsWithFingers.panels.map(p=>({...p,origin:p.center.map((n,i)=>n-p.size[i]/2) as Vec3})),interiorsWithFingers.pockets),hanging=wallHangingCuts(c),notched=dividerRailNotches(c,interiorsWithFingers.panels,interiors.root),pockets=[...construction.pockets,...fingerCuts,...hanging.pockets,...rearCornerCuts(c,interiorsWithFingers.panels),...profiles,...notched.pockets];
   const narrow=narrowToolCuts(c,pockets);if(narrow.length){const width=Math.min(...narrow.flatMap(p=>p.size.filter((_,i)=>i!==p.axis)));issues.push({code:'machining-tool-width',featureId:c.id,severity:'notice',relatedIds:[...new Set([...narrow.map(p=>p.panelId),...narrow.every(p=>!p.kind)?[`${c.id}/panel/back`]:[]])],message:`${narrow.length} connection cuts are narrower than the Ø${cnc(c).bitDiameter} mm cutter (smallest width ${+width.toFixed(2)} mm). Use a smaller cutter or compatible thicker stock. Joint fit allowance is unchanged.`});}
   const panels: Panel[] = notched.panels.map(panel => ({ ...panel, ...panelMaterials(c, panel) }));
+  const cornerFiller=kitchenCornerFiller(c,fronts.doors);if(cornerFiller)panels.push({...cornerFiller,...panelMaterials(c,cornerFiller)});
   panels.forEach(name);
   const hardware=doorHardware(c,fronts.doors);issues.push(...hingePlateReview(panels,hardware.hinges),...innerDrawerHingeReview(drawers.drawers,hardware.hinges));
   let drilling=[...drawerDrilling(c,panels),...hanging.bores,...footDrilling(c),...hardware.bores,...backPilots(c),...shelfDrilling(c,panels,interiors.openings)];
@@ -94,6 +96,6 @@ export function evaluate(c: Cabinet): EvaluatedCabinet {
   pockets.push(...shaker.pockets.filter(p=>!shaker.owners.some(id=>p.panelId.startsWith(id+'/shaker/'))));
   const actualPanels=[...reviewPanels.filter(p=>!shaker.owners.includes(p.id)),...shaker.panels],actualCuts=[...pockets.filter(p=>!shaker.owners.includes(p.panelId)),...shaker.pockets.filter(p=>shaker.owners.some(id=>p.panelId.startsWith(id+'/shaker/')))];
   issues.push(...machiningReview(actualPanels,cabineo,shaker.bores.filter(b=>!cabineo.some(j=>j.bores.some(v=>v.id===b.id))),actualCuts));
-  return { shaker, doorHardware:hardware, drilling, backFasteners, pockets, cabineo, revision: EVALUATOR_REVISION, cabinetId: c.id, issues, drawers, fronts, adjustable, installation, mounting: resolveMounting(c), panels, opening: interiors.root, openings: interiors.openings, divisions: interiors.divisions,
+  return { shaker, doorHardware:hardware, drilling, backFasteners, pockets, cabineo, revision: c.cabinetType==='corner'?KITCHEN_CORNER_REVISION:EVALUATOR_REVISION, cabinetId: c.id, issues, drawers, fronts, adjustable, installation, mounting: resolveMounting(c), panels, opening: interiors.root, openings: interiors.openings, divisions: interiors.divisions,
     construction: { rearSetback: construction.rearSetback, topGap: construction.topGap, backGap: construction.backGap } };
 }

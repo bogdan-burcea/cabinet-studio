@@ -105,7 +105,7 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
   onPreview={()=>{}} onCommit={value=>changeStock({[key]:value})} onCancel={()=>{}}/>;
  const toolParts=part?[part]:entry?.sheet.placements.map(p=>p.part)??[];
 
- return <div className="workspace cnc-workspace" id="workspace-cnc" role="tabpanel" aria-labelledby="workspace-tab-1" hidden={!active}>
+ return <div className="workspace cnc-workspace" id="workspace-cnc" role="tabpanel" aria-labelledby="workspace-tab-2" hidden={!active}>
   {parts.length>0&&<>
    <aside className="elements-panel cnc-elements" aria-label="CNC elements">
       <div className="panel-heading"><h2>Layout</h2><span className="count-badge">{parts.length} parts</span></div>

@@ -4,6 +4,7 @@ import {useRef} from 'react';
 type Tab<Id extends string> = {id:Id; label:string; controls?:string};
 const tabs = [
   {id:'box', label:'Build', controls:'workspace-box'},
+  {id:'assembly',label:'Assembly',controls:'workspace-assembly'},
   {id:'cnc', label:'Cut', controls:'workspace-cnc'},
 ] as const;
 export type Workspace = typeof tabs[number]['id'];
@@ -24,7 +25,7 @@ export function SegmentedTabs<Id extends string>({tabs,value,label,prefix,classN
           event.preventDefault();
           const next=tabs[event.key==='Home'?0:event.key==='End'?tabs.length-1:(i+(event.key==='ArrowLeft'?-1:1)+tabs.length)%tabs.length].id;
           onChange(next);items.current.get(next)?.focus();
-        }}><span className="segmented-buttons__button-cell">{prefix==='workspace-tab'&&<Icon name={tab.id==='box'?'cabinet':'cut'} size={20}/>} {tab.label}</span></button></li>)}
+        }}><span className="segmented-buttons__button-cell">{prefix==='workspace-tab'&&<Icon name={tab.id==='box'?'cabinet':tab.id==='assembly'?'assembly':'cut'} size={20}/>} {tab.label}</span></button></li>)}
     </ul>
   </div>;
 }

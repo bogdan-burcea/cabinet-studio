@@ -1,7 +1,7 @@
 export interface CustomHingeSpec {article:string;plate:string;cupDiameter:number;cupDepth:number;screwPitch:number;screwOffset:number;plateLine:number;platePitch:number;doorPilotDiameter:number;doorPilotDepth:number;platePilotDiameter:number;platePilotDepth:number;maxAngle:number;mountingReach:number;mountingHeight:number;mountingDepth:number;openProtrusion:number;openingAdvance:number}
 export interface CncSettings {revision:'cnc-1';pilotDiameter?:number;tolerance:number;bitDiameter:number;dogbones:boolean;throughOpposed:boolean;cabineoPerSide:number;partCabineoCounts?:Record<string,number>;shelfRowInsets?:{front:number;rear:number};rearChamfers?:Record<string,{low?:number;high?:number}>;bottomFace?:'inside'|'outside';bottomFastenersThrough?:boolean;throughHoles?:Record<string,'fasteners'|'adjustment'>}
 export type Axis = 'width' | 'height' | 'depth';
-export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back' | 'shelf' | 'divider' | 'top-front-rail' | 'top-rear-rail' | 'back-upper-rail' | 'back-lower-rail' | 'front-upper-rail' | 'front-lower-rail' | 'plinth-front' | 'plinth-left' | 'plinth-right' | 'door';
+export type PanelRole = 'left' | 'right' | 'top' | 'bottom' | 'back' | 'shelf' | 'divider' | 'top-front-rail' | 'top-rear-rail' | 'back-upper-rail' | 'back-lower-rail' | 'front-upper-rail' | 'front-lower-rail' | 'plinth-front' | 'plinth-left' | 'plinth-right' | 'door' | 'corner-filler';
 export interface Carcass {
   machining?:CncSettings;
   corner?:{mode:'puzzle';revision:'puzzle-1';pitch:number};
@@ -72,7 +72,7 @@ export interface MetalDrawer {
 }
 export interface Cabinet {
   frontDefaults?:{edgeGap:number;frontGap:number;cornerRadius:number};
-  cabinetType?:'open'|'base'|'wall'|'tall';
+  cabinetType?:'open'|'base'|'wall'|'tall'|'corner';
   names?:Record<string,string>;
   id: string;
   name: string;
