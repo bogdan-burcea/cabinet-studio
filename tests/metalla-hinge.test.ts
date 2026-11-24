@@ -49,3 +49,24 @@ test('Metalla rejects incompatible stock, gap and side adjustment with a retaine
  assert.equal(metallaMinimumGap(18,4),1.5);assert.equal(metallaMinimumGap(18,6),3.5);
  assert.throws(()=>evaluate({...c,fronts:c.fronts.map(d=>({...d,hinge:{...d.hinge!,cupDistance:3},reveal:6}))}),/side adjustment/);
 });
+
+
+import {resizeEnvelope} from '../src/commands/dimensions';
+import {addDrawerStack} from '../src/commands/drawers';
+import {antaroPin,chooseDrawerPack} from '../src/catalogue/drawers';
+import {editSimpleDoors} from '../src/commands/simple-doors';
+import {drawerOpeningEditIssue} from '../src/commands/drawer-opening-preflight';
+for(const family of ['antaro','merivobox'] as const)for(const layout of ['single','pair'] as const)for(const placement of ['inset','overlay'] as const){
+ test(`adding ${layout} ${placement} doors over three ${family} inner drawers offers a complete fitting correction`,()=>{
+  const base=resizeEnvelope(createCabinet(),{width:400,height:720,depth:560}),before=addDrawerStack(base,base.compartments.id,3,chooseDrawerPack(antaroPin,{family}),false,true).cabinet;
+  const added=addSimpleDoors(before,layout).cabinet,requested=editSimpleDoors(added,added.fronts.map(d=>d.id),{placement}),saved=serialize(before),issue=drawerOpeningEditIssue(requested,before);
+  if(!issue){assert.equal(innerDrawerOpeningRepairs(requested).length,0);return;}
+  const option=innerDrawerOpeningRepairs(requested).find(r=>r.label.includes('Häfele'));assert.ok(option,'A valid hinge fit must be offered rather than an empty correction dialog');
+  const next=option.cabinet,e=evaluate(next);assert.equal(drawerOpeningEditIssue(next,before),null);assert.equal(drawerOpeningIssue(e),null);
+  assert.deepEqual(next.drawers,before.drawers);assert.deepEqual(next.compartments,before.compartments);assert.deepEqual(next.envelope,before.envelope);assert.deepEqual(next.fronts.map(d=>[d.id,d.placement]),requested.fronts.map(d=>[d.id,d.placement]));
+  assert.ok(e.doorHardware.hinges.every(h=>h.softClose&&h.maxAngle===155));assert.ok(!e.issues.some(i=>['machining-hinge-plate','machining-hole-collision','machining-collision'].includes(i.code)));
+  const opened=safeDoorAngles(e,{},next.fronts.map(d=>d.id),155);assert.equal(opened.blocked,false);const extended=safeInnerDrawerExtensions(e,{}, {...opened.angles,...Object.fromEntries(next.drawers!.map(d=>[d.id,100]))});assert.equal(extended.blocked,false);assert.ok(next.drawers!.every(d=>extended.angles[d.id]===100));
+  assert.equal(safeInnerDrawerExtensions(e,{},Object.fromEntries(next.drawers!.map(d=>[d.id,100]))).blocked,true,'Closed doors must still block drawers');
+  const store=new CabinetStore(before);assert.ok(store.commit(next));store.undo();assert.equal(serialize(store.getSnapshot().committed),saved);store.redo();assert.deepEqual(store.getSnapshot().committed,next);assert.deepEqual(deserialize(serialize(next)),next);assert.equal(serialize(before),saved);
+ });
+}

@@ -5,7 +5,7 @@ import {evaluate} from '../geometry/evaluate';
 import {cnc} from '../rules/cnc';
 import {setCnc} from './cnc';
 import {setSimpleFeet} from './simple-supports';
-import {safeDoorAngles,safeInnerDrawerExtensions,doorAngleLimit} from '../rules/door-motion';
+import {safeDoorAngles,safeInnerDrawerExtensions,doorAngleLimit,drawerOpeningIssue} from '../rules/door-motion';
 import {backFixingRepairs} from './machining-repairs';
 import {editSimpleDoors} from './simple-doors';
 type MachiningIssue=ReturnType<typeof evaluate>['issues'][number];
@@ -66,16 +66,17 @@ export function hingePlateRepairs(c:Cabinet):EditRepair[]{
 /** Check the complete opening, including the next tray and every hinge obstruction. Never offer a partial correction. */
 export function innerDrawerOpeningRepairs(c:Cabinet):EditRepair[]{
  const initial=evaluate(c),ids=c.fronts.map(d=>d.id),existing=machiningCollisionKeys(initial.issues);
+ if(!drawerOpeningIssue(initial))return [];
  const check=(candidate:Cabinet)=>{
   const model=evaluate(candidate),target=Math.max(0,...ids.map(id=>doorAngleLimit(model,id))),doors=safeDoorAngles(model,{},ids,target);
   if(doors.blocked)return false;
   return !safeInnerDrawerExtensions(model,{}, {...doors.angles,...Object.fromEntries(model.drawers.drawers.map(d=>[d.id,100]))}).blocked&&[...machiningCollisionKeys(model.issues)].every(key=>existing.has(key));
  };
  const metallaOptions:EditRepair[]=[];
- if(c.fronts.some(d=>d.placement==='inset')&&c.drawers?.some(d=>d.internal))try{
+ if(c.fronts.length&&c.drawers?.some(d=>d.internal))try{
   const fitted=fitMetallaHinges(c,ids),candidates=evaluate(fitted).issues.some(i=>i.code==='machining-hinge-plate')?hingePlateRepairs(fitted).map(r=>r.cabinet):[fitted];
   const clear=candidates.find(candidate=>!evaluate(candidate).issues.some(i=>i.code==='machining-hinge-plate')&&check(candidate));
-  if(clear&&JSON.stringify(clear.fronts)!==JSON.stringify(c.fronts))metallaOptions.push({label:'Use soft-close Häfele Metalla hinges; retain inset doors and internal drawers (provisional clearance study)',cabinet:clear});
+  if(clear&&JSON.stringify(clear.fronts)!==JSON.stringify(c.fronts))metallaOptions.push({label:`Use soft-close Häfele Metalla hinges and fit their positions; retain ${c.fronts.every(d=>d.placement==='inset')?'inset':c.fronts.every(d=>d.placement==='overlay')?'overlay':'the selected'} doors and internal drawers (provisional clearance study)`,cabinet:clear});
  }catch{/* Only complete, evaluated fits are offered. */}
  const opened=safeDoorAngles(initial,{},ids,Math.max(0,...ids.map(id=>doorAngleLimit(initial,id))));
  const blocked=safeInnerDrawerExtensions(initial,{}, {...opened.angles,...Object.fromEntries(initial.drawers.drawers.map(d=>[d.id,100]))});

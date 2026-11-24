@@ -150,3 +150,47 @@ test('Assembly handle symbols reuse Build positions for pulls, knobs, holes and 
 test('drawer handle marks respect horizontal placement and translated cabinet origins without changing geometry',async()=>{
  const {addMetalDrawer}=await import('../src/commands/drawers');const {defaultDrawerHandle}=await import('../src/rules/handles');const {assemblyHandleSymbols,assemblyModel}=await import('../src/rules/assembly');const c=createCabinet();c.envelope.origin=[100,200,300];const added=addMetalDrawer(c,c.compartments.id).cabinet,drawer=added.drawers![0],native={...added,drawers:[{...drawer,handle:{...defaultDrawerHandle(),kind:'pull' as const}}]},item:AssemblyItem={id:'drawers',label:'Drawers',kind:'cabinet',cabinet:native,position:[800,0,1200],rotation:270},before=JSON.stringify(assemblyModel(native)),symbols=assemblyHandleSymbols(item);assert.equal(symbols.length,1);const mark=symbols[0];assert.equal(mark.shape,'line');if(mark.shape!=='line')throw Error();assert.equal(mark.from[1],mark.to[1]);assert.equal(mark.to[0]-mark.from[0],152);assert.ok(mark.from[0]>0&&mark.to[0]<600);assert.ok(mark.from[1]<720);assert.equal(JSON.stringify(assemblyModel(native)),before);
 });
+
+
+test('dragging within a row preserves the slot and reinserting opens space for every neighbour',async()=>{
+ const {moveAssemblyGroup}=await import('../src/rules/assembly');const initial=assembly([cabinet('A'),cabinet('B',[600,0,0]),cabinet('C',[1200,0,0])]);
+ const positions=(a:Assembly)=>a.items.map(p=>p.position);
+ assert.deepEqual(positions(moveAssemblyGroup(initial,['B'],'B',[610,0,5])),positions(initial));
+ const outside=moveAssemblyGroup(initial,['B'],'B',[600,0,600]);assert.equal(outside.items[1].position[2],560);assert.equal(outside.items[2].position[0],600);
+ const restored=moveAssemblyGroup(outside,['B'],'B',[600,0,0]);assert.deepEqual(positions(restored),positions(initial));assert.equal(assemblyIssues(restored).length,0);
+ const reordered=moveAssemblyGroup(initial,['B'],'B',[1300,0,0]);assert.deepEqual(positions(reordered),[[0,0,0],[1200,0,0],[600,0,0]]);
+ const store=new AssemblyStore(outside);store.commit(restored);store.undo();assert.deepEqual(store.getSnapshot().assembly,outside);store.redo();assert.deepEqual(store.getSnapshot().assembly,restored);assert.deepEqual(deserializeAssembly(serializeAssembly(restored)),restored);
+});
+test('row insertion supports narrow panels, reserved spaces, unequal widths and all quarter turns',async()=>{
+ const {moveAssemblyGroup,turnPoint}=await import('../src/rules/assembly');
+ for(const rotation of [0,90,180,270] as const){
+  const transform=(p:Vec3)=>turnPoint(p,rotation).map(n=>n||0) as Vec3,panel:AssemblyItem={id:'P',label:'Panel',kind:'end-panel',size:[18,720,560],position:transform([600,0,560]),rotation},space:AssemblyItem={id:'S',label:'Space',kind:'space',size:[100,720,560],position:transform([600,0,0]),rotation};
+  const initial=assembly([{...cabinet('A'),rotation},{...cabinet('C'),rotation,position:transform([700,0,0])},space,panel,cabinet('remote',[5000,900,5000])]),next=moveAssemblyGroup(initial,['P'],'P',transform([600,0,0]));
+  assert.deepEqual(next.items.find(p=>p.id==='P')!.position,transform([600,0,0]));assert.deepEqual(next.items.find(p=>p.id==='S')!.position,transform([618,0,0]));assert.deepEqual(next.items.find(p=>p.id==='C')!.position,transform([718,0,0]));assert.equal(next.items.at(-1),initial.items.at(-1));assert.equal(assemblyIssues(next).filter(i=>i.kind==='body').length,0);
+ }
+});
+test('contiguous group insertion compacts the old row and keeps the selected block rigid',async()=>{
+ const {moveAssemblyGroup}=await import('../src/rules/assembly');const initial=assembly(['A','B','C','D','E'].map((id,i)=>cabinet(id,[600*i,0,0]))),next=moveAssemblyGroup(initial,['B','C'],'C',[2400,0,0]);
+ assert.deepEqual(next.items.map(p=>p.position[0]),[0,1800,2400,600,1200]);assert.equal(assemblyIssues(next).length,0);
+ const wall=(id:string,x:number):AssemblyItem=>{const p=cabinet(id,[x,1380,0]);if(p.kind!=='cabinet')throw Error();return {...p,cabinet:{...p.cabinet,cabinetType:'wall'}};};
+ const stacked=assembly([cabinet('base'),wall('W1',0),wall('W2',600),{...wall('W3',600),position:[600,1380,560]}]),inserted=moveAssemblyGroup(stacked,['W3'],'W3',[600,1380,0]);assert.equal(inserted.items[0],stacked.items[0]);assert.deepEqual(inserted.items[2].position,[1200,1380,0]);assert.deepEqual(inserted.items[3].position,[600,1380,0]);
+});
+
+test('docking a row leader to a perpendicular cabinet carries its following row instead of blocking the snap',async()=>{
+ const {moveAssemblyGroup}=await import('../src/rules/assembly');
+ for(const rotation of [0,90,180,270] as const){
+  const {turnPoint}=await import('../src/rules/assembly'),pose=(p:Vec3)=>turnPoint(p,rotation).map(n=>n||0) as Vec3;
+  const left=cabinet('left',pose([0,0,600]),((90+rotation)%360) as 0|90|180|270),leader=cabinet('leader',pose([1000,0,0]),rotation),following=cabinet('following',pose([1600,0,0]),rotation),initial=assembly([left,leader,following]),next=moveAssemblyGroup(initial,['leader'],'leader',pose([570,0,0]));
+  assert.deepEqual(next.items[1].position,pose([560,0,0]));assert.deepEqual(next.items[2].position,pose([1160,0,0]));assert.equal(next.items[0],left);assert.equal(assemblyIssues(next).filter(i=>i.kind==='body').length,0);
+ }
+});
+
+test('wall cabinets dock beside tall cabinets even when another wall row exists, aligning to the chosen tall top',async()=>{
+ const {moveAssemblyGroup,turnPoint}=await import('../src/rules/assembly');
+ const typed=(id:string,type:'wall'|'tall',position:Vec3,width:number,height:number,depth:number,rotation:0|90|180|270):AssemblyItem=>{const p=cabinet(id,position,rotation);if(p.kind!=='cabinet')throw Error();return {...p,cabinet:{...p.cabinet,cabinetType:type,envelope:{...p.cabinet.envelope,width,height,depth}}};};
+ for(const rotation of [0,90,180,270] as const){
+  const pose=(p:Vec3)=>turnPoint(p,rotation).map(n=>n||0) as Vec3,left=typed('left','wall',pose([0,1380,0]),560,720,350,rotation),selected=typed('selected','wall',pose([560,1380,0]),560,720,350,rotation),tall=typed('tall','tall',pose([1140,0,0]),600,2300,560,rotation),initial=assembly([left,selected,tall]);
+  const next=moveAssemblyGroup(initial,['selected'],'selected',pose([580,1580,0]));assert.deepEqual(next.items[1].position,pose([580,1580,0]));assert.equal(next.items[0],left);assert.equal(next.items[2],tall);assert.equal(assemblyBounds(next.items[1]).max[1],2300);assert.equal(assemblyIssues(next).filter(i=>i.kind==='body').length,0);
+  const floor=moveAssemblyGroup(assembly([selected,{...tall,position:pose([1300,0,0])}]),['tall'],'tall',pose([1120,0,0]));assert.deepEqual(floor.items[1].position,pose([1120,0,0]));
+ }
+});

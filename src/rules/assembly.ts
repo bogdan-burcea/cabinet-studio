@@ -36,7 +36,7 @@ function forwardRun(a:Assembly,after:AssemblyItem,reach=0){
 const wallItem=(p:AssemblyItem)=>p.kind==='cabinet'&&p.cabinet.cabinetType==='wall';
 function mountingHeight(a:Assembly,item:AssemblyItem,reference?:AssemblyItem){
  if(item.kind!=='cabinet')return reference?.position[1]??item.position[1];if(!wallItem(item))return 0;
- const walls=a.items.filter(p=>wallItem(p)&&p.id!==item.id),tall=a.items.filter(p=>p.kind==='cabinet'&&p.cabinet.cabinetType==='tall'&&p.id!==item.id),ref=reference&&wallItem(reference)?reference:walls.at(-1)??tall.at(-1);return Math.max(0,(ref?assemblyBounds(ref).max[1]:2100)-assemblySize(item)[1]);
+ const walls=a.items.filter(p=>wallItem(p)&&p.id!==item.id),tall=a.items.filter(p=>p.kind==='cabinet'&&p.cabinet.cabinetType==='tall'&&p.id!==item.id),ref=reference&&(wallItem(reference)||reference.kind==='cabinet'&&reference.cabinet.cabinetType==='tall')?reference:walls.at(-1)??tall.at(-1);return Math.max(0,(ref?assemblyBounds(ref).max[1]:2100)-assemblySize(item)[1]);
 }
 export function appendAssemblyItem(a:Assembly,item:AssemblyItem,afterId?:string):Assembly{
  let after=a.items.find(p=>p.id===afterId)??a.items.filter(p=>!p.attachedTo).at(-1);if(after?.attachedTo)after=a.items.find(p=>p.id===after!.attachedTo);
@@ -56,17 +56,53 @@ export function resizeAssemblyItem(a:Assembly,next:AssemblyItem):Assembly{
  return withCornerFiller({...a,items:a.items.map(p=>p.id===next.id?next:run.has(p.id)?{...p,position:p.position.map((n,i)=>n+delta[i]) as Vec3}:p)},next.id);
 }
 export function dockAssemblyGroup(a:Assembly,ids:string[],anchorId:string,desired:Vec3):Assembly{
- const anchor=a.items.find(p=>p.id===anchorId);if(!anchor)throw Error('Select an assembly item.');const moving=new Set(assemblyGroupIds(a,ids)),others=a.items.filter(p=>!moving.has(p.id)&&!p.attachedTo),sameTier=others.filter(p=>anchor.kind!=='cabinet'||p.kind!=='cabinet'||wallItem(p)===wallItem(anchor)),candidates:Vec3[]=[];
+ const anchor=a.items.find(p=>p.id===anchorId);if(!anchor)throw Error('Select an assembly item.');const moving=new Set(assemblyGroupIds(a,ids)),others=a.items.filter(p=>!moving.has(p.id)&&!p.attachedTo),sameTier=others.filter(p=>anchor.kind!=='cabinet'||p.kind!=='cabinet'||wallItem(p)===wallItem(anchor)||anchor.cabinet.cabinetType==='tall'||p.cabinet.cabinetType==='tall'),candidates:Vec3[]=[];
  const put=(position:Vec3)=>{const delta=position.map((n,i)=>n-anchor.position[i]),moved=a.items.filter(p=>moving.has(p.id)&&!p.attachedTo).map(p=>({...p,position:p.position.map((n,i)=>n+delta[i]) as Vec3}));if(moved.some(p=>others.some(q=>{const b=assemblyBounds(p),c=assemblyBounds(q);return [0,1,2].every(k=>Math.min(b.max[k],c.max[k])-Math.max(b.min[k],c.min[k])>.1);})))return;candidates.push(position);};
  for(const other of sameTier){const y=mountingHeight(a,anchor,other),b=assemblyBounds({...anchor,position:[0,y,0]}),q=assemblyBounds(other);for(const axis of [0,2] as const){const cross=axis===0?2:0;for(const edge of [q.min[axis]-b.max[axis],q.max[axis]-b.min[axis]])for(const align of [q.min[cross]-b.min[cross],q.max[cross]-b.max[cross]]){const p:Vec3=[0,y,0];p[axis]=edge;p[cross]=align;put(p);}}}
  // A first wall cabinet can align above a floor unit; floor units stay on the floor.
  if(!sameTier.length){for(const other of others){const y=mountingHeight(a,anchor,other),b=assemblyBounds({...anchor,position:[0,y,0]}),q=assemblyBounds(other);put([q.min[0]-b.min[0],y,q.min[2]-b.min[2]]);}}
  const distance=(p:Vec3)=>p.reduce((sum,n,i)=>sum+(n-desired[i])**2,0);candidates.sort((x,y)=>distance(x)-distance(y));const position=candidates[0]??(!others.length?[desired[0],anchor.kind==='cabinet'?mountingHeight(a,anchor):desired[1],desired[2]] as Vec3:anchor.position),delta=position.map((n,i)=>n-anchor.position[i]);return {...a,items:a.items.map(p=>moving.has(p.id)?{...p,position:p.position.map((n,i)=>Math.round((n+delta[i])*10)/10) as Vec3}:p)};
 }
-export function moveAssemblyGroup(a:Assembly,ids:string[],anchorId:string,position:Vec3,snap=true){
- if(snap){const anchor=a.items.find(p=>p.id===anchorId)!;let base=a;if(ids.length===1&&Math.hypot(position[0]-anchor.position[0],position[2]-anchor.position[2])>assemblySize(anchor)[0]/2){const run=forwardRun(a,anchor),direction=turnPoint([-(anchor.runDirection??1)*assemblySize(anchor)[0],0,0],anchor.rotation);base={...a,items:a.items.map(p=>run.has(p.id)?{...p,position:p.position.map((n,i)=>n+direction[i]) as Vec3}:p)};}return dockAssemblyGroup(base,ids,anchorId,position);}
- const anchor=a.items.find(p=>p.id===anchorId);if(!anchor)throw Error('Select an assembly item.');const set=new Set(assemblyGroupIds(a,ids)),isolated={...a,items:a.items.filter(p=>p.id===anchorId||!set.has(p.id))},placed=placeAssemblyItem(isolated,anchorId,position,snap).items.find(p=>p.id===anchorId)!,delta=placed.position.map((n,i)=>n-anchor.position[i]);
- return {...a,items:a.items.map(p=>set.has(p.id)?{...p,position:p.position.map((n,i)=>n+delta[i]) as Vec3}:p)};
+/** Follow only the straight row, never a touching perpendicular return or another tier. */
+function straightTail(a:Assembly,edge:AssemblyItem,excluded:Set<string>){
+ const direction=turnPoint([edge.runDirection??1,0,0],edge.rotation),axis=direction[0]?0:2,cross=axis===0?2:0,sign=direction[axis],b=assemblyBounds(edge),result=new Set<string>();let boundary=sign>0?b.max[axis]:b.min[axis];
+ for(let step=0;step<a.items.length;step++){
+  const next=a.items.find(p=>{if(excluded.has(p.id)||result.has(p.id)||p.attachedTo||p.rotation!==edge.rotation)return false;const q=assemblyBounds(p);return Math.abs((sign>0?q.min[axis]:q.max[axis])-boundary)<.1&&Math.abs(q.min[cross]-b.min[cross])<.1&&Math.abs(q.min[1]-b.min[1])<.1;});
+  if(!next)break;result.add(next.id);const q=assemblyBounds(next);boundary=sign>0?q.max[axis]:q.min[axis];
+ }
+ return new Set(assemblyGroupIds(a,[...result]));
+}
+function translateItems(a:Assembly,ids:Set<string>,delta:Vec3):Assembly{return {...a,items:a.items.map(p=>ids.has(p.id)?{...p,position:p.position.map((n,i)=>Math.round((n+delta[i])*10)/10) as Vec3}:p)};}
+function overlapping(a:AssemblyItem,b:AssemblyItem){const x=assemblyBounds(a),y=assemblyBounds(b);return [0,1,2].every(k=>Math.min(x.max[k],y.max[k])-Math.max(x.min[k],y.min[k])>.1);}
+export function moveAssemblyGroup(a:Assembly,ids:string[],anchorId:string,position:Vec3,snap=true):Assembly{
+ const anchor=a.items.find(p=>p.id===anchorId);if(!anchor)throw Error('Select an assembly item.');const moving=new Set(assemblyGroupIds(a,ids)),selected=a.items.filter(p=>moving.has(p.id)&&!p.attachedTo);
+ if(!snap)return translateItems(a,moving,position.map((n,i)=>n-anchor.position[i]) as Vec3);
+ const direction=turnPoint([anchor.runDirection??1,0,0],anchor.rotation),axis=direction[0]?0:2,cross=axis===0?2:0,sign=direction[axis],bounds=selected.map(assemblyBounds),min=[0,1,2].map(k=>Math.min(...bounds.map(b=>b.min[k]))) as Vec3,max=[0,1,2].map(k=>Math.max(...bounds.map(b=>b.max[k]))) as Vec3;
+ // Compact a contiguous source block, even on a short drag. Reinsertion at its
+ // original boundary restores the original row exactly, without a distance threshold.
+ const ordered=[...selected].sort((x,y)=>assemblyBounds(x).min[axis]-assemblyBounds(y).min[axis]),straight=ordered.every((p,i)=>p.rotation===anchor.rotation&&Math.abs(assemblyBounds(p).min[cross]-min[cross])<.1&&Math.abs(assemblyBounds(p).min[1]-min[1])<.1&&(!i||Math.abs(assemblyBounds(ordered[i-1]).max[axis]-assemblyBounds(p).min[axis])<.1));
+ let base=a;
+ if(straight){const last=sign>0?ordered.at(-1)!:ordered[0],tail=straightTail(a,last,moving);base=translateItems(a,tail,direction.map(n=>-n*(max[axis]-min[axis])) as Vec3);}
+ const candidates:Assembly[]=[dockAssemblyGroup(base,ids,anchorId,position)];
+ // Also try docking with the following row intact. Compacting it into the old
+ // slot can otherwise make it obstruct a perfectly clear perpendicular join.
+ if(straight){const last=sign>0?ordered.at(-1)!:ordered[0],tail=straightTail(a,last,moving);if(tail.size)candidates.push(dockAssemblyGroup(a,[...moving,...tail],anchorId,position));}
+
+ const valid=(candidate:Assembly)=>{const changed=new Set(candidate.items.filter(p=>{const old=a.items.find(q=>q.id===p.id)!;return moving.has(p.id)||p.position.some((n,i)=>n!==old.position[i]);}).map(p=>p.id));return !candidate.items.some((p,i)=>candidate.items.slice(i+1).some(q=>(changed.has(p.id)||changed.has(q.id))&&p.attachedTo!==q.id&&q.attachedTo!==p.id&&overlapping(p,q)));};
+ // Open a slot at either edge of a nearby row item, then translate the complete
+ // selected group into it. Explicit spaces/panels remain members of the row.
+ for(const target of base.items.filter(p=>!moving.has(p.id)&&!p.attachedTo)){
+  if(anchor.kind==='cabinet'&&target.kind==='cabinet'&&wallItem(anchor)!==wallItem(target))continue;
+  const dir=turnPoint([target.runDirection??1,0,0],target.rotation),k=dir[0]?0:2,c=k===0?2:0,positive=dir[k]>0,q=assemblyBounds(target),span=max[k]-min[k],y=mountingHeight(base,anchor,target);
+  for(const before of [true,false])for(const align of [q.min[c]-min[c],q.max[c]-max[c]]){
+   const boundary=before?(positive?q.min[k]:q.max[k]):(positive?q.max[k]:q.min[k]),delta:Vec3=[0,y-anchor.position[1],0];delta[k]=boundary-(positive?min[k]:max[k]);delta[c]=align;
+   const tail=straightTail(base,target,moving);if(before)for(const id of assemblyGroupIds(base,[target.id]))tail.add(id);
+   const shifted=translateItems(base,tail,dir.map(n=>n*span) as Vec3),candidate=translateItems(shifted,moving,delta);
+   if(valid(candidate))candidates.push(candidate);
+  }
+ }
+ const distance=(candidate:Assembly)=>candidate.items.find(p=>p.id===anchorId)!.position.reduce((sum,n,i)=>sum+(n-position[i])**2,0);
+ const clear=candidates.filter(valid);clear.sort((x,y)=>distance(x)-distance(y));return clear[0]??a;
 }
 export function rotateAssemblyGroup(a:Assembly,ids:string[],snap=true):Assembly{
  const expanded=assemblyGroupIds(a,ids),selected=a.items.filter(p=>expanded.includes(p.id));if(!selected.length)return a;const bounds=selected.map(assemblyBounds),pivot:Vec3=ids.length===1?a.items.find(p=>p.id===ids[0])!.position:[0,1,2].map(k=>(Math.min(...bounds.map(b=>b.min[k]))+Math.max(...bounds.map(b=>b.max[k])))/2) as Vec3;

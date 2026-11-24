@@ -12,6 +12,7 @@ import type {EvaluatedCabinet} from '../geometry/evaluate';
 import {CncViewport} from '../viewport/CncViewport';
 import type {CncScene} from '../viewport/cnc-scene';
 import {sheetsForExport} from '../cnc/sheet-export';
+import {downloadSheetStl,requestSheetStl} from '../cnc/stl-download';
 import {downloadSheetStep,requestSheetStep} from '../cnc/step-download';
 import {Checkbox,Button,FieldPair,IconButton,Section} from './components';
 import {DimensionField} from './DimensionField';
@@ -100,6 +101,17 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
   }catch(error){onNotice((error as Error).message,true);}
   finally{exporting.current=false;setProgress('');}
  }
+ async function exportStl(){
+  if(!entry||exporting.current)return;
+  exporting.current=true;setProgress('Preparing STL…');
+  try{
+   const exportingSheets=selectedSheets.length?selectedSheets:[entry],material=entry.material.replace(/[^a-z0-9.-]+/gi,'-');
+   const file=await requestSheetStl(sheetsForExport(exportingSheets,offcuts,false),(done,total)=>setProgress(`Meshing part ${done} of ${total}…`));
+   downloadSheetStl(file,exportingSheets.length>1?'selected-sheets.stl':`${material}-${entry.label.toLowerCase().replace(' ','-')}.stl`);
+   onNotice(exportingSheets.length>1?`${exportingSheets.length} sheets downloaded in one STL file.`:`${entry.label} STL downloaded.`);
+  }catch(error){onNotice((error as Error).message,true);}
+  finally{exporting.current=false;setProgress('');}
+ }
  const field=(key:'width'|'height'|'margin'|'gap',label:string)=>options&&<DimensionField plain label={label}
   value={options[key]} cancelValue={options[key]} limits={key==='width'||key==='height'?{min:100,max:10000}:{min:0,max:500}}
   onPreview={()=>{}} onCommit={value=>changeStock({[key]:value})} onCancel={()=>{}}/>;
@@ -160,8 +172,12 @@ export function CncWorkspace({active,evaluated,theme,bitDiameter,allowance,setti
      </>}
     </Section>
     <Section title={shared?`Export ${selectedSheets.length} sheets`:"Export sheet"}>
-     <Checkbox className="cnc-rotate" checked={includeStock} onChange={e=>setIncludeStock(e.target.checked)}>Include stock body</Checkbox>
-     <Button className="full-width-button" disabled={!entry||!!progress} onClick={exportStep}>Export STEP</Button>
+     <Checkbox className="cnc-rotate" checked={includeStock} onChange={e=>setIncludeStock(e.target.checked)}>Include stock body in STEP</Checkbox>
+     <FieldPair>
+      <Button disabled={!entry||!!progress} onClick={exportStep}>Export STEP</Button>
+      <Button disabled={!entry||!!progress} onClick={exportStl}>Export STL</Button>
+     </FieldPair>
+     <p className="field-note">STL for Kiri:Moto · millimetres · stock body excluded.</p>
      {progress&&<p className="field-note" role="status">{progress}</p>}
     </Section></>}
     {evaluated.drawers.drawers.length>0&&<Section title="Drawer preparation"><p className="field-note">Drawer boards are included. Prepare the runner, front brackets, and board-to-metal fixings using the matched Blum assembly instructions and template.</p></Section>}

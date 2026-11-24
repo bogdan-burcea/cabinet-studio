@@ -53,7 +53,11 @@ export function doorOpeningPose(e:EvaluatedCabinet,door:FrontBody,degrees:number
   const cup=inward*(hinge.cup[0]-door.pivot[0])-blumClip155.cupDiameter/2;
   const factoryEdge=metalla?metallaNominalEdge(kind,cup):kind==='inset'?data.fixingDistance-cup:-(data.fixingDistance+cup),adjustment=edge-factoryEdge;
   const smooth=(n:number)=>n*n*(3-2*n),t=smooth(Math.min(1,a/90)),u=smooth(Math.max(0,(a-90)/65));
-  const target=edge+(data.protrusion90+adjustment-edge)*t+(data.protrusion155-data.protrusion90)*u;
+  // The Metalla study uses the selected zero-protrusion envelope. A legal
+  // mounting adjustment changes the closed door edge, not its open protrusion.
+  // Carrying the cup/gap adjustment into that datum falsely blocks drawer sides
+  // that run flush to the support (notably MERIVOBOX).
+  const target=edge+(data.protrusion90+(metalla?0:adjustment)-edge)*t+(data.protrusion155-data.protrusion90)*u;
   const front=door.center[2]+door.size[2]/2;
   const nose=Math.max(...[front,front-door.size[2]].map(z=>inward*(pivot[0]+Math.sin(angle)*(z-pivot[2])-face)));
   origin[0]+=inward*(target-nose);
