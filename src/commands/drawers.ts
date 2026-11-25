@@ -28,7 +28,8 @@ export function removeMetalDrawer(c:Cabinet,id:string){
   if(removed?.id===before[0]?.id&&group[0].front)group[0].front={...group[0].front,top:before[0].front?.top??0};
   if(removed?.id===before.at(-1)?.id&&group.at(-1)!.front)group.at(-1)!.front={...group.at(-1)!.front!,bottom:before.at(-1)!.front?.bottom??0};
  }
- const next={...c,drawers:layoutDrawerIntents({...c,drawers})};evaluate(next);return next;
+ const banding={...c.banding};delete banding[`${id}/front`];
+ const next={...c,banding,drawers:layoutDrawerIntents({...c,drawers})};evaluate(next);return next;
 }
 
 type DrawerPatch=Partial<Pick<MetalDrawer,'offset'|'frontHeight'|'front'|'pack'|'manualRail'|'internal'>>;
@@ -61,10 +62,10 @@ export function duplicateDrawers(c:Cabinet,ids:string[]){
  const originals=c.drawers?.filter(d=>ids.includes(d.id))??[];
  if(originals.length!==ids.length||!ids.length)throw Error('Select drawers to duplicate.');
  if(originals.every(d=>d.stack)){
-  const draws=(c.drawers??[]).map(d=>structuredClone(d)),added:string[]=[];
+  const draws=(c.drawers??[]).map(d=>structuredClone(d)),added:string[]=[],banding=structuredClone(c.banding);
   for(const groupId of new Set(originals.map(d=>d.stack!.groupId))){
    const group=draws.filter(d=>d.stack?.groupId===groupId).sort((a,b)=>a.stack!.order-b.stack!.order),expanded:MetalDrawer[]=[];
-   for(const d of group){expanded.push(d);if(ids.includes(d.id)){const copy={...structuredClone(d),id:crypto.randomUUID(),stack:{...d.stack!,height:0}};expanded.push(copy);added.push(copy.id);draws.push(copy);}}
+   for(const d of group){expanded.push(d);if(ids.includes(d.id)){const copy={...structuredClone(d),id:crypto.randomUUID(),stack:{...d.stack!,height:0}};expanded.push(copy);added.push(copy.id);draws.push(copy);if(c.banding[`${d.id}/front`])banding[`${copy.id}/front`]=structuredClone(c.banding[`${d.id}/front`]);}}
    expanded.forEach((d,order)=>{d.stack={...d.stack!,order};});
    // Keep the edited outer overlaps at the stack boundaries, never between fronts.
    const top=group[0].front?.top??0,bottom=group.at(-1)!.front?.bottom??0;
@@ -72,7 +73,7 @@ export function duplicateDrawers(c:Cabinet,ids:string[]){
    if(expanded[0].front?.placement==='overlay')expanded[0].front={...expanded[0].front,top};
    if(expanded.at(-1)!.front?.placement==='overlay')expanded.at(-1)!.front={...expanded.at(-1)!.front!,bottom};
   }
-  return {cabinet:{...c,drawers:layoutDrawerIntents({...c,drawers:draws})},featureIds:added};
+  return {cabinet:{...c,banding,drawers:layoutDrawerIntents({...c,drawers:draws})},featureIds:added};
  }
  let next=c;const added:string[]=[];
  // Preserve each opening's selected group spacing and find a clear translation.
@@ -87,7 +88,8 @@ export function duplicateDrawers(c:Cabinet,ids:string[]){
   for(const start of candidates){
    if(start+span>opening.size[1])continue;
    const copies=group.map(d=>({...structuredClone(d),id:crypto.randomUUID(),offset:start+d.offset-low}));
-   const trial={...next,drawers:[...(next.drawers??[]),...copies]};
+   const banding=structuredClone(next.banding);copies.forEach((copy,i)=>{if(c.banding[`${group[i].id}/front`])banding[`${copy.id}/front`]=structuredClone(c.banding[`${group[i].id}/front`]);});
+   const trial={...next,banding,drawers:[...(next.drawers??[]),...copies]};
    try{evaluate(trial);result=trial;idsForGroup=copies.map(d=>d.id);break;}catch{/* Try the next clear allocation. */}
   }
   if(!result)throw Error('The selected drawer group has no free space for a duplicate in this opening. Reduce drawer spacing or increase the opening height.');

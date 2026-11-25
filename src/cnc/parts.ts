@@ -11,7 +11,7 @@ export type FaceSign = 1 | -1;
 
 export function flattenParts(cabinet: EvaluatedCabinet, {includeGlass=false}:{includeGlass?:boolean}={}) {
   const bores = cabinet.shaker?.bores??[...cabinet.cabineo.flatMap(joint => joint.bores), ...cabinet.backFasteners, ...cabinet.drilling];
-  const drawerBoards=drawerBoardPanels(cabinet.drawers.drawers,cabinet.panels.find(p=>p.role==='bottom')!);
+  const drawerBoards=cabinet.drawerBoards??drawerBoardPanels(cabinet.drawers.drawers,cabinet.panels.find(p=>p.role==='bottom')!);
   const pockets=physicalPockets(cabinet);
   return [...physicalPanels(cabinet),...drawerBoards].filter(panel=>includeGlass||!(panel as ShakerPanel).glass).map(panel => {
     const [u, v] = faceAxes[panel.orientation];

@@ -25,7 +25,8 @@ export function finish(pin: ProductPin) {
   return record;
 }
 export function edgeProduct(pin: ProductPin) {
-  const record = edgeProducts[pin.id];
+  const match = pin.id.match(/^generic-edge-(\d+(?:\.\d)?)$/), thickness=match?Number(match[1]):NaN;
+  const record = edgeProducts[pin.id] ?? (pin.revision==='1'&&thickness>=.1&&thickness<=20&&match?.[1]===String(thickness)?{id:pin.id,revision:'1',thickness,name:`Generic band · ${thickness} mm`,finish:'match-panel',verification:'conceptual'}:undefined);
   if (!record || record.revision !== pin.revision) throw new Error(`Unavailable edge band revision: ${pin.id}@${pin.revision}`);
   return record;
 }

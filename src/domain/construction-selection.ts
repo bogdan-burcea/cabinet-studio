@@ -1,6 +1,7 @@
 import type {Cabinet} from './cabinet';
 /** Build selections describe features; Cut retains the physical board identities. */
 export function constructionOwner(c:Cabinet,id:string):string{
+ if(id.includes('/edge/'))return id;
  const owner=c.fronts.find(d=>id.startsWith(d.id+'/shaker/'));if(owner)return owner.id;
  if(id===`${c.id}/construction/top`)return `${c.id}/panel/top`;if(id===`${c.id}/construction/back`)return `${c.id}/panel/back`;
  const prefix=`${c.id}/panel/`;if(!id.startsWith(prefix))return id;

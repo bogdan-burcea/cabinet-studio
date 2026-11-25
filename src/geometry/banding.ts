@@ -15,7 +15,10 @@ export function panelMaterials(c: Cabinet, panel: { id: string; materialRole: Ma
     const size = [...panel.size] as Vec3, origin = [...lower] as Vec3, axis = index < 2 ? u : v;
     size[axis] = widths[index];
     if (index % 2) origin[axis] += panel.size[axis] - widths[index];
-    if (index < 2) { origin[v] += widths[2]; size[v] -= widths[2] + widths[3]; }
+    // Front edging on vertical boards caps the top/bottom edging. Horizontal
+    // boards already give their front (V-max) strip the full finished width.
+    if (index < 2 && !(panel.orientation === 'yz' && index === 1)) { origin[v] += widths[2]; size[v] -= widths[2] + widths[3]; }
+    if (panel.orientation === 'yz' && index >= 2) size[u] -= widths[1];
     return { id: `${panel.id}/edge/${key}`, key, label: edgeNames[panel.orientation][index], product: products[index], thickness: widths[index], size, center: origin.map((n, i) => n + size[i] / 2) as Vec3 };
   });
   return { materialId: record.id, materialRevision: record.revision, finish: selected.finish, grain: selected.grain,

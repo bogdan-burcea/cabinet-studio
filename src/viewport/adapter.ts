@@ -112,7 +112,7 @@ export class CabinetViewport {
       if(object.userData.pickKind==='hinge'){(object.material as THREE.MeshBasicMaterial).opacity=selectedIds.includes(object.userData.id)?.3:0;return;}
       if((object.userData.pickKind==='opening'||object.userData.pickKind==='construction')){(object.material as THREE.MeshBasicMaterial).visible=selectedIds.includes(object.userData.id);return;}
       if(!object.userData.selectBase)return;
-      const active=selectedIds.includes(object.userData.id)||selectedIds.includes(object.userData.ownerId);
+      const active=selectedIds.includes(object.userData.id)||selectedIds.includes(object.userData.ownerId)||selectedIds.includes(object.userData.partId);
       const material=object.material as THREE.MeshStandardMaterial;
       material.color.set(preview?theme.ghost:active?theme.selected:object.userData.selectBase);
       for(const edge of object.children)if(edge instanceof THREE.LineSegments)(edge.material as THREE.LineBasicMaterial).color.set(renderMode==='wireframe'?theme.wire:active?(theme.selectedEdge??theme.selected):theme.edge);
@@ -149,8 +149,12 @@ export class CabinetViewport {
 
       mesh.add(edge); attach(mesh,panel.coreCenter,panel.id);
       for (const band of panel.edges.filter(edge => edge.product)) {
-        const strip = new THREE.Mesh(new THREE.BoxGeometry(...band.size), material.clone()); strip.position.set(...band.center); strip.userData.id = mesh.userData.id; strip.userData.ownerId=mesh.userData.ownerId; strip.userData.selectBase=finishColor(panel.finish.id,theme); strip.userData.pickKind = mesh.userData.pickKind; strip.userData.pickThrough = mesh.userData.pickThrough;
-        if (isSelected) strip.add(new THREE.LineSegments(new THREE.EdgesGeometry(strip.geometry), new THREE.LineBasicMaterial({ color: theme.handle, transparent: true, opacity: 0.9 })));
+        if(hiddenIds.includes(band.id))continue;
+        const active=isSelected||selectedIds.includes(band.id),bandMaterial=material.clone();
+        bandMaterial.color.set(preview?theme.ghost:active?theme.selected:finishColor(panel.finish.id,theme));
+        const strip = new THREE.Mesh(new THREE.BoxGeometry(...band.size), bandMaterial);
+        strip.userData.id=band.id;strip.userData.ownerId=mesh.userData.id;strip.userData.selectBase=finishColor(panel.finish.id,theme);strip.userData.pickKind='front';strip.userData.pickThrough=mesh.userData.pickThrough;
+        strip.add(new THREE.LineSegments(new THREE.EdgesGeometry(strip.geometry),new THREE.LineBasicMaterial({color:active?(theme.selectedEdge??theme.selected):theme.edge,toneMapped:false,transparent:true,opacity:theme.edgeOpacity??.65})));
         attach(strip,band.center,panel.id);
       }
     }
@@ -173,9 +177,16 @@ export class CabinetViewport {
       const board=drawerBoards.get(part.id);
       const display=board?panelDisplayGeometry(board.panel,geometry.pockets,bores):drawerDisplayGeometry(part);
       const mesh=new THREE.Mesh(display,new THREE.MeshStandardMaterial({color:preview?theme.ghost:active?theme.selected:metal?(part.moving?'#cdd2d8':'#6b7580'):theme.panel,roughness:metal?.45:.82,metalness:metal?.35:0,transparent:preview,opacity:preview?.65:1}));
-      mesh.position.set(...part.center).add(new THREE.Vector3(...offsets.get(part.id)!));
+      mesh.position.set(...(board?.panel.coreCenter??part.center)).add(new THREE.Vector3(...offsets.get(part.id)!));
       mesh.userData.id=part.id;mesh.userData.ownerId=drawer.id;mesh.userData.selectBase=metal?(part.id.includes('/handle/')?theme.frontHandle:part.id.includes('/runner-')?'#747f8a':'#d4dae0'):theme.panel;mesh.userData.pickKind='interior';
       mesh.add(new THREE.LineSegments(board?panelDisplayEdges(board.panel,mesh.geometry,geometry.pockets,bores):drawerDisplayEdges(part,mesh.geometry),new THREE.LineBasicMaterial({color:active?(theme.selectedEdge??theme.edge):theme.edge,toneMapped:false,transparent:true,opacity:theme.edgeOpacity??.85})));(part.moving?this.drawerGroups.get(drawer.id)!.group:this.model).add(mesh);
+      if(board)for(const band of board.panel.edges.filter(e=>e.product&&!hiddenIds.includes(e.id))){
+       const selected=active||selectedIds.includes(band.id),strip=new THREE.Mesh(new THREE.BoxGeometry(...band.size),(mesh.material as THREE.MeshStandardMaterial).clone());
+       (strip.material as THREE.MeshStandardMaterial).color.set(preview?theme.ghost:selected?theme.selected:theme.panel);
+       strip.position.set(...band.center).add(new THREE.Vector3(...offsets.get(part.id)!));strip.userData={id:band.id,ownerId:drawer.id,partId:part.id,selectBase:theme.panel,pickKind:'front'};
+       strip.add(new THREE.LineSegments(new THREE.EdgesGeometry(strip.geometry),new THREE.LineBasicMaterial({color:selected?(theme.selectedEdge??theme.selected):theme.edge,toneMapped:false,transparent:true,opacity:theme.edgeOpacity??.65})));
+       (part.moving?this.drawerGroups.get(drawer.id)!.group:this.model).add(strip);
+      }
     }
     if(renderMode!=='solid')this.model.traverse(object=>{
       if(object instanceof THREE.Mesh){const materials=Array.isArray(object.material)?object.material:[object.material];for(const material of materials){material.transparent=true;material.opacity=object.userData.accessory?(renderMode==='wireframe'?.18:.65):object.userData.bore?.7:renderMode==='wireframe'?0:.23;material.depthWrite=false;material.side=THREE.DoubleSide;material.forceSinglePass=true;}}

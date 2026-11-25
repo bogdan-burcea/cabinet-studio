@@ -1,3 +1,4 @@
+import {checkBandingClearance} from '../rules/banding-clearance';
 import {kitchenCornerFiller,KITCHEN_CORNER_REVISION} from '../rules/kitchen-corner';
 import {resolveShaker} from '../rules/shaker';
 import {placeSideBackFasteners} from '../rules/side-back-fasteners';
@@ -37,6 +38,7 @@ export interface Panel extends ReturnType<typeof panelMaterials> {
   provenance: string; orientation: 'yz' | 'xz' | 'xy'; constructionPart?: 'top' | 'back'; installationPart?: 'plinth';
 }
 export interface EvaluatedCabinet {
+  drawerBoards?:Panel[];
   shaker:ReturnType<typeof resolveShaker>;
   doorHardware:ReturnType<typeof doorHardware>;
   drilling:CabineoBore[];
@@ -91,11 +93,12 @@ export function evaluate(c: Cabinet): EvaluatedCabinet {
   let drilling=[...drawerDrilling(c,panels),...hanging.bores,...footDrilling(c),...hardware.bores,...backPilots(c),...shelfDrilling(c,panels,interiors.openings)];
   const nominalBackFasteners=resolveBackFasteners(c),cabineo=oneFaceBores(c,panels,resolveCabineo(c,interiorsWithFingers.panels,[...nominalBackFasteners,...drilling]),[...nominalBackFasteners,...drilling],pockets);
   drilling=placeRailScrewPilots(c,panels,cabineo,drilling,pockets);
-  const reviewPanels=[...panels,...drawerBoardPanels(drawers.drawers,panels.find(p=>p.role==='bottom')!)],backFasteners=placeSideBackFasteners(c,reviewPanels,cabineo,drilling,pockets,nominalBackFasteners);
+  const drawerBoards=drawerBoardPanels(drawers.drawers,panels.find(p=>p.role==='bottom')!,c),reviewPanels=[...panels,...drawerBoards],backFasteners=placeSideBackFasteners(c,reviewPanels,cabineo,drilling,pockets,nominalBackFasteners);
+  checkBandingClearance(c,reviewPanels,[...cabineo.flatMap(j=>j.bores),...backFasteners,...drilling],pockets);
   const shaker=resolveShaker(c,fronts.doors,[...cabineo.flatMap(j=>j.bores),...backFasteners,...drilling],pockets);
   pockets.push(...shaker.pockets.filter(p=>!shaker.owners.some(id=>p.panelId.startsWith(id+'/shaker/'))));
   const actualPanels=[...reviewPanels.filter(p=>!shaker.owners.includes(p.id)),...shaker.panels],actualCuts=[...pockets.filter(p=>!shaker.owners.includes(p.panelId)),...shaker.pockets.filter(p=>shaker.owners.some(id=>p.panelId.startsWith(id+'/shaker/')))];
   issues.push(...machiningReview(actualPanels,cabineo,shaker.bores.filter(b=>!cabineo.some(j=>j.bores.some(v=>v.id===b.id))),actualCuts));
-  return { shaker, doorHardware:hardware, drilling, backFasteners, pockets, cabineo, revision: c.cabinetType==='corner'?KITCHEN_CORNER_REVISION:EVALUATOR_REVISION, cabinetId: c.id, issues, drawers, fronts, adjustable, installation, mounting: resolveMounting(c), panels, opening: interiors.root, openings: interiors.openings, divisions: interiors.divisions,
+  return { drawerBoards,shaker, doorHardware:hardware, drilling, backFasteners, pockets, cabineo, revision: c.cabinetType==='corner'?KITCHEN_CORNER_REVISION:EVALUATOR_REVISION, cabinetId: c.id, issues, drawers, fronts, adjustable, installation, mounting: resolveMounting(c), panels, opening: interiors.root, openings: interiors.openings, divisions: interiors.divisions,
     construction: { rearSetback: construction.rearSetback, topGap: construction.topGap, backGap: construction.backGap } };
 }

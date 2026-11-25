@@ -104,7 +104,7 @@ export function cabinetForExport(cabinet:EvaluatedCabinet,name:string):ExportMod
     ...blank(label,size[0],size[1],size[2],[0,0]),round,material,
     frame:{corner:cabinetToStep([center[0]-size[0]/2,center[1]-size[1]/2,center[2]+size[2]/2]),axes:[[1,0,0],[0,0,1],[0,-1,0]]},
   });
-  const bands=cabinet.panels.flatMap(panel=>panel.edges.filter(edge=>edge.product)
+  const bands=[...cabinet.panels,...(cabinet.drawerBoards??[])].flatMap(panel=>panel.edges.filter(edge=>edge.product)
     .map(edge=>solid(`${panel.label} · ${edge.label} band`,edge.size,edge.center,false,edgeProduct(edge.product!).name)));
   const handles=cabinet.fronts.handles.map(handle=>{
     const owner=cabinet.panels.find(p=>p.id===handle.ownerId);
