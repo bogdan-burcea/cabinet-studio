@@ -36,6 +36,16 @@ function removeStrip(triangles:Point[][],axis:1|2,lo:number,hi:number):Point[][]
  return triangles.flatMap(triangle=>[clip(triangle,lo,true),clip(triangle,hi,false).map(p=>p.map((n,i)=>i===axis?n-(hi-lo):n) as Point)].flatMap(p=>p.slice(1,-1).map((_,i)=>[p[0],p[i+1],p[i+2]])));
 }
 
+function mirrorFittingX(geometry:THREE.BufferGeometry){
+ geometry.scale(-1,1,1);
+ // Reflecting vertices reverses handedness. Restore triangle winding so the
+ // transformed normals and ordinary front-face culling still face outwards.
+ const index=geometry.getIndex();
+ if(index){for(let i=0;i<index.count;i+=3){const b=index.getX(i+1);index.setX(i+1,index.getX(i+2));index.setX(i+2,b);}index.needsUpdate=true;}
+ else {const indices:number[]=[];for(let i=0;i<geometry.getAttribute('position').count;i+=3)indices.push(i,i+2,i+1);geometry.setIndex(indices);}
+ return geometry;
+}
+
 // K550 comes directly from the assembled STEP in millimetres. M/500 variants
 // are display adaptations of plain strips; they are not manufacturer M/500 CAD.
 export function drawerDisplayGeometry(part:DrawerPart){
@@ -46,7 +56,11 @@ export function drawerDisplayGeometry(part:DrawerPart){
   shape.moveTo(-d/2,-h/2);shape.lineTo(d/2,-h/2);shape.lineTo(d/2,h/2);shape.lineTo(-d/2,h/2);shape.lineTo(-d/2,h/2-t);shape.lineTo(d/2-t,h/2-t);shape.lineTo(d/2-t,-h/2+t);shape.lineTo(-d/2,-h/2+t);shape.closePath();
   const g=new THREE.ExtrudeGeometry(shape,{depth:w,bevelEnabled:false,steps:1});
   // Extrusion along local Z becomes the cross-cabinet X axis.
-  g.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.PI/2));g.translate(-w/2,0,0);return g;
+  g.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.PI/2));g.translate(-w/2,0,0);
+  // MERIVOBOX has a closed user-facing front (+Z); keep the schematic
+  // channel opening at the rear. Leave the pinned ANTARO profile unchanged.
+  if(part.article==='ZV4.1042M')g.rotateY(Math.PI);
+  return g;
  }
  if(part.system==='merivobox'){
   // MERIVOBOX-only schematic sections; never reuse TANDEMBOX fitting CAD.
@@ -56,7 +70,7 @@ export function drawerDisplayGeometry(part:DrawerPart){
    const [w,h,d]=part.size,t=1.5,edge=.75,shape=new THREE.Shape();
    const points=[[-w/2,-d/2],[w/2,-d/2],[w/2,-d/2+t],[edge,-d/2+t],[edge,d/2-t],[w/2,d/2-t],[w/2,d/2],[-w/2,d/2]];
    shape.moveTo(...points[0] as [number,number]);for(const point of points.slice(1))shape.lineTo(...point as [number,number]);shape.closePath();
-   const g=new THREE.ExtrudeGeometry(shape,{depth:h,bevelEnabled:false,steps:1});g.rotateX(Math.PI/2);g.translate(0,h/2,0);if(!left)g.scale(-1,1,1);return g;
+   const g=new THREE.ExtrudeGeometry(shape,{depth:h,bevelEnabled:false,steps:1});g.rotateX(Math.PI/2);g.translate(0,h/2,0);return left?g:mirrorFittingX(g);
   }
   if(wall||runner){
    const [w,h,length]=part.size,t=1.5,shape=new THREE.Shape();
@@ -64,7 +78,7 @@ export function drawerDisplayGeometry(part:DrawerPart){
     [[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[w/2-5,h/2],[-w/2,-h/2+22]];
    shape.moveTo(...points[0] as [number,number]);for(const point of points.slice(1))shape.lineTo(...point as [number,number]);shape.closePath();
    if(wall){const hole=new THREE.Path();hole.moveTo(w/2-t,-h/2+t);hole.lineTo(w/2-t,h/2-t);hole.lineTo(w/2-4,h/2-t);hole.lineTo(-w/2+t,-h/2+20);hole.lineTo(-w/2+t,-h/2+t);hole.closePath();shape.holes.push(hole);}
-   const g=new THREE.ExtrudeGeometry(shape,{depth:length,bevelEnabled:false,steps:1});g.translate(0,0,-length/2);if(!left)g.scale(-1,1,1);return g;
+   const g=new THREE.ExtrudeGeometry(shape,{depth:length,bevelEnabled:false,steps:1});g.translate(0,0,-length/2);return left?g:mirrorFittingX(g);
   }
   return new THREE.BoxGeometry(...part.size);
  }

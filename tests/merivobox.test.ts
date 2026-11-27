@@ -97,7 +97,47 @@ test('MERIVOBOX exploded side covers, gallery and rear fixings stay attached to 
  }
 });
 
-import {Box3,Vector3,Triangle} from 'three';
+import {Box3,Vector3,Triangle,Mesh,MeshBasicMaterial,Raycaster} from 'three';
+test('MERIVOBOX mirrored sides, runners and back fixings retain outward-facing surfaces',()=>{
+ for(const kind of ['m','e-gallery','e-closed'])for(const length of [270,500,600]){
+  const b=base(),c=addDrawerStack(b,b.compartments.id,1,pin(pack(kind,40,length)),true,true).cabinet,d=evaluate(c).drawers.drawers[0];
+  for(const role of ['side','runner','back-fixing']){
+   const volumes:number[]=[];
+   for(const side of ['left','right']){
+    const geometry=drawerDisplayGeometry(d.parts.find(p=>p.id.endsWith(`/${role}-${side}`))!),position=geometry.getAttribute('position'),normal=geometry.getAttribute('normal'),index=geometry.getIndex();
+    const point=(i:number)=>new Vector3().fromBufferAttribute(position,index?index.getX(i):i);
+    let volume=0;
+    for(let i=0;i<(index?.count??position.count);i+=3){
+     const a=point(i),b=point(i+1),c=point(i+2),face=new Vector3().subVectors(b,a).cross(new Vector3().subVectors(c,a));
+     volume+=a.dot(new Vector3().crossVectors(b,c))/6;
+     if(face.lengthSq()>1e-10)for(let j=0;j<3;j++)assert.ok(face.dot(new Vector3().fromBufferAttribute(normal,index?index.getX(i+j):i+j))>0,`${kind} ${length} ${role}-${side}: winding must agree with outward normals`);
+    }
+    assert.ok(volume>0,`${role}-${side} must face outwards under normal back-face culling`);volumes.push(volume);geometry.dispose();
+   }
+   assert.ok(Math.abs(volumes[0]-volumes[1])<.01,`${role}: mirroring must preserve enclosed volume`);
+  }
+ }
+});
+
+test('MERIVOBOX inner fronts have a closed forward face without changing cuts, drilling or saved intent',()=>{
+ for(const kind of ['m','e-gallery','e-closed']){
+  const b=base(),c=addDrawerStack(b,b.compartments.id,1,pin(pack(kind)),true,true).cabinet,model=evaluate(c),drawer=model.drawers.drawers[0];
+  const saved=serialize(c),cuts=structuredClone(flattenParts(model)),drilling=structuredClone(model.drilling),front=drawer.parts.find(p=>p.id===drawer.id+'/front')!;
+  const geometry=drawerDisplayGeometry(front),material=new MeshBasicMaterial(),mesh=new Mesh(geometry,material);mesh.updateMatrixWorld();
+  // Solid rendering must hit the exterior at +depth/2, including away from
+  // the narrow top/bottom lips that previously hid the open front channel.
+  for(const x of [-front.size[0]/3,0,front.size[0]/3])for(const y of [-front.size[1]/3,0,front.size[1]/3]){
+   const hits=new Raycaster(new Vector3(x,y,front.size[2]+10),new Vector3(0,0,-1)).intersectObject(mesh);
+   assert.ok(hits.length,'The front must remain visible with default front-face rendering');
+   assert.ok(Math.abs(hits[0].point.z-front.size[2]/2)<1e-6,'The closed face must point toward the user (+Z)');
+  }
+  geometry.dispose();material.dispose();
+  const width=drawer.allocation.size[0];
+  assert.deepEqual(drawer.bottom,[width-51,16,474]);assert.deepEqual(drawer.back,[width-51,kind==='m'?83:184,16]);assert.equal(front.size[0],width-126);
+  assert.deepEqual(flattenParts(evaluate(c)),cuts);assert.deepEqual(evaluate(c).drilling,drilling);assert.equal(serialize(c),saved);
+ }
+});
+
 test('ANTARO conversion refits MERIVOBOX rear brackets around the back without wood intersections',()=>{
  for(const internal of [false,true])for(const kind of ['m','e-gallery','e-closed']){
   const b=base(),before=addDrawerStack(b,b.compartments.id,2,antaroPin,true,internal).cabinet,id=before.drawers![0].id;
