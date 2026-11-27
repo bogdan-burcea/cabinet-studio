@@ -1,36 +1,54 @@
 import {useState,useEffect} from 'react';
 import {CustomHingeFields} from './CustomHingeFields';
 import {defaultCustomHinge} from '../catalogue/custom-hinge';
-import {fitMetallaHinges} from '../commands/metalla-hinges';
+import {fitMetallaWithRaisedPlate} from '../commands/clearance-repairs';
+import {fitMetallaHinges,type MetallaId} from '../commands/metalla-hinges';
 import {stock} from '../catalogue/materials';
 import {HandleFields} from './HandleFields';
 import type {Cabinet,SlabDoor} from '../domain/cabinet';
 import type {EvaluatedCabinet} from '../geometry/evaluate';
-import {resolveHinge,isMetalla,isThinHinge,thinPlateHeight,cupSetbackMax,defaultHinge,hingeProfiles,selectableHinges,type HingeId} from '../catalogue/hinges';
+import {resolveHinge,isMetalla,metallaPlateDistance,isThinHinge,thinPlateHeight,cupSetbackMax,defaultHinge,hingeProfiles,selectableHinges,type HingeId} from '../catalogue/hinges';
 import {conceptHandle} from '../catalogue/fronts';
-import {Section,FieldPair} from './components';
+import {Button,Section,FieldPair} from './components';
 import {Icon} from '../design-system/Icon';
 import {DimensionField} from './DimensionField';
-export function DoorHardwareInspector(p:{cabinet:Cabinet;evaluated:EvaluatedCabinet;ids:string[];onCommit(c:Cabinet):boolean;onCancel():void}){
+export function DoorHardwareInspector(p:{cabinet:Cabinet;evaluated:EvaluatedCabinet;ids:string[];onCommit(c:Cabinet):boolean;onCancel():void;onHingeCommit?(c:Cabinet):boolean}){
  const doors=p.cabinet.fronts.filter(d=>p.ids.includes(d.id)),door=doors[0];if(!door)return null;
  const handle=door.handle,hinge=door.hinge;
  const [customDraft,setCustomDraft]=useState<import('../domain/cabinet').CustomHingeSpec|null>(null);
- useEffect(()=>setCustomDraft(null),[p.ids.join('|')]);
+ const [mountingFeedback,setMountingFeedback]=useState<{message:string;alternative?:Cabinet}|null>(null);
+ useEffect(()=>{setCustomDraft(null);setMountingFeedback(null);},[p.ids.join('|'),p.cabinet]);
+ const commitHinge=p.onHingeCommit??p.onCommit;
  const mixedHinges=doors.some(d=>d.hinge?.id!==hinge?.id);
  const profile=hinge&&resolveHinge(hinge),thin=!!hinge&&isThinHinge(hinge.id),metalla=!!hinge&&isMetalla(hinge.id);
  const cupMax=hinge?Math.min(...doors.map(d=>cupSetbackMax(d.hinge?.id??hinge.id,d.placement==='inset'))):7;
  const selectedHardware=p.evaluated.doorHardware.hinges.filter(h=>p.ids.includes(h.ownerId));
  const fittedArticles=[...new Set(selectedHardware.map(h=>`${h.article} + ${h.plate}`))];
- const patch=(make:(d:SlabDoor)=>SlabDoor)=>p.onCommit({...p.cabinet,fronts:p.cabinet.fronts.map(d=>p.ids.includes(d.id)?make(d):d)});
+ const patch=(make:(d:SlabDoor)=>SlabDoor,commit=p.onCommit)=>commit({...p.cabinet,fronts:p.cabinet.fronts.map(d=>p.ids.includes(d.id)?make(d):d)});
  const setHandle=(change:Partial<SlabDoor['handle']>)=>patch(d=>({...d,handle:{...d.handle,...change}}));
- const setHinge=(change:Partial<NonNullable<SlabDoor['hinge']>>)=>patch(d=>{const {offsets,...regular}=d.hinge??defaultHinge();return {...d,hinge:{...regular,...change.count===undefined&&change.endOffset===undefined&&offsets?{offsets}:{},...change}};});
+ const setHinge=(change:Partial<NonNullable<SlabDoor['hinge']>>)=>patch(d=>{const {offsets,...regular}=d.hinge??defaultHinge();return {...d,hinge:{...regular,...change.count===undefined&&change.endOffset===undefined&&offsets?{offsets}:{},...change}};},commitHinge);
  const choice=(label:string,value:string,options:[string,string,boolean?][],onChange:(v:string)=>void)=><label className="construction-choice">{label}<span className="select select--fluid"><select aria-label={label} value={value} onChange={e=>onChange(e.target.value)}>{options.map(([v,text,disabled])=><option key={v} value={v} disabled={disabled}>{text}</option>)}</select><Icon name="chevron" size={12}/></span></label>;
  const number=(label:string,value:number,min:number,max:number,commit:(v:number)=>boolean,step=1)=><DimensionField plain label={label} value={value} cancelValue={value} limits={{min,max}} step={step} onPreview={()=>{}} onCommit={commit} onCancel={p.onCancel}/>;
  return <>
  <Section title="Hinges">
  {choice('Hinge system',customDraft?'custom-hinge':mixedHinges?'mixed':thin?'saved':hinge?.id??'none',
- [['none','None'],...mixedHinges?[['mixed','Mixed'] as [string,string]]:[],...thin?[['saved','Saved hinge · choose a replacement'] as [string,string]]:[],...selectableHinges.map(h=>[h.id,h.id==='custom-hinge'?'Custom · soft-close':isMetalla(h.id)?`Häfele · Metalla+ 310 SM ${h.maxAngle}° · soft-close`:isThinHinge(h.id)?'Blum · EXPANDO T 110° · soft-close':`Blum · BLUMOTION ${h.maxAngle}°`,isMetalla(h.id)?doors.some(d=>{const t=stock(p.cabinet,'front',d.id).thickness;return t<15||t>24;}):isThinHinge(h.id)&&doors.some(d=>{const t=stock(p.cabinet,'front',d.id).thickness;return t<8||t>14;})] as [string,string,boolean])],
- value=>{if(value==='mixed'||value==='saved')return;if(value==='custom-hinge'){setCustomDraft({...defaultCustomHinge,plateLine:37+(door.placement==='inset'?stock(p.cabinet,'front',door.id).thickness+door.clearance:0)});return;}setCustomDraft(null);if(isMetalla(value)){try{p.onCommit(fitMetallaHinges(p.cabinet,p.ids,value as 'hafele-metalla-110'|'hafele-metalla-155'));}catch{p.onCommit({...p.cabinet,fronts:p.cabinet.fronts.map(d=>p.ids.includes(d.id)?{...d,hinge:{...(({custom,...h})=>h)(d.hinge??defaultHinge(value as HingeId)),...defaultHinge(value as HingeId),count:d.hinge?.count??2,endOffset:d.hinge?.endOffset??100,...d.hinge?.offsets?{offsets:d.hinge.offsets}:{}}}:d)});}return;}patch(d=>{
+ [['none','None'],...mixedHinges?[['mixed','Mixed'] as [string,string]]:[],...thin?[['saved','Saved hinge · choose a replacement'] as [string,string]]:[],...selectableHinges.map(h=>[h.id,h.id==='custom-hinge'?'Custom · soft-close':isMetalla(h.id)?`Häfele · Metalla+ 310 SM ${h.maxAngle}° · ${metallaPlateDistance(h.id)} mm plate`:isThinHinge(h.id)?'Blum · EXPANDO T 110° · soft-close':`Blum · BLUMOTION ${h.maxAngle}°`,isMetalla(h.id)?doors.some(d=>{const t=stock(p.cabinet,'front',d.id).thickness;return t<15||t>24;}):isThinHinge(h.id)&&doors.some(d=>{const t=stock(p.cabinet,'front',d.id).thickness;return t<8||t>14;})] as [string,string,boolean])],
+ value=>{if(value==='mixed'||value==='saved')return;if(value==='custom-hinge'){setCustomDraft({...defaultCustomHinge,plateLine:37+(door.placement==='inset'?stock(p.cabinet,'front',door.id).thickness+door.clearance:0)});return;}setCustomDraft(null);setMountingFeedback(null);
+ if(isMetalla(value)){
+  try{
+   const fitted=value==='hafele-metalla-155-d4'
+    ?fitMetallaWithRaisedPlate(p.cabinet,p.ids)
+    :fitMetallaHinges(p.cabinet,p.ids,value as MetallaId);
+   if(!fitted)throw Error('The 4 mm plate did not clear this layout.');
+   commitHinge(fitted);
+  }catch(error){
+   let alternative:Cabinet|undefined;
+   if(value==='hafele-metalla-155')try{alternative=fitMetallaWithRaisedPlate(p.cabinet,p.ids);}catch{/* No checked fit. */}
+   setMountingFeedback({message:(error as Error).message,alternative});
+  }
+  return;
+ }
+ patch(d=>{
   const {hinge,...rest}=d;
   if(value==='none')return rest;
   const id=value as HingeId,{custom,...next}=hinge??defaultHinge(id),min=isThinHinge(id)?23.5:3;
@@ -38,15 +56,19 @@ export function DoorHardwareInspector(p:{cabinet:Cabinet;evaluated:EvaluatedCabi
   const support=body?p.evaluated.panels.filter(panel=>panel.orientation==='yz'&&panel.center[1]-panel.size[1]/2<body.center[1]&&panel.center[1]+panel.size[1]/2>body.center[1]).sort((a,b)=>Math.abs(a.center[0]+inward*a.size[0]/2-body.pivot[0])-Math.abs(b.center[0]+inward*b.size[0]/2-body.pivot[0]))[0]:undefined;
   const b=body&&support?27+thinPlateHeight(support.size[0],body.size[2])+inward*(support.center[0]+inward*support.size[0]/2-body.pivot[0]):25;
   return {...rest,hinge:{...next,id,revision:hingeProfiles[id].revision,cupDistance:isThinHinge(id)&&(!hinge||!isThinHinge(hinge.id))?+b.toFixed(1):Math.max(min,Math.min(next.cupDistance,cupSetbackMax(id,d.placement==='inset')))}};
- });})}
- {customDraft&&<CustomHingeFields spec={customDraft} cupDistance={hinge?.cupDistance??5} onCancel={()=>setCustomDraft(null)} onChange={(spec,cupDistance)=>{const ok=patch(d=>({...d,hinge:{...(d.hinge??defaultHinge('custom-hinge')),id:'custom-hinge',revision:'custom-1',cupDistance,custom:{...customDraft,...spec}}}));if(ok)setCustomDraft(null);return ok;}}/>}
+ },commitHinge);})}
+ {mountingFeedback&&<div role="status">
+  <p className="field-note">{mountingFeedback.message}</p>
+  {mountingFeedback.alternative&&<Button className="full-width-button" onClick={()=>{if(commitHinge(mountingFeedback.alternative!))setMountingFeedback(null);}}>Use Metalla 155° with 4 mm plate{mountingFeedback.alternative.fronts.filter((d,i)=>d.hinge!==p.cabinet.fronts[i]?.hinge).length>1?' on the linked doors':''}</Button>}
+ </div>}
+ {customDraft&&<CustomHingeFields spec={customDraft} cupDistance={hinge?.cupDistance??5} onCancel={()=>setCustomDraft(null)} onChange={(spec,cupDistance)=>{const ok=patch(d=>({...d,hinge:{...(d.hinge??defaultHinge('custom-hinge')),id:'custom-hinge',revision:'custom-1',cupDistance,custom:{...customDraft,...spec}}}),commitHinge);if(ok)setCustomDraft(null);return ok;}}/>}
  {hinge&&!mixedHinges&&!customDraft&&<>
- {hinge.id==='custom-hinge'&&hinge.custom&&<CustomHingeFields spec={hinge.custom} cupDistance={hinge.cupDistance} onChange={(change,cupDistance)=>patch(d=>({...d,hinge:{...d.hinge!,cupDistance,custom:{...(d.hinge?.custom??defaultCustomHinge),...change}}}))} onCancel={p.onCancel}/>}
+ {hinge.id==='custom-hinge'&&hinge.custom&&<CustomHingeFields spec={hinge.custom} cupDistance={hinge.cupDistance} onChange={(change,cupDistance)=>patch(d=>({...d,hinge:{...d.hinge!,cupDistance,custom:{...(d.hinge?.custom??defaultCustomHinge),...change}}}),commitHinge)} onCancel={p.onCancel}/>}
  <FieldPair>{number('Hinges / door',hinge.count,2,6,count=>setHinge({count}))}{number('End setback',hinge.endOffset,35,300,endOffset=>setHinge({endOffset}))}</FieldPair>
  {hinge.id!=='custom-hinge'&&<FieldPair>{number(thin?'Fixing distance B':'Cup setback',hinge.cupDistance,thin?23.5:3,cupMax,cupDistance=>setHinge({cupDistance}),.1)}</FieldPair>}
  <p className="field-note">{fittedArticles.join(' / ')} · {thin?'Two Ø10 × 6 mm EXPANDO T fixings per hinge, 32 mm apart.':`Ø${profile?.cupDiameter} × ${profile?.cupDepth} mm cup.`} Integrated soft close.</p>
  {hinge.id!=='custom-hinge'&&<><p className="field-note">{thin?'For 8–14 mm wood fronts only. B = front overlay + 27 mm + plate spacing; inset overlay is negative. B is measured to the fixing centres, 23.5–46 mm. Plate spacing follows side/front thickness.':`Cup setback: min. 3 mm, max. ${cupMax} mm, measured from the door edge to the Ø35 cup edge in the manufacturer drawing.`}</p>
- <p className="field-note">{metalla?`H=0 cam plate; up to ±${profile?.maxAngle===110?3:2.5} mm side adjustment. Cup setback is fitted when selecting Metalla. Existing door placement and drawers are retained. Inset motion and hinge-arm clearance use a provisional planning envelope; confirm with a trial assembly.`:'Mounting-zone checks use an estimated clearance envelope.'}</p>
+ <p className="field-note">{metalla?`${metallaPlateDistance(hinge.id)} mm cam plate; up to ±${profile?.maxAngle===110?3:2.5} mm side adjustment. Cup setback is fitted when selecting Metalla. Existing door placement and drawers are retained. Inset motion and hinge-arm clearance use a provisional planning envelope; confirm with a trial assembly.`:'Mounting-zone checks use an estimated clearance envelope.'}</p>
  <p className="field-note">{thin?'EXPANDO T uses expansion anchors, not cup screws. Support screw pilots remain application choices; follow the mounting plate assembly instructions.':'Count is user specified. Screw pilots: Ø2.5 × 10 door / ×8 support; confirm against your screws and stock.'}</p></>}
  </>}
  </Section>

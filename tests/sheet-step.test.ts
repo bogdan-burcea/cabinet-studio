@@ -5,6 +5,7 @@ import {createRequire} from 'node:module';
 import init from 'replicad-opencascadejs';
 import {setOC, importSTEP, measureVolume} from 'replicad';
 import {createCabinet} from '../src/domain/cabinet.ts';
+import {addMetalDrawer} from '../src/commands/drawers.ts';
 import {setBackPanel} from '../src/commands/back-panel.ts';
 import {setPuzzleCorners} from '../src/commands/stock.ts';
 import {addDivision,setInteriorFinger} from '../src/commands/interiors.ts';
@@ -153,4 +154,23 @@ test('multi-sheet STEP exports one named component per sheet with independent bo
  assert.equal((file.match(/MANIFOLD_SOLID_BREP\(/g)??[]).length,4);
  assert.equal((file.match(/PROPERTY_DEFINITION\('material property','material name'/g)??[]).length,2);
  const imported=await importSTEP(new Blob([file]));try{const [min,max]=imported.boundingBox.bounds;assert.deepEqual(min.map(Math.round),[0,0,-18]);assert.deepEqual(max.map(Math.round),[2610,1220,0]);}finally{imported.delete();}
+});
+
+test('rounded drawer front builds a solid in cabinet and nested sheet exports',()=>{
+ const base=createCabinet();
+ const {cabinet}=addMetalDrawer(base,base.compartments.id);
+ const radius=20;
+ const evaluated=evaluate({...cabinet,drawers:cabinet.drawers!.map(drawer=>({...drawer,cornerRadius:radius}))});
+ const front=flattenParts(evaluated).find(part=>part.label==='Drawer 1 · Slab front')!;
+ const [sheet]=nestStock([front],defaultSheet).sheets;
+ const models=[cabinetForExport(evaluated,'Cabinet'),sheetForExport(sheet,defaultSheet)];
+ const cornerArea=radius**2*(1-8*Math.sin(Math.PI/32));
+ for(const model of models){
+  const part=model.parts.find(part=>part.name===front.label)!;
+  const solid=buildSheetSolid({...part,bores:[]});
+  try {
+   assert.equal(solid.solids.length,1);
+   assert.ok(Math.abs(measureVolume(solid)-(front.width*front.height-4*cornerArea)*front.thickness)<.01);
+  } finally {solid.delete();}
+ }
 });

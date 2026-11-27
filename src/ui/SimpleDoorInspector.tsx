@@ -9,7 +9,7 @@ import {supportedHingeSides} from '../rules/fronts';
 import {Section,Button,FieldPair} from './components';
 import {DimensionField} from './DimensionField';
 import {Icon} from '../design-system/Icon';
-export function SimpleDoorInspector(p:{cabinet:Cabinet;evaluated:EvaluatedCabinet;ids:string[];onCommit(c:Cabinet):boolean;onCancel():void;onSelect(ids:string[]):void;onRemove(ids:string[]):void;onNotice(s:string):void}){
+export function SimpleDoorInspector(p:{cabinet:Cabinet;evaluated:EvaluatedCabinet;ids:string[];onCommit(c:Cabinet):boolean;onHingeCommit?(c:Cabinet):boolean;onCancel():void;onSelect(ids:string[]):void;onRemove(ids:string[]):void;onNotice(s:string):void}){
  const door=p.cabinet.fronts.find(d=>d.id===p.ids[0]),selected=p.ids.filter(id=>p.cabinet.fronts.some(d=>d.id===id));
  function edit(make:()=>Cabinet){try{return p.onCommit(make());}catch(e){p.onNotice((e as Error).message);return false;}}
  function add(layout:'single'|'pair'){try{const openings=p.ids.filter(id=>p.evaluated.openings.some(o=>o.id===id)),next=addSimpleDoors(p.cabinet,layout,openings);if(p.onCommit(next.cabinet))p.onSelect(next.featureIds);}catch(e){p.onNotice((e as Error).message);}}
@@ -33,5 +33,5 @@ export function SimpleDoorInspector(p:{cabinet:Cabinet;evaluated:EvaluatedCabine
  <FieldPair><DimensionField plain label="Thickness" accessibleLabel="Door thickness" value={stock(p.cabinet,'front',door.id).thickness} cancelValue={stock(p.cabinet,'front',door.id).thickness} limits={{min:3,max:24}} step={.1} onPreview={()=>{}} onCommit={thickness=>p.onCommit({...p.cabinet,fronts:p.cabinet.fronts.map(d=>selected.includes(d.id)?{...d,material:{...binding(p.cabinet,'front',d.id),stock:{id:`generic-panel-${thickness}`,revision:'1'}}}:d)})} onCancel={p.onCancel}/><DimensionField plain label="Corner radius" value={door.cornerRadius??0} cancelValue={door.cornerRadius??0} limits={{min:0,max:Math.min(shape.size[0],shape.size[1])/2}} step={.1} onPreview={()=>{}} onCommit={n=>p.onCommit({...p.cabinet,fronts:p.cabinet.fronts.map(d=>selected.includes(d.id)?{...d,cornerRadius:n}:d)})} onCancel={p.onCancel}/></FieldPair>
  {selected.length===1&&<div className="interior-actions"><Button onClick={()=>edit(()=>splitDoor(p.cabinet,door.id,'vertical').cabinet)}>Split left/right</Button><Button onClick={()=>edit(()=>splitDoor(p.cabinet,door.id,'horizontal').cabinet)}>Split top/bottom</Button></div>}
  <p className="field-note">Opening is a clearance study; Exact hinge kinematics are not yet verified.</p>
- </Section><DoorHardwareInspector cabinet={p.cabinet} evaluated={p.evaluated} ids={selected} onCommit={p.onCommit} onCancel={p.onCancel}/></>;
+ </Section><DoorHardwareInspector cabinet={p.cabinet} evaluated={p.evaluated} ids={selected} onCommit={p.onCommit} onHingeCommit={p.onHingeCommit} onCancel={p.onCancel}/></>;
 }

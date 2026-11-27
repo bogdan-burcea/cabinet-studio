@@ -10,5 +10,5 @@ export function MachiningChecks({issues,onResolve}:{issues:Issue[];onResolve():v
  return <Section title="Machining checks" className="machining-checks-notice"><div className="machining-review" aria-label={title}>
 <div className="machining-review-main"><p>{summary}</p>
  {issues.length>1&&<details className="machining-details"><summary>View {issues.length} {issues.length===1?'detail':'details'}</summary><ul>{issues.map((i,n)=><li key={n}>{i.message}</li>)}</ul></details>}
- </div></div><Button className="full-width-button primary-button" onClick={onResolve}>Resolve</Button></Section>;
+ </div></div><Button className="full-width-button primary-button" onClick={onResolve}>{issues.some(i=>i.code==='machining-hinge-selection')?'Choose hinges':'Resolve'}</Button></Section>;
 }

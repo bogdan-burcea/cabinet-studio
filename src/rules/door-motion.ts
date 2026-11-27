@@ -145,15 +145,17 @@ export function drawerOpeningIssue(e:EvaluatedCabinet):import('./validate').Issu
 }
 function computeDrawerOpeningIssue(e:EvaluatedCabinet):import('./validate').Issue|null{
  if(!e.drawers.drawers.some(d=>d.intent.internal))return null;
+ const unconfigured=e.fronts.doors.find(d=>!e.doorHardware.hinges.some(h=>h.ownerId===d.id));
+ if(unconfigured)return {code:'machining-hinge-selection',severity:'notice',featureId:unconfigured.id,relatedIds:e.drawers.drawers.filter(d=>d.intent.internal).map(d=>d.id),message:`Choose hinges for ${unconfigured.label} before checking internal-drawer clearance. Select the door → Hinges → Hinge system. A 155° soft-close hinge is the starting option; its mounting and clearance are checked when selected. No hinge has been assumed.`};
  const ids=e.fronts.doors.map(d=>d.id),target=Math.max(0,...ids.map(id=>doorAngleLimit(e,id))),opened=safeDoorAngles(e,{},ids,target);
  if(opened.blocked){const hit=opened.collision!,door=e.fronts.doors.find(d=>d.id===hit.movingOwner),other=e.panels.find(p=>p.id===hit.otherId)?.label??e.drawers.drawers.find(d=>d.id===hit.otherOwner)?.label??'another part';
-  return {code:'machining-drawer-opening',severity:'notice',featureId:hit.movingOwner,relatedIds:[hit.otherOwner],message:`${door?.label??'Door'} cannot open fully for the internal drawers: it meets ${other} near ${Math.round(hit.angle)}°. Review the door placement, hinge or adjoining part before accepting this setup.`};
+  return {code:'machining-drawer-opening',severity:'notice',featureId:hit.movingOwner,relatedIds:[hit.otherOwner],message:`${door?.label??'Door'} cannot open fully for the internal drawers: it meets ${other} near ${Math.round(hit.angle)}°. Choose a compatible 155° soft-close hinge in the door’s Hinges settings, or adjust the door gap / adjoining part. The complete opening is checked again before this setup is accepted.`};
  }
  const result=safeInnerDrawerExtensions(e,{}, {...opened.angles,...Object.fromEntries(e.drawers.drawers.map(d=>[d.id,100]))});
  if(!result.blocked)return null;
  const drawer=e.drawers.drawers.find(d=>d.id===result.drawerId)!,hinge=e.doorHardware.hinges.find(h=>h.id===result.otherId),door=e.fronts.doors.find(d=>d.id===(hinge?.ownerId??result.otherId));
  const other=hinge?`hinge ${Number(hinge.id.split('/').at(-1))+1} on ${door?.label??'the door'}`:e.panels.find(p=>p.id===result.otherId)?.label??'another part';
- return {code:'machining-drawer-opening',severity:'notice',featureId:drawer.id,relatedIds:[result.otherId!],message:`${drawer.label} cannot fully extend with the selected doors and hinges: it is blocked by ${other}. Review the door placement, hinge or drawer clearance before accepting this setup.`};
+ return {code:'machining-drawer-opening',severity:'notice',featureId:drawer.id,relatedIds:[result.otherId!],message:`${drawer.label} cannot fully extend with the selected doors and hinges: it is blocked by ${other}. Choose a compatible 155° soft-close hinge in the door’s Hinges settings. If its mounting zone blocks the drawer, adjust End setback or the individual hinge offsets; overlay doors are another option when compatible. The complete opening is checked again before this setup is accepted.`};
 }
 
 // Assembly reuses the same exact oriented-box SAT and modelling tolerance.

@@ -4,7 +4,7 @@ import type {Cabinet,SlabDoor,Vec3} from '../domain/cabinet';
 import type {FrontBody} from './fronts';
 import {frontStructure} from './fronts';
 import {effectiveDoor} from './front-links';
-import {resolveHinge,isMetalla,metallaMinimumGap,metallaNominalEdge,blumClip155,isThinHinge,thinPlateHeight,hingeProfiles,cupSetbackMax} from '../catalogue/hinges';
+import {resolveHinge,isMetalla,metallaPlateDistance,metallaMinimumGap,metallaNominalEdge,blumClip155,isThinHinge,thinPlateHeight,hingeProfiles,cupSetbackMax} from '../catalogue/hinges';
 import {conceptHandle} from '../catalogue/fronts';
 import type {CabineoBore} from './cabineo';
 export interface DoorHinge {customMotion?:{openProtrusion:number;openingAdvance:number};profileId:string;id:string;ownerId:string;supportId:string;article:string;plate:string;y:number;cup:Vec3;softClose:boolean;maxAngle:number;mountingZone:{center:Vec3;size:Vec3}}
@@ -50,15 +50,15 @@ export function doorHardware(c:Cabinet,doors:FrontBody[]){
     const supportId='id' in support?support.id as string:`${c.id}/panel/${support.role}`,face=side===-1?support.origin[0]+support.size[0]:support.origin[0],plateZ=c.envelope.origin[2]+c.envelope.depth-profile.plateLine-(custom?0:wide||thin||metalla?(inset?body.size[2]+1.5:0):(front.placement==='inset'?body.size[2]+front.clearance:0));
     if(thin){const height=thinPlateHeight(support.size[0],body.size[2]);if(height===6)throw Error('This thin-front combination requires a 6 mm plate; the EXPANDO T pack currently supports 0 or 3 mm cam plates.');plate=height===3?'173H7130':'173H7100';const expected=27+height-side*(face-edge);if(Math.abs(h.cupDistance-expected)>2.001)throw Error(`EXPANDO T fixing distance B must match this front overlay/reveal: ${+expected.toFixed(1)} mm nominal (±2 mm side adjustment).`);}
     if(metalla){
-     const kind=inset?'inset':outer?'overlay':'dual',edgeDistance=-side*(edge-face),nominal=metallaNominalEdge(kind,h.cupDistance,profile.maxAngle);
-     if(Math.abs(edgeDistance-nominal)>(profile.maxAngle===110?3.001:2.501))throw Error('Metalla mounting exceeds its side adjustment range. Adjust the cup setback, door reveal or overlay to match the H=0 plate.');
+     const kind=inset?'inset':outer?'overlay':'dual',edgeDistance=-side*(edge-face),nominal=metallaNominalEdge(kind,h.cupDistance,profile.maxAngle)+metallaPlateDistance(h.id);
+     if(Math.abs(edgeDistance-nominal)>(profile.maxAngle===110?3.001:2.501))throw Error(`Metalla mounting exceeds its side adjustment range. ${body.label} has ${+(-edgeDistance).toFixed(1)} mm hinge-side overlay. The ${metallaPlateDistance(h.id)} mm plate at this cup setback needs ${+(-nominal).toFixed(1)} mm nominal overlay (±${profile.maxAngle===110?3:2.5} mm).`);
      const gap=metallaMinimumGap(body.size[2],h.cupDistance);
      if((inset?edgeDistance:front.reveal)+1e-6<gap)throw Error(`Metalla needs at least ${gap} mm edge gap at this thickness and cup setback. Increase the door reveal or reduce the cup setback.`);
     }
     const extra=wide?blumClip155.extraPlateSetback:0;
     if(plateZ-extra-1.5<support.origin[2]||plateZ+1.5>support.origin[2]+support.size[2])throw Error('The hinge plate line falls outside its support. Reduce the support front inset.');
     if(support.size[0]<(custom?custom.platePilotDepth+1:9))throw Error('Hinge mounting supports need at least 9 mm stock for the selected pilot depth.');
-    const plateDepth=custom?custom.mountingDepth:metalla?56:wide?46:24,reach=custom?custom.mountingReach:metalla?12:thin?(plate==='173H7130'?11:8):wide&&inset?17.5:8;
+    const plateDepth=custom?custom.mountingDepth:metalla?56:wide?46:24,reach=custom?custom.mountingReach:metalla?12+metallaPlateDistance(h.id):thin?(plate==='173H7130'?11:8):wide&&inset?17.5:8;
     hinges.push({...custom?{customMotion:{openProtrusion:custom.openProtrusion,openingAdvance:custom.openingAdvance}}:{},profileId:h.id,id:key,ownerId:body.id,supportId,article,plate,y,cup:[cupX,y,rear],softClose:profile.softClose,maxAngle:profile.maxAngle,mountingZone:{center:[face-side*reach/2,y,plateZ-extra/2],size:[reach,custom?.mountingHeight??48,plateDepth]}});
     if(!thin)add(`${key}/cup`,body.id,'hinge-cup',[cupX,y,rear],2,1,profile.cupDiameter,profile.cupDepth);
     if(wide)add(`${key}/plate-screw/extra`,supportId,'hinge-pilot',[face,y,plateZ-extra],0,side,pilotDiameter(c),8);

@@ -1,3 +1,7 @@
+import {connectedDoors} from './fronts';
+import {doorHardware} from '../rules/door-hardware';
+import {hingePlateReview,innerDrawerHingeReview} from '../rules/hinge-plate-review';
+import {blumClip155,defaultHinge,hafeleMetalla155D4} from '../catalogue/hinges';
 import {fitMetallaHinges} from './metalla-hinges';
 import type {Cabinet} from '../domain/cabinet';
 import type {EditRepair} from './edit-repairs';
@@ -46,7 +50,13 @@ export function bottomFaceRepairs(c:Cabinet):EditRepair[]{
 export function hingePlateRepairs(c:Cabinet):EditRepair[]{
  const options:EditRepair[]=[],initial=evaluate(c),bad=initial.issues.filter(i=>i.code==='machining-hinge-plate');if(!bad.length)return options;
  const existing=machiningCollisionKeys(initial.issues);
- const safe=(next:Cabinet,hingeId?:string)=>{const model=evaluate(next);return !model.issues.some(i=>i.code==='machining-hinge-plate'&&(!hingeId||i.operationIds?.includes(hingeId)))&&[...machiningCollisionKeys(model.issues)].every(key=>existing.has(key));};
+ const safe=(next:Cabinet,hingeId?:string)=>{
+  // Reject blocked offsets using the same mounting checks before evaluating CNC geometry.
+  if(hingeId){
+   const hinges=doorHardware(next,initial.fronts.doors).hinges.filter(h=>h.id===hingeId);
+   if(hingePlateReview(initial.panels,hinges).length||innerDrawerHingeReview(initial.drawers.drawers,hinges).length)return false;
+  }
+  const model=evaluate(next);return !model.issues.some(i=>i.code==='machining-hinge-plate'&&(!hingeId||i.operationIds?.includes(hingeId)))&&[...machiningCollisionKeys(model.issues)].every(key=>existing.has(key));};
  for(const directions of [[-1],[1],[-1,1]]){
   let candidate=c;
   for(const issue of bad.filter((v,i,a)=>a.findIndex(q=>q.operationIds?.[0]===v.operationIds?.[0])===i)){const hinge=initial.doorHardware.hinges.find(h=>issue.operationIds?.includes(h.id));if(!hinge)continue;const index=+hinge.id.split('/').at(-1)!;
@@ -68,9 +78,8 @@ export function innerDrawerOpeningRepairs(c:Cabinet):EditRepair[]{
  const initial=evaluate(c),ids=c.fronts.map(d=>d.id),existing=machiningCollisionKeys(initial.issues);
  if(!drawerOpeningIssue(initial))return [];
  const check=(candidate:Cabinet)=>{
-  const model=evaluate(candidate),target=Math.max(0,...ids.map(id=>doorAngleLimit(model,id))),doors=safeDoorAngles(model,{},ids,target);
-  if(doors.blocked)return false;
-  return !safeInnerDrawerExtensions(model,{}, {...doors.angles,...Object.fromEntries(model.drawers.drawers.map(d=>[d.id,100]))}).blocked&&[...machiningCollisionKeys(model.issues)].every(key=>existing.has(key));
+  const model=evaluate(candidate);
+  return !drawerOpeningIssue(model)&&[...machiningCollisionKeys(model.issues)].every(key=>existing.has(key));
  };
  const metallaOptions:EditRepair[]=[];
  if(c.fronts.length&&c.drawers?.some(d=>d.internal))try{
@@ -78,6 +87,11 @@ export function innerDrawerOpeningRepairs(c:Cabinet):EditRepair[]{
   const clear=candidates.find(candidate=>!evaluate(candidate).issues.some(i=>i.code==='machining-hinge-plate')&&check(candidate));
   if(clear&&JSON.stringify(clear.fronts)!==JSON.stringify(c.fronts))metallaOptions.push({label:`Use soft-close Häfele Metalla hinges and fit their positions; retain ${c.fronts.every(d=>d.placement==='inset')?'inset':c.fronts.every(d=>d.placement==='overlay')?'overlay':'the selected'} doors and internal drawers (provisional clearance study)`,cabinet:clear});
  }catch{/* Only complete, evaluated fits are offered. */}
+ // A second evaluated wide-angle option is useful for ordinary overlay doors.
+ if(c.fronts.length&&c.fronts.every(d=>d.placement==='overlay'))try{
+  const candidate={...c,fronts:c.fronts.map(d=>({...d,hinge:{...defaultHinge(blumClip155.id),count:d.hinge?.count??2,endOffset:d.hinge?.endOffset??100}}))};
+  if(check(candidate)&&!evaluate(candidate).issues.some(i=>i.code==='machining-hinge-plate'))metallaOptions.push({label:'Use Blum BLUMOTION 155° hinges; retain overlay doors and internal drawers',cabinet:candidate});
+ }catch{/* An option must clear all manufacturing and opening checks. */}
  const opened=safeDoorAngles(initial,{},ids,Math.max(0,...ids.map(id=>doorAngleLimit(initial,id))));
  const blocked=safeInnerDrawerExtensions(initial,{}, {...opened.angles,...Object.fromEntries(initial.drawers.drawers.map(d=>[d.id,100]))});
  if(opened.blocked||!blocked.blocked)return metallaOptions;
@@ -124,4 +138,19 @@ export function oneFaceRepairs(c:Cabinet,panelIds:string[]):EditRepair[]{
   }catch{/* Never offer an invalid conversion. */}
  }
  return options;
+}
+
+/** Fit a catalogue plate at the existing cabinet geometry. Test all drawers
+ * and both leaves before offering the change. */
+export function fitMetallaWithRaisedPlate(c:Cabinet,ids:string[]):Cabinet|undefined{
+ const before=evaluate(c);
+ const targets=new Set(ids);
+ if(c.drawers?.some(drawer=>drawer.internal))for(const id of ids)for(const linked of connectedDoors(c,id))targets.add(linked);
+ const fitted=fitMetallaHinges(c,[...targets],hafeleMetalla155D4.id,{allowRevealChange:false});
+ const model=evaluate(fitted);
+ const existing=machiningCollisionKeys(before.issues);
+ const clear=(candidate:Cabinet,result=evaluate(candidate))=>!result.issues.some(i=>i.code==='machining-hinge-plate')&&
+  [...machiningCollisionKeys(result.issues)].every(key=>existing.has(key))&&!drawerOpeningIssue(result);
+ if(clear(fitted,model))return fitted;
+ return hingePlateRepairs(fitted).find(option=>clear(option.cabinet))?.cabinet;
 }

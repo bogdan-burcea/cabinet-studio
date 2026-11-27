@@ -20,13 +20,26 @@ export function buildSheetSolid(part:SheetPart) {
     finally { tool.delete(); }
   }
   try {
-    for(const p of part.pockets){
+    for(const [index,p] of part.pockets.entries()){
       const low = p.low <= -thickness + 1e-6 ? p.low-overcut : p.low;
       const high = p.high >= -1e-6 ? p.high+overcut : p.high;
-      const face = makePolygon(p.points.slice(0,-1).map(([px,py])=>transform([px,py,low])));
-      const extent = new Vector(direction([0,0,high-low]));
-      try { subtract(basicFaceExtrusion(face,extent)); }
-      finally { face.delete();extent.delete(); }
+      // Profile generators may repeat tangent joins or the closing vertex.
+      // OpenCascade needs a wire without zero-length edges and closes it itself.
+      const points:typeof p.points=[];
+      const samePoint=(a:typeof p.points[number],b:typeof p.points[number])=>Math.hypot(a[0]-b[0],a[1]-b[1])<=1e-7;
+      for(const point of p.points)if(!points.length||!samePoint(points[points.length-1],point))points.push(point);
+      if(points.length>1&&samePoint(points[0],points[points.length-1]))points.pop();
+      if(points.length<3)throw Error(`Routed cut ${index+1} has fewer than three distinct outline points.`);
+      try {
+        const face = makePolygon(points.map(([px,py])=>transform([px,py,low])));
+        try {
+          const extent = new Vector(direction([0,0,high-low]));
+          try { subtract(basicFaceExtrusion(face,extent)); }
+          finally { extent.delete(); }
+        } finally { face.delete(); }
+      } catch(error) {
+        throw Error(`CAD cut failed at routed cut ${index+1}. Review the part’s routed profiles.`,{cause:error});
+      }
     }
     for(const bore of part.bores){
       const start = bore.point.map((n,i)=>n-bore.direction[i]*overcut) as Vec3;

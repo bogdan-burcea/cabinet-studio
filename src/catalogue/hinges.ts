@@ -25,7 +25,9 @@ export const thinPlateHeight=(side:number,front:number)=>side-front>=5?0:side-fr
 export const hafeleMetalla155={...blumClip110,id:'hafele-metalla-155',revision:'metalla-1',name:'Häfele Metalla+ 310 SM 155°',overlay:'311.63.730',dual:'311.63.733',inset:'311.63.736',plate:'311.70.610',cupDepth:12,maxAngle:155,
  source:'https://sklep.domator.eu/files/HPL_Broszura_Metalla_310_SM.pdf'} as const;
 export const hafeleMetalla110={...hafeleMetalla155,id:'hafele-metalla-110',name:'Häfele Metalla+ 310 SM 110°',overlay:'311.04.248',dual:'311.04.251',inset:'311.04.254',maxAngle:110} as const;
-export const isMetalla=(id:string)=>id===hafeleMetalla155.id||id===hafeleMetalla110.id;
+export const hafeleMetalla155D4={...hafeleMetalla155,id:'hafele-metalla-155-d4',plate:'311.70.614',name:'Häfele Metalla+ 310 SM 155° · 4 mm plate'} as const;
+export const metallaPlateDistance=(id:string)=>id===hafeleMetalla155D4.id?4:0;
+export const isMetalla=(id:string)=>id===hafeleMetalla155.id||id===hafeleMetalla110.id||id===hafeleMetalla155D4.id;
 export const isMetallaArticle=(article:string)=>([hafeleMetalla155.overlay,hafeleMetalla155.dual,hafeleMetalla155.inset,hafeleMetalla110.overlay,hafeleMetalla110.dual,hafeleMetalla110.inset] as string[]).includes(article);
 /** Minimum square-edge gap, brochure p.6. Round upwards between table entries. */
 export function metallaMinimumGap(thickness:number,cup:number){
@@ -35,7 +37,7 @@ export function metallaMinimumGap(thickness:number,cup:number){
 /** Signed inward door-edge distance from the support face at the centre setting. */
 export const metallaNominalEdge=(kind:'overlay'|'dual'|'inset',cup:number,angle=155)=>angle===110?(kind==='inset'?7-cup:-(cup+(kind==='overlay'?11:2))):kind==='inset'?cup-4:-(cup+(kind==='overlay'?15:3));
 export const customHinge={...blumClip110,...defaultCustomHinge,id:'custom-hinge',revision:'custom-1',name:'Custom soft-close hinge',overlay:defaultCustomHinge.article,dual:defaultCustomHinge.article,inset:defaultCustomHinge.article} as const;
-export const hingeProfiles={ [blumClip110.id]:blumClip110, [blumClip155.id]:blumClip155, [blumThin110.id]:blumThin110, [hafeleMetalla155.id]:hafeleMetalla155, [hafeleMetalla110.id]:hafeleMetalla110, [customHinge.id]:customHinge };
+export const hingeProfiles={ [blumClip110.id]:blumClip110, [blumClip155.id]:blumClip155, [blumThin110.id]:blumThin110, [hafeleMetalla155.id]:hafeleMetalla155, [hafeleMetalla110.id]:hafeleMetalla110, [hafeleMetalla155D4.id]:hafeleMetalla155D4, [customHinge.id]:customHinge };
 /** Retired EXPANDO files remain readable; new selections exclude this fitting. */
 export const selectableHinges=Object.values(hingeProfiles).filter(p=>!isThinHinge(p.id));
 export function resolveHinge(h:NonNullable<SlabDoor['hinge']>){

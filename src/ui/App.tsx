@@ -33,7 +33,7 @@ import {renameItem} from '../commands/item-names';
 import {backFixingRepairs} from '../commands/machining-repairs';
 import {MachiningChecks,affectedItems} from './MachiningChecks';
 import {toolingRepairs} from '../commands/tooling-repairs';
-import {drawerOpeningEditIssue} from '../commands/drawer-opening-preflight';
+import {drawerOpeningEditIssue,fitNewPantryHinges} from '../commands/drawer-opening-preflight';
 import {drawerOpeningIssue,doorAngleLimit,safeDoorAngles,safeInnerDrawerExtensions} from '../rules/door-motion';
 import {SimpleDoorInspector} from './SimpleDoorInspector';
 import {removeDoor} from '../commands/fronts';
@@ -124,8 +124,9 @@ export function App(){
   if(!candidate)return false;
   candidate=fitDrawerRails(candidate);
   try{
+   if(checkOpening)candidate=fitNewPantryHinges(candidate,store.getSnapshot().committed);
    const issue=checkOpening?drawerOpeningEditIssue(candidate,store.getSnapshot().committed):null;
-   if(issue){store.cancel();setNotice('');setPendingEdit({title:'Internal drawer clearance',message:issue.message,options:innerDrawerOpeningRepairs(candidate),base:store.getSnapshot().committed});return false;}
+   if(issue){store.cancel();if(!repairDialog){setNotice(issue.message,true);return false;}setNotice('');setPendingEdit({title:'Internal drawer clearance',message:issue.message,options:innerDrawerOpeningRepairs(candidate),base:store.getSnapshot().committed});return false;}
   }catch{/* Existing construction validation supplies its normal error/repairs. */}
   if(store.commit(candidate)){setPendingEdit(null);return true;}
   const error=store.getSnapshot().error;
@@ -138,8 +139,10 @@ export function App(){
   try{
   ids=[...new Set(ids.map(id=>evaluated.drawers.drawers.find(d=>d.parts.some(p=>p.id===id))?.id??id))];
   const base=store.getSnapshot().committed,{cabinet:next,connected}=removalPlan(base,ids);
-  if(connected.length){setPendingEdit({title:'Delete connected items?',message:`Deleting this selection also removes ${connected.length} connected item${connected.length===1?'':'s'} (interiors, doors or drawers). Undo restores all removed items.`,options:[{label:`Delete selection and ${connected.length} connected item${connected.length===1?'':'s'}`,cabinet:next}],base});}
-  else if(commit(next))setSelection(cabinet.id);
+  // Removal must stay available while a cabinet has an unresolved opening warning.
+  // The normal construction validation still runs and remaining warnings stay visible.
+  if(connected.length){setPendingEdit({removal:true,title:'Delete connected items?',message:`Deleting this selection also removes ${connected.length} connected item${connected.length===1?'':'s'} (interiors, doors or drawers). Undo restores all removed items.`,options:[{label:`Delete selection and ${connected.length} connected item${connected.length===1?'':'s'}`,cabinet:next}],base});}
+  else if(commit(next,true,false))setSelection(cabinet.id);
   }catch(error){setNotice((error as Error).message,true);}
  }
  const [notice,setNoticeText]=useState('');
@@ -178,6 +181,9 @@ export function App(){
  useEffect(()=>{if(selection===cabinet.id&&pendingDimension.current){const input=fields.current[pendingDimension.current];revealField(input);pendingDimension.current=null;}},[selection,cabinet.id]);
  const selectedReview=review.filter(i=>selection===cabinet.id||selectedIds.some(id=>affectedItems(i).some(part=>constructionOwner(cabinet,part)===id)));
  function resolveMachining(issues=selectedReview){
+  const hingeSetup=issues.find(i=>i.code==='machining-hinge-selection');
+  if(hingeSetup){setSelection(hingeSetup.featureId);requestAnimationFrame(()=>{const field=document.querySelector<HTMLSelectElement>('.inspector select[aria-label="Hinge system"]');field?.scrollIntoView({block:'center'});field?.focus({preventScroll:true});});return;}
+
   const faceIssues=issues.filter(i=>i.code==='machining-faces'),faceIds=faceIssues.map(i=>i.featureId);
   const hole=issues.some(i=>i.code==='machining-hole-collision'||i.code==='machining-collision'&&i.operationIds?.some(id=>id.includes('/installation/foot/'))),collision=issues.some(i=>i.code==='machining-collision'),plate=issues.some(i=>i.code==='machining-hinge-plate'),faces=issues.some(i=>i.code==='machining-faces'&&i.featureId===`${cabinet.id}/panel/bottom`),tool=issues.some(i=>i.code==='machining-tool-width');
   const backIds=new Set(evaluated.backFasteners.map(b=>b.id)),backCollision=issues.some(i=>i.operationIds?.some(id=>backIds.has(id)));
@@ -192,6 +198,7 @@ export function App(){
  const doorIds=cabinet.fronts.map(d=>d.id),drawerIds=(cabinet.drawers??[]).map(d=>d.id);
  const movableIds=[...doorIds,...drawerIds],doorsOpen=movableIds.length>0&&(cabinet.drawers?.some(d=>d.internal)?movableIds.some(id=>(doorAngles[id]??0)>0):movableIds.every(id=>(doorAngles[id]??0)>0));
  function toggleFronts(){
+  const hingeSetup=drawerOpeningIssue(evaluated);if(hingeSetup?.code==='machining-hinge-selection'){resolveMachining([hingeSetup]);return;}
   const opening=!doorsOpen;
   if(!cabinet.drawers?.some(d=>d.internal)){
    if(doorIds.length)operateDoors(doorIds,opening?Math.max(...doorIds.map(id=>doorAngleLimit(evaluated,id))):0);
@@ -274,7 +281,7 @@ export function App(){
     {selection===cabinet.id&&cabinet.cabinetType==='wall'&&<WallHangingInspector cabinet={snapshot.committed} onCommit={commit} onCancel={store.cancel}/>}
     {shakerPart&&<Section title="Door assembly"><Button className="full-width-button" onClick={()=>setSelection(shakerPart.doorOwnerId)}>Edit door</Button></Section>}
     <MachiningChecks issues={selectedReview} onResolve={()=>resolveMachining()}/>
-    {!mixedFronts&&cabinet.fronts.some(d=>selectedIds.includes(d.id))&&<SimpleDoorInspector cabinet={snapshot.committed} evaluated={evaluated} ids={selectedIds} onCommit={commit} onCancel={store.cancel} onSelect={setSelectedIds} onRemove={requestRemoval} onNotice={message=>setNotice(message,true)}/>}
+    {!mixedFronts&&cabinet.fronts.some(d=>selectedIds.includes(d.id))&&<SimpleDoorInspector cabinet={snapshot.committed} evaluated={evaluated} ids={selectedIds} onCommit={commit} onHingeCommit={candidate=>commit(candidate,false)} onCancel={store.cancel} onSelect={setSelectedIds} onRemove={requestRemoval} onNotice={message=>setNotice(message,true)}/>}
     {panel?.role==='bottom'&&<Section title="Bottom fasteners"><label className="construction-choice">Machining face<span className="select select--fluid"><select aria-label="Bottom fastener face" value={cnc(cabinet).bottomFastenersThrough?'outside-through':cnc(cabinet).bottomFace??'outside'} onChange={e=>{const value=e.target.value;commitFasteners(setCnc(snapshot.committed,{bottomFace:value==='inside'?'inside':'outside',bottomFastenersThrough:value==='outside-through'}));}}><option value="inside">Inside</option><option value="outside">Outside</option>{cnc(cabinet).bottomFastenersThrough&&<option value="outside-through">Outside · through pilots</option>}</select><Icon name="chevron" size={12}/></span></label>{cnc(cabinet).bottomFastenersThrough&&<p className="field-note">Connector pockets stay blind. Only receiving pilots can drill through.</p>}</Section>}
     {constructionPart==='back'&&<BackPanelInspector cabinet={snapshot.committed} onCommit={commit} onFastenerCommit={commitFasteners} onCancel={store.cancel} railFasteners={partFastenerFields}/>}
     {cabinet.contents.some(s=>s.id===selection)?<SimpleAdjustableInspector onSelect={setSelection} committed={snapshot.committed} evaluated={evaluated} ids={selectedIds} onCommit={commit} onCancel={store.cancel} onRemove={requestRemoval} onNotice={message=>setNotice(message,true)} positionRef={el=>{shelfPosition.current=el;}}/>:<SimpleInteriorInspector cabinet={cabinet} committed={snapshot.committed} evaluated={evaluated} selection={selection} selectedIds={selectedIds} onRemove={requestRemoval} onCommit={commit} onCancel={store.cancel} onSelect={setSelection} onSelectMany={setSelectedIds} onNotice={message=>setNotice(message,true)} positionRef={el=>{shelfPosition.current=el;}}/>}
@@ -301,6 +308,6 @@ export function App(){
  {librarySaveChoice&&<LibrarySaveDialog busy={savingLibrary} onCancel={()=>{if(!savingLibrary)setLibrarySaveChoice(null);}} onSave={overwrite=>{void performLibrarySave(librarySaveChoice.source,overwrite?librarySaveChoice.entryId:undefined);}}/>}
  {libraryOpen&&<CabinetLibrary onClose={closeLibrary} onOpen={(next,entryId)=>{if(!commit(next,true,false))return false;linkAssemblyBuild(null);workingCopy.current!.link(store.getSnapshot().committed,entryId);setSelection(next.id);setWorkspace('box');setNotice('');return true;}}/>}
  {costsOpen&&<CostPanel key={cabinet.id} cabinet={cabinet} model={evaluated} settings={sheetSettings} history={cncHistory.current} onClose={closeCosts} onNotice={setNotice} onReview={()=>{closeCosts();setWorkspace('cnc');}}/>}
- {pendingEdit&&<EditConflict key={snapshot.revision} edit={pendingEdit} onCancel={()=>setPendingEdit(null)} onApply={index=>{if(pendingEdit.base!==store.getSnapshot().committed){setPendingEdit(null);setNotice('The cabinet changed. Try the edit again.');return;}const option=pendingEdit.options[index];if(option){const motion=pendingEdit.motion;if(commit(option.cabinet)){if(motion){const model=evaluate(option.cabinet),opened=safeDoorAngles(model,{},motion.ids,motion.target);setDoorAngles(motion.drawers?safeInnerDrawerExtensions(model,{}, {...opened.angles,...Object.fromEntries(model.drawers.drawers.map(d=>[d.id,100]))}).angles:opened.angles);}else if(pendingEdit.title)setSelection(cabinet.id);}}}}/>}
+ {pendingEdit&&<EditConflict key={snapshot.revision} edit={pendingEdit} onCancel={()=>setPendingEdit(null)} onApply={index=>{if(pendingEdit.base!==store.getSnapshot().committed){setPendingEdit(null);setNotice('The cabinet changed. Try the edit again.');return;}const option=pendingEdit.options[index];if(option){const motion=pendingEdit.motion;if(commit(option.cabinet,true,!pendingEdit.removal)){if(motion){const model=evaluate(option.cabinet),opened=safeDoorAngles(model,{},motion.ids,motion.target);setDoorAngles(motion.drawers?safeInnerDrawerExtensions(model,{}, {...opened.angles,...Object.fromEntries(model.drawers.drawers.map(d=>[d.id,100]))}).angles:opened.angles);}else if(pendingEdit.title)setSelection(cabinet.id);}}}}/>}
  </div>;
 }

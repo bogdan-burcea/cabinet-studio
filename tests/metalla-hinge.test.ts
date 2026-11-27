@@ -8,7 +8,7 @@ import {hafeleMetalla155,defaultHinge,metallaMinimumGap} from '../src/catalogue/
 import {evaluate} from '../src/geometry/evaluate';
 import {serialize,deserialize} from '../src/persistence/files';
 import {safeDoorAngles,safeInnerDrawerExtensions,drawerOpeningIssue} from '../src/rules/door-motion';
-import {innerDrawerOpeningRepairs} from '../src/commands/clearance-repairs';
+import {innerDrawerOpeningRepairs,fitMetallaWithRaisedPlate} from '../src/commands/clearance-repairs';
 import {editRepairs} from '../src/commands/edit-repairs';
 import {CabinetStore} from '../src/commands/store';
 const pantry=()=>deserialize(readFileSync(new URL('./fixtures/pantry-inset-inner-drawers.json',import.meta.url),'utf8'));
@@ -60,7 +60,7 @@ for(const family of ['antaro','merivobox'] as const)for(const layout of ['single
  test(`adding ${layout} ${placement} doors over three ${family} inner drawers offers a complete fitting correction`,()=>{
   const base=resizeEnvelope(createCabinet(),{width:400,height:720,depth:560}),before=addDrawerStack(base,base.compartments.id,3,chooseDrawerPack(antaroPin,{family}),false,true).cabinet;
   const added=addSimpleDoors(before,layout).cabinet,requested=editSimpleDoors(added,added.fronts.map(d=>d.id),{placement}),saved=serialize(before),issue=drawerOpeningEditIssue(requested,before);
-  if(!issue){assert.equal(innerDrawerOpeningRepairs(requested).length,0);return;}
+  if(!issue)assert.equal(drawerOpeningIssue(evaluate(requested))?.code,'machining-hinge-selection','Doors remain editable until their hinge is selected');
   const option=innerDrawerOpeningRepairs(requested).find(r=>r.label.includes('Häfele'));assert.ok(option,'A valid hinge fit must be offered rather than an empty correction dialog');
   const next=option.cabinet,e=evaluate(next);assert.equal(drawerOpeningEditIssue(next,before),null);assert.equal(drawerOpeningIssue(e),null);
   assert.deepEqual(next.drawers,before.drawers);assert.deepEqual(next.compartments,before.compartments);assert.deepEqual(next.envelope,before.envelope);assert.deepEqual(next.fronts.map(d=>[d.id,d.placement]),requested.fronts.map(d=>[d.id,d.placement]));
@@ -70,3 +70,19 @@ for(const family of ['antaro','merivobox'] as const)for(const layout of ['single
   const store=new CabinetStore(before);assert.ok(store.commit(next));store.undo();assert.equal(serialize(store.getSnapshot().committed),saved);store.redo();assert.deepEqual(store.getSnapshot().committed,next);assert.deepEqual(deserialize(serialize(next)),next);assert.equal(serialize(before),saved);
  });
 }
+
+test('the 4 mm Metalla plate fits 14 mm overlay and clears the internal drawers without resizing the doors',()=>{
+ const base=resizeEnvelope(createCabinet(),{width:600,height:720,depth:560});
+ base.materials.carcass={...base.materials.carcass,stock:{id:'generic-panel-16',revision:'1'}};
+ const drawers=addDrawerStack(base,base.compartments.id,3,antaroPin,false,true).cabinet;
+ const cabinet=addSimpleDoors(drawers,'pair').cabinet,ids=cabinet.fronts.map(d=>d.id);
+ assert.throws(()=>fitMetallaHinges(cabinet,ids),/14 mm hinge-side overlay.*15.5 mm/);
+ const fitted=fitMetallaWithRaisedPlate(cabinet,[ids[0]]);
+ assert.ok(fitted);
+ const model=evaluate(fitted);
+ assert.equal(drawerOpeningIssue(model),null);
+ assert.ok(model.doorHardware.hinges.every(h=>h.softClose&&h.plate==='311.70.614'));
+ assert.deepEqual(model.fronts.doors,evaluate(cabinet).fronts.doors);
+ assert.deepEqual(fitted.drawers,cabinet.drawers);
+ assert.deepEqual(deserialize(serialize(fitted)),fitted);
+});
